@@ -26,5 +26,9 @@
     ],
     "atom": {
         "rewriteTsConfig": false
+    },
+    "angularCompilerOptions": {
+        "genDir": "dist",
+        "skipMetadataEmit": false
     }
 }

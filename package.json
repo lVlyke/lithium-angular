@@ -1,18 +1,20 @@
 {
   "name": "@angular-rxjs-lifecycle-decorators/core",
-  "version": "1.0.0-beta.4",
+  "version": "1.0.0-beta.5",
   "description": "A set of decorators that allow Angular lifecycle events to be expressed as RxJS observables.",
   "main": "index.js",
   "author": "Mychal Thompson <mychal.r.thompson@gmail.com>",
   "license": "MIT",
   "scripts": {
-    "build:js": "rimraf ./dist && tsc && cp ./package.json ./dist/package.json"
+    "build:js": "rimraf ./dist && ngc && cp ./package.json ./dist/package.json"
   },
   "peerDependencies": {
     "@angular/core": "4.x.x",
     "rxjs": "5.x.x"
   },
   "devDependencies": {
+    "@angular/compiler": "^4.4.6",
+    "@angular/compiler-cli": "^4.4.6",
     "@angular/core": "4.x.x",
     "@types/reflect-metadata": "^0.0.5",
     "rimraf": "^2.6.2",

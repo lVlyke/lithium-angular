@@ -91,9 +91,6 @@ export function CreateSubjectProxyMetadata(type: EventType, target: any, propert
         // Assign the facade function for the given event type to the appropriate target class method
         target[type] = facadeList.get(type);
     }
-    else {
-        console.info(`${type} lifecycle event already defined.`);
-    }
 
     // Add the propertyKey to the class' metadata
     EventMetadata.GetOwnPropertySubjectMap(type, target.constructor).set(propertyKey, undefined);
@@ -143,11 +140,28 @@ export function Lifecycle(constructor: any) {
     let metadataMap = mergeInherittedMetadata(constructor);
 
     // Iterate over each of the target properties for each proxied event type used in this class
-    metadataMap.forEach((propertySubjectMap) => propertySubjectMap.forEach((value, propertyKey) => {
+    metadataMap.forEach((propertySubjectMap, eventType) => propertySubjectMap.forEach((value, propertyKey) => {
         // If the event proxy Subject hasn't been created for this property yet...
         if (!value) {
+            // Get the property's descriptor from the class' immediate prototype
+            let propertyDescriptor = Object.getOwnPropertyDescriptor(constructor.prototype, propertyKey);
+
             // Define the Subject
-            value = new Subject<any>();
+            if (propertyDescriptor && propertyDescriptor.value) {
+                // Use the existing property value (this allows for chaining of subject proxy decorators)
+                value = propertyDescriptor.value;
+
+                // Existing values must be a Subject
+                if (!(value instanceof Subject)) {
+                    throw new Error(`Existing property value for ${eventType} event proxy "${constructor.name}.${propertyKey}" is not a Subject (Did you mean to define a value for this property?).`);
+                }
+            }
+            else {
+                // Create a new Subject
+                value = new Subject<any>();
+            }
+            
+            // Add the Subject to the class' metadata
             propertySubjectMap.set(propertyKey, value);
 
             // Make the Subject accessible on the class' prototype

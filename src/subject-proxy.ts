@@ -1,13 +1,48 @@
-import { Subject } from "rxjs";
+import { Subject, Observable } from "rxjs";
 import { Metadata } from "./metadata";
 
 export type EventType = string;
 export type EventTypeFacadeList = Map<EventType, Function>;
-export type SubjectProxyDecorator = (target: any, propertyKey: string) => any;
+export type SubjectProxyDecorator = ((target: any, propertyKey: string) => any) & { eventType: EventType };
+export type SubjectProxyDecoratorFactory = () => SubjectProxyDecorator;
+
+export namespace SubjectProxyDecorator {
+
+    export const COMPOSED_TARGET_TYPE = "$$ComposedTarget$$";
+    export const COMPOSED_TARGET_TYPE_LIST = new Map([[COMPOSED_TARGET_TYPE, () => {}]]);
+
+    /** @PropertyDecoratorFactory */
+    export function Compose(...decorators: SubjectProxyDecorator[]): (target: any, propertyKey: string) => any {
+        /** @PropertyDecorator */
+        return function (target: any, propertyKey: string) {
+            // Instantiate all given decorators as composed decorators
+            decorators.forEach(decorator => decorator(target, ComposedEventPropertyKey(decorator.eventType, propertyKey)));
+
+            // Create the composed metadata on the target for the given propertyKey
+            let subjectInfo = CreateSubjectProxyMetadata(COMPOSED_TARGET_TYPE, target, propertyKey, COMPOSED_TARGET_TYPE_LIST);
+            
+            // Create a proxy observable that waits for all composed event proxies to emit
+            subjectInfo.observable = new Observable(observer => {
+                // Look up the SubjectInfo for each composed decorator and subscribe
+                Observable.zip(...decorators.map(decorator => EventMetadata.GetPropertySubjectMap(decorator.eventType, target.constructor).get(ComposedEventPropertyKey(decorator.eventType, propertyKey)).observable))
+                    .subscribe(observer);
+            });
+        }
+    }
+
+    export function ComposedEventPropertyKey(eventType: EventType, propertyKey: string): string {
+        return `$$${propertyKey}$$ComposedBy$$${eventType}`;
+    }
+}
 
 export namespace EventMetadata {
 
-    export type PropertySubjectMap = Map<string, Subject<any>>;
+    export interface SubjectInfo {
+        subject: Subject<any>;
+        observable: Observable<any>;
+    }
+
+    export type PropertySubjectMap = Map<string, SubjectInfo>;
     export type MetadataMap = Map<EventType, PropertySubjectMap>;
 
     export const EventMapSymbol = Symbol("EventMapSymbol");
@@ -70,7 +105,7 @@ export namespace EventFacade {
         return function (...args: any[]) {
             // Iterate over all class properties that have a proxy subject for this event type...
             EventMetadata.GetPropertySubjectMap(type, this.constructor)
-                .forEach((subject: Subject<any>) => subject.next(args.length > 0 ? args[0] : undefined)); // And notify each subscriber
+                .forEach((subjectInfo: EventMetadata.SubjectInfo) => subjectInfo.subject.next(args.length > 0 ? args[0] : undefined)); // And notify each subscriber
         };
     }
 
@@ -82,33 +117,48 @@ export namespace EventFacade {
     }
 }
 
-export function CreateSubjectProxyMetadata(type: EventType, target: any, propertyKey: string, facadeList: EventTypeFacadeList) {
-    if (target[type] && target[type] !== facadeList.get(type)) {
+export function CreateSubjectProxyMetadata(type: EventType, target: any, propertyKey: string, facadeList: EventTypeFacadeList): EventMetadata.SubjectInfo {
+    let facadeFn: Function = facadeList.get(type);
+
+    if (target[type] && target[type] !== facadeFn) {
         // Make sure the target class doesn't have a custom method already defined for this event type
         throw new Error(`@OnInit bootstrap failed. Class already has a ${type} method.`);
     }
-    else if (!target[type]) {
+    else if (!target[type] && facadeFn) {
         // Assign the facade function for the given event type to the appropriate target class method
-        target[type] = facadeList.get(type);
+        target[type] = facadeFn;
+    }
+    else {
+        console.warn(`Subject proxy facade function for event type "${type}" is undefined. Event will never be triggered.`);
     }
 
+    // Create initial metadata
+    let metadata: EventMetadata.SubjectInfo = {
+        subject: undefined,
+        observable: undefined
+    };
+
     // Add the propertyKey to the class' metadata
-    EventMetadata.GetOwnPropertySubjectMap(type, target.constructor).set(propertyKey, undefined);
+    EventMetadata.GetOwnPropertySubjectMap(type, target.constructor).set(propertyKey, metadata);
+    return metadata;
 }
 
-/** @PropertyDecoratorFactory */
-export function SubjectProxyDecorator(type: EventType, list: EventTypeFacadeList): SubjectProxyDecorator {
-    /** @PropertyDecorator */
-    return function (target: any, propertyKey: string) {
-        // Create the subject proxy metadata for the decorated property
-        CreateSubjectProxyMetadata(type, target, propertyKey, list);
+/** @PropertyDecoratorMetaFactory */
+export function SubjectProxyDecoratorFactory(eventType: EventType, list: EventTypeFacadeList): SubjectProxyDecoratorFactory {
+    /** @PropertyDecoratorFactory */
+    return function (): SubjectProxyDecorator {
+        /** @PropertyDecorator */
+        return Object.assign(function (target: any, propertyKey: string) {
+            // Create the subject proxy metadata for the decorated property
+            CreateSubjectProxyMetadata(eventType, target, propertyKey, list);
+        }, { eventType });
     };
 }
 
 /** @ClassDecorator
  *  @Description Creates event proxy Subjects for all event proxy properties in the class.
  */
-export function Lifecycle(constructor: any) {
+export function LifecycleDecorator(constructor: any) {
 
     function mergeInherittedMetadata(constructor: any): EventMetadata.MetadataMap {
         let metadataMap: EventMetadata.MetadataMap = EventMetadata.GetMetadataMap(constructor);
@@ -127,7 +177,7 @@ export function Lifecycle(constructor: any) {
     
                     // And add them to this class' metadata map if not already defined
                     if (!ownPropertySubjectMap.has(propertyKey)) {
-                        ownPropertySubjectMap.set(propertyKey, value);
+                        ownPropertySubjectMap.set(propertyKey, Object.assign({}, value));
                     }
                 }));
             }
@@ -140,32 +190,40 @@ export function Lifecycle(constructor: any) {
     let metadataMap = mergeInherittedMetadata(constructor);
 
     // Iterate over each of the target properties for each proxied event type used in this class
-    metadataMap.forEach((propertySubjectMap, eventType) => propertySubjectMap.forEach((value, propertyKey) => {
-        // If the event proxy Subject hasn't been created for this property yet...
-        if (!value) {
+    metadataMap.forEach((propertySubjectMap, eventType) => propertySubjectMap.forEach((subjectInfo, propertyKey) => {
+        // If the event proxy hasn't been created for this property yet...
+        if (!subjectInfo.observable) {
             // Get the property's descriptor from the class' immediate prototype
             let propertyDescriptor = Object.getOwnPropertyDescriptor(constructor.prototype, propertyKey);
 
             // Define the Subject
             if (propertyDescriptor && propertyDescriptor.value) {
                 // Use the existing property value (this allows for chaining of subject proxy decorators)
-                value = propertyDescriptor.value;
-
+                subjectInfo.subject = propertyDescriptor.value;
+                
                 // Existing values must be a Subject
-                if (!(value instanceof Subject)) {
+                if (!(subjectInfo.subject instanceof Subject)) {
                     throw new Error(`Existing property value for ${eventType} event proxy "${constructor.name}.${propertyKey}" is not a Subject (Did you mean to define a value for this property?).`);
                 }
             }
             else {
                 // Create a new Subject
-                value = new Subject<any>();
+                subjectInfo.subject = new Subject<any>();
             }
+
+            // Define the observable
+            subjectInfo.observable = subjectInfo.subject.asObservable();
             
             // Add the Subject to the class' metadata
-            propertySubjectMap.set(propertyKey, value);
-
-            // Make the Subject accessible on the class' prototype
-            constructor.prototype[propertyKey] = value;
+            propertySubjectMap.set(propertyKey, subjectInfo);
         }
+
+        // Make the observable accessible on the class' prototype
+        constructor.prototype[propertyKey] = subjectInfo.observable;
     }));
+}
+
+/** @ClassDecoratorFactory */
+export function Lifecycle() {
+    return LifecycleDecorator;
 }

@@ -1,4 +1,5 @@
-import { EventSource, EventSourceDecorator, EventType } from "./subject-proxy";
+import { EventSourceDecorator, EventSource } from "./event-source";
+import { EventType } from "./event-metadata";
 
 export type AngularLifecycleType = keyof {
     ngOnChanges,

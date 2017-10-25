@@ -1,4 +1,4 @@
-import { EventTypeFacadeList, EventFacade, EventType, SubjectProxyDecoratorFactory } from "./subject-proxy";
+import { EventSource, EventSourceDecorator, EventType } from "./subject-proxy";
 
 export type AngularLifecycleType = keyof {
     ngOnChanges,
@@ -12,6 +12,8 @@ export type AngularLifecycleType = keyof {
 };
 
 export namespace AngularLifecycleType {
+
+    export type DecoratorFactory = () => EventSourceDecorator;
 
     export const OnChanges: AngularLifecycleType = "ngOnChanges";
     export const OnInit: AngularLifecycleType = "ngOnInit";
@@ -32,31 +34,28 @@ export namespace AngularLifecycleType {
         AfterViewInit,
         AfterViewChecked
     ];
-}
 
-export namespace AngularLifecycleFacade {
-
-    export const list: EventTypeFacadeList = EventFacade.list(AngularLifecycleType.values);
+    /** @PropertyDecoratorMetaFactory */
+    export function DecoratorFactory(type: EventType): DecoratorFactory {
+        return function (): EventSourceDecorator {
+            return EventSource(type);
+        };
+    }
 }
 
 /** @PropertyDecoratorFactory */
-export function AngularLifecycleDecoratorFactory(type: EventType): SubjectProxyDecoratorFactory {
-    return SubjectProxyDecoratorFactory(type, AngularLifecycleFacade.list);
-}
-
-/** @PropertyDecorator */
-export const OnChanges: SubjectProxyDecoratorFactory = AngularLifecycleDecoratorFactory(AngularLifecycleType.OnChanges);
-/** @PropertyDecorator */
-export const OnInit: SubjectProxyDecoratorFactory = AngularLifecycleDecoratorFactory(AngularLifecycleType.OnInit);
-/** @PropertyDecorator */
-export const OnDestroy: SubjectProxyDecoratorFactory = AngularLifecycleDecoratorFactory(AngularLifecycleType.OnDestroy);
-/** @PropertyDecorator */
-export const DoCheck: SubjectProxyDecoratorFactory = AngularLifecycleDecoratorFactory(AngularLifecycleType.DoCheck);
-/** @PropertyDecorator */
-export const AfterContentInit: SubjectProxyDecoratorFactory = AngularLifecycleDecoratorFactory(AngularLifecycleType.AfterContentInit);
-/** @PropertyDecorator */
-export const AfterContentChecked: SubjectProxyDecoratorFactory = AngularLifecycleDecoratorFactory(AngularLifecycleType.AfterContentChecked);
-/** @PropertyDecorator */
-export const AfterViewInit: SubjectProxyDecoratorFactory = AngularLifecycleDecoratorFactory(AngularLifecycleType.AfterViewInit);
-/** @PropertyDecorator */
-export const AfterViewChecked: SubjectProxyDecoratorFactory = AngularLifecycleDecoratorFactory(AngularLifecycleType.AfterViewChecked);
+export const OnChanges = AngularLifecycleType.DecoratorFactory(AngularLifecycleType.OnChanges);
+/** @PropertyDecoratorFactory */
+export const OnInit = AngularLifecycleType.DecoratorFactory(AngularLifecycleType.OnInit);
+/** @PropertyDecoratorFactory */
+export const OnDestroy = AngularLifecycleType.DecoratorFactory(AngularLifecycleType.OnDestroy);
+/** @PropertyDecoratorFactory */
+export const DoCheck = AngularLifecycleType.DecoratorFactory(AngularLifecycleType.DoCheck);
+/** @PropertyDecoratorFactory */
+export const AfterContentInit = AngularLifecycleType.DecoratorFactory(AngularLifecycleType.DoCheck);
+/** @PropertyDecoratorFactory */
+export const AfterContentChecked = AngularLifecycleType.DecoratorFactory(AngularLifecycleType.DoCheck);
+/** @PropertyDecoratorFactory */
+export const AfterViewInit = AngularLifecycleType.DecoratorFactory(AngularLifecycleType.DoCheck);
+/** @PropertyDecoratorFactory */
+export const AfterViewChecked = AngularLifecycleType.DecoratorFactory(AngularLifecycleType.DoCheck);

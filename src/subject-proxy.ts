@@ -2,105 +2,160 @@ import { Subject, Observable } from "rxjs";
 import { Metadata } from "./metadata";
 
 export type EventType = string;
-export type EventTypeFacadeList = Map<EventType, Function>;
-export type SubjectProxyDecorator = ((target: any, propertyKey: string) => any) & { eventType: EventType };
-export type SubjectProxyDecoratorFactory = () => SubjectProxyDecorator;
+export type EventSourceDecorator = ((target: any, propertyKey: string) => any) & { eventType: EventType };
 
-export namespace SubjectProxyDecorator {
+/** @PropertyDecoratorFactory */
+export function EventSource(eventType?: EventType): EventSourceDecorator {
+    /** @PropertyDecorator */
+    return Object.assign(function (target: any, propertyKey: string) {
+        // If an eventType wasn't specified...
+        if (!eventType) {
+            // Try to deduce the eventType from the propertyKey
+            if (propertyKey.endsWith("$")) {
+                eventType = propertyKey.substring(0, propertyKey.length - 1);
+            }
+            else {
+                throw new Error(`@EventSource error: eventType could not be deduced from propertyKey "${propertyKey}" (only keys ending with '$' can be auto-deduced).`);
+            }
+        }
 
-    export type Synchronizer<T> = (...observables: Observable<any>[]) => Observable<T>;
-    export type DecoratorKeyResolver = (eventType: EventType, propertyKey: string) => string;
+        // Create the event source metadata for the decorated property
+        EventSource.CreateMetadata(eventType, target, propertyKey);
+    }, { eventType });
+}
 
-    export const COMPOSED_TARGET_TYPE = "$$ComposedTarget$$";
-    export const COMPOSED_TARGET_TYPE_LIST = new Map([[COMPOSED_TARGET_TYPE, () => {}]]);
+export namespace EventSource {
 
-    /** @description Creates an observable that synchronizes on the given subject proxy decorators before emitting.
-      * @param target The target object.
-      * @param propertyKey The targeted property name of the object.
-      * @param synchronizer The function to use to synchronize on the given decorators.
-      * @param keyResolver The function to use to resolve the correct propertyKey for each decorator.
-      * @param decorators The subject proxy decorators to synchronize on.
-      */
-    export function SynchronizeOn<T>(target: any, propertyKey: string, synchronizer: Synchronizer<T>, keyResolver: DecoratorKeyResolver, decorators: SubjectProxyDecorator[]): Observable<T> {
-        // Instantiate all given decorators with the approriate keys
-        decorators.forEach(decorator => decorator(target,  keyResolver(decorator.eventType, propertyKey)));
+    export namespace Facade {
 
-        // Synchronize on the decorators using the specified synchronizer function
-        return new Observable(observer => synchronizer(...decorators.map((decorator: SubjectProxyDecorator) => {
-            // Look up the SubjectInfo for each decorator and subscribe
-            return EventMetadata.GetPropertySubjectMap(decorator.eventType, target.constructor).get(keyResolver(decorator.eventType, propertyKey)).observable;
-        })).subscribe(observer));
+        /** @description
+         *  Creates an event facade function (the function that is invoked during an event) for the given event type.
+         */
+        export function Create(type: EventType): Function {
+            return function (...args: any[]) {
+                // Iterate over all class properties that have a proxy subject for this event type...
+                EventMetadata.GetPropertySubjectMap(type, this.constructor)
+                    .forEach((subjectInfo: EventMetadata.SubjectInfo) => subjectInfo.subject.next(args.length > 0 ? args[0] : undefined)); // And notify each subscriber
+            };
+        }
     }
 
-    /** @PropertyDecoratorFactory */
-    export function Compose(...decorators: SubjectProxyDecorator[]): (target: any, propertyKey: string) => any {
-        /** @PropertyDecorator */
-        return function (target: any, propertyKey: string) {
-            // Create the composed metadata on the target for the given propertyKey
-            let subjectInfo = CreateSubjectProxyMetadata(COMPOSED_TARGET_TYPE, target, propertyKey, COMPOSED_TARGET_TYPE_LIST);
+    export function CreateMetadata(type: EventType, target: any, propertyKey: string): EventMetadata.SubjectInfo {
+        if (target[type] && target[type].eventType !== type) {
+            // Make sure the target class doesn't have a custom method already defined for this event type
+            throw new Error(`@EventSource bootstrap failed. Class already has a custom ${type} method.`);
+        }
+        else if (!target[type]) {
+            // Assign the facade function for the given event type to the appropriate target class method
+            target[type] = Facade.Create(type);
+        }
 
-            // Create a proxy observable that waits for all composed event proxies to emit each time
-            EventMetadata.SubjectInfo.AppendObservable(subjectInfo, SynchronizeOn(target, propertyKey, Observable.zip, ComposedEventPropertyKey, decorators));
-            
-            // Create a dummy completed subject
-            subjectInfo.subject = new Subject<any>();
-            subjectInfo.subject.complete();
+        // Create initial metadata
+        let metadata: EventMetadata.SubjectInfo = {
+            subject: undefined,
+            observable: undefined
         };
+
+        // Add the propertyKey to the class' metadata
+        EventMetadata.GetOwnPropertySubjectMap(type, target.constructor).set(propertyKey, metadata);
+        return metadata;
     }
 
-    export function ComposedEventPropertyKey(eventType: EventType, propertyKey: string): string {
-        return `$$${propertyKey}$$ComposedBy$$${eventType}`;
-    }
+    export namespace Synchronizers {
 
-    /** @PropertyDecoratorFactory */
-    export function On(...decorators: SubjectProxyDecorator[]): (target: any, propertyKey: string) => any {
-        /** @PropertyDecorator */
-        return function (target: any, propertyKey: string) {
-            // Create the composed metadata on the target for the given propertyKey
-            let subjectInfo = CreateSubjectProxyMetadata(COMPOSED_TARGET_TYPE, target, propertyKey, COMPOSED_TARGET_TYPE_LIST);
+        export type Synchronizer<T> = (...observables: Observable<any>[]) => Observable<T>;
+        export type DecoratorKeyResolver = (eventType: EventType, propertyKey: string) => string;
 
-            // Create a proxy observable that emits as soon as any source decorator emits
-            EventMetadata.SubjectInfo.AppendObservable(subjectInfo, SynchronizeOn(target, propertyKey, Observable.merge, OnEventPropertyKey, decorators));
+        export const COMPOSED_TARGET_TYPE = "$$ComposedTarget$$";
 
-            // Create a dummy completed subject
-            subjectInfo.subject = new Subject<any>();
-            subjectInfo.subject.complete();
-        };
-    }
+        /** @description Creates an observable that synchronizes on the given subject proxy decorators before emitting.
+         * @param target The target object.
+         * @param propertyKey The targeted property name of the object.
+         * @param synchronizer The function to use to synchronize on the given decorators.
+         * @param keyResolver The function to use to resolve the correct propertyKey for each decorator.
+         * @param decorators The subject proxy decorators to synchronize on.
+        **/
+        export function SynchronizeOn<T>(target: any, propertyKey: string, synchronizer: Synchronizer<T>, keyResolver: DecoratorKeyResolver, decorators: EventSourceDecorator[]): Observable<T> {
+            // Instantiate all given decorators with the approriate keys
+            decorators.forEach(decorator => decorator(target,  keyResolver(decorator.eventType, propertyKey)));
 
-    export function OnEventPropertyKey(eventType: EventType, propertyKey: string): string {
-        return `$$${propertyKey}$$On$$${eventType}`;
-    }
+            // Synchronize on the decorators using the specified synchronizer function
+            return new Observable(observer => synchronizer(...decorators.map((decorator: EventSourceDecorator) => {
+                // Look up the SubjectInfo for each decorator and subscribe
+                return EventMetadata.GetPropertySubjectMap(decorator.eventType, target.constructor).get(keyResolver(decorator.eventType, propertyKey)).observable;
+            })).subscribe(observer));
+        }
 
-    /** @PropertyDecoratorFactory */
-    export function WaitFor(...decorators: SubjectProxyDecorator[]): (target: any, propertyKey: string) => any {
-        /** @PropertyDecorator */
-        return function (target: any, propertyKey: string) {
-            // Get the property key name of the wait-for property that will be created
-            let waitForEventPropertyKey = WaitForEventPropertyKey(propertyKey);
+        /** @PropertyDecoratorFactory */
+        export function Compose(...decorators: EventSourceDecorator[]): (target: any, propertyKey: string) => any {
+            /** @PropertyDecorator */
+            return function (target: any, propertyKey: string) {
+                // Create the composed metadata on the target for the given propertyKey
+                let subjectInfo = CreateMetadata(COMPOSED_TARGET_TYPE, target, propertyKey);
 
-            // Compose all decorators to wait for on the wait-for property
-            Compose(...decorators)(target, waitForEventPropertyKey);
+                // Create a proxy observable that waits for all composed event proxies to emit each time
+                EventMetadata.SubjectInfo.AppendObservable(subjectInfo, SynchronizeOn(target, propertyKey, Observable.zip, ComposedEventPropertyKey, decorators));
+                
+                // Create a dummy completed subject
+                subjectInfo.subject = new Subject<any>();
+                subjectInfo.subject.complete();
+            };
+        }
 
-            // Get the SubjectInfo for the composed wait-for property
-            let waitForEventSubjectInfo = EventMetadata.GetPropertySubjectMap(COMPOSED_TARGET_TYPE, target.constructor).get(waitForEventPropertyKey);
+        export function ComposedEventPropertyKey(eventType: EventType, propertyKey: string): string {
+            return `$$${propertyKey}$$ComposedBy$$${eventType}`;
+        }
 
-            // Iterate over the metadata map to look for all metadata for the target property
-            EventMetadata.GetMetadataMap(target.constructor).forEach((propertySubjectMap, eventType) => propertySubjectMap.forEach((subjectInfo, foundPropertyKey) => {
-                // If this is metadata for the target property...
-                if (foundPropertyKey === propertyKey) {
-                    // Create a proxy observable that waits for all event proxies to emit once before completing
-                    EventMetadata.SubjectInfo.PrependObservable(subjectInfo, new Observable(observer => waitForEventSubjectInfo.observable.subscribe(() => {
-                        observer.next();
-                        observer.complete();
-                    })));
-                }
-            }));
-        };
-    }
+        /** @PropertyDecoratorFactory */
+        export function On(...decorators: EventSourceDecorator[]): (target: any, propertyKey: string) => any {
+            /** @PropertyDecorator */
+            return function (target: any, propertyKey: string) {
+                // Create the composed metadata on the target for the given propertyKey
+                let subjectInfo = CreateMetadata(COMPOSED_TARGET_TYPE, target, propertyKey);
 
-    export function WaitForEventPropertyKey(propertyKey: string): string {
-        return `$$${propertyKey}$$WaitingFor$$${COMPOSED_TARGET_TYPE}`;
+                // Create a proxy observable that emits as soon as any source decorator emits
+                EventMetadata.SubjectInfo.AppendObservable(subjectInfo, SynchronizeOn(target, propertyKey, Observable.merge, OnEventPropertyKey, decorators));
+
+                // Create a dummy completed subject
+                subjectInfo.subject = new Subject<any>();
+                subjectInfo.subject.complete();
+            };
+        }
+
+        export function OnEventPropertyKey(eventType: EventType, propertyKey: string): string {
+            return `$$${propertyKey}$$On$$${eventType}`;
+        }
+
+        /** @PropertyDecoratorFactory */
+        export function WaitFor(...decorators: EventSourceDecorator[]): (target: any, propertyKey: string) => any {
+            /** @PropertyDecorator */
+            return function (target: any, propertyKey: string) {
+                // Get the property key name of the wait-for property that will be created
+                let waitForEventPropertyKey = WaitForEventPropertyKey(propertyKey);
+
+                // Compose all decorators to wait for on the wait-for property
+                Compose(...decorators)(target, waitForEventPropertyKey);
+
+                // Get the SubjectInfo for the composed wait-for property
+                let waitForEventSubjectInfo = EventMetadata.GetPropertySubjectMap(COMPOSED_TARGET_TYPE, target.constructor).get(waitForEventPropertyKey);
+
+                // Iterate over the metadata map to look for all metadata for the target property
+                EventMetadata.GetMetadataMap(target.constructor).forEach((propertySubjectMap, eventType) => propertySubjectMap.forEach((subjectInfo, foundPropertyKey) => {
+                    // If this is metadata for the target property...
+                    if (foundPropertyKey === propertyKey) {
+                        // Create a proxy observable that waits for all event proxies to emit once before completing
+                        EventMetadata.SubjectInfo.PrependObservable(subjectInfo, new Observable(observer => waitForEventSubjectInfo.observable.subscribe(() => {
+                            observer.next();
+                            observer.complete();
+                        })));
+                    }
+                }));
+            };
+        }
+
+        export function WaitForEventPropertyKey(propertyKey: string): string {
+            return `$$${propertyKey}$$WaitingFor$$${COMPOSED_TARGET_TYPE}`;
+        }
     }
 }
 
@@ -197,69 +252,10 @@ export namespace EventMetadata {
     }
 }
 
-export namespace EventFacade {
-
-    /** @description
-     *  Creates an event facade function (the function that is invoked during an event) for the given event type.
-     */
-    export function Create(type: EventType): Function {
-        return function (...args: any[]) {
-            // Iterate over all class properties that have a proxy subject for this event type...
-            EventMetadata.GetPropertySubjectMap(type, this.constructor)
-                .forEach((subjectInfo: EventMetadata.SubjectInfo) => subjectInfo.subject.next(args.length > 0 ? args[0] : undefined)); // And notify each subscriber
-        };
-    }
-
-    /** @description
-     *  Creates a list of event facade functions for each of the given event types.
-     */
-    export function list(values: EventType[]): EventTypeFacadeList {
-        return values.reduce((map, type) => map.set(type, Create(type)), new Map<EventType, Function>());
-    }
-}
-
-export function CreateSubjectProxyMetadata(type: EventType, target: any, propertyKey: string, facadeList: EventTypeFacadeList): EventMetadata.SubjectInfo {
-    let facadeFn: Function = facadeList.get(type);
-
-    if (target[type] && target[type] !== facadeFn) {
-        // Make sure the target class doesn't have a custom method already defined for this event type
-        throw new Error(`@OnInit bootstrap failed. Class already has a ${type} method.`);
-    }
-    else if (!target[type] && facadeFn) {
-        // Assign the facade function for the given event type to the appropriate target class method
-        target[type] = facadeFn;
-    }
-    else {
-        console.warn(`Subject proxy facade function for event type "${type}" is undefined. Event will never be triggered.`);
-    }
-
-    // Create initial metadata
-    let metadata: EventMetadata.SubjectInfo = {
-        subject: undefined,
-        observable: undefined
-    };
-
-    // Add the propertyKey to the class' metadata
-    EventMetadata.GetOwnPropertySubjectMap(type, target.constructor).set(propertyKey, metadata);
-    return metadata;
-}
-
-/** @PropertyDecoratorMetaFactory */
-export function SubjectProxyDecoratorFactory(eventType: EventType, list: EventTypeFacadeList): SubjectProxyDecoratorFactory {
-    /** @PropertyDecoratorFactory */
-    return function (): SubjectProxyDecorator {
-        /** @PropertyDecorator */
-        return Object.assign(function (target: any, propertyKey: string) {
-            // Create the subject proxy metadata for the decorated property
-            CreateSubjectProxyMetadata(eventType, target, propertyKey, list);
-        }, { eventType });
-    };
-}
-
 /** @ClassDecorator
  *  @description Creates event proxy Subjects for all event proxy properties in the class.
  */
-export function LifecycleDecorator(constructor: any) {
+export function EventTargetDecorator(constructor: any) {
 
     function mergeInherittedMetadata(constructor: any): EventMetadata.MetadataMap {
         let metadataMap: EventMetadata.MetadataMap = EventMetadata.GetMetadataMap(constructor);
@@ -317,6 +313,6 @@ export function LifecycleDecorator(constructor: any) {
 }
 
 /** @ClassDecoratorFactory */
-export function Lifecycle() {
-    return LifecycleDecorator;
+export function EventTarget() {
+    return EventTargetDecorator;
 }

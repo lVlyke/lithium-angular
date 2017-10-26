@@ -19,6 +19,8 @@ EventSource is the main decorator used for responding to events from a component
 
 **Component**
 ```
+@Component({...})
+@EventTarget()
 class Component {
 
     @EventSource() private onButtonPress$: Observable<any>;
@@ -39,6 +41,9 @@ StateEmitter is the decorator used to automatically synchronize state of a compo
 ```
 **Component**
 ```
+@Component({...})
+@EventTarget()
+@EmitterTarget()
 class Component {
 
     @EventSource() private onButtonPress$: Observable<any>;
@@ -67,6 +72,8 @@ Helper decorators are provided that proxy all of the Angular component lifecycle
 
 **Example**
 ```
+@Component({...})
+@EventTarget()
 class Component {
 
     @OnInit() private onInit$: Observable<void>;

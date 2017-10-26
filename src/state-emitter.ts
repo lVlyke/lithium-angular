@@ -3,15 +3,22 @@ import { EmitterMetadata, EmitterType } from "./emitter-metadata";
 
 export type StateEmitterDecorator = ((target: any, propertyKey: string) => any) & { emitterType: EmitterType };
 
+export interface StateEmitterDecoratorParams {
+    emitterType?: EmitterType;
+    value?: any;
+}
+
 /** @PropertyDecoratorFactory */
-export function StateEmitter(emitterType?: EmitterType, defaultValue?: any): StateEmitterDecorator {
+export function StateEmitter(params?: StateEmitterDecoratorParams): StateEmitterDecorator {
+    params = params || {};
+
     /** @PropertyDecorator */
     return Object.assign(function (target: any, propertyKey: string) {
         // If an emitterType wasn't specified...
-        if (!emitterType) {
+        if (!params.emitterType) {
             // Try to deduce the emitterType from the propertyKey
             if (propertyKey.endsWith("$")) {
-                emitterType = propertyKey.substring(0, propertyKey.length - 1);
+                params.emitterType = propertyKey.substring(0, propertyKey.length - 1);
             }
             else {
                 throw new Error(`@StateEmitter error: emitterType could not be deduced from propertyKey "${propertyKey}" (only keys ending with '$' can be auto-deduced).`);
@@ -19,8 +26,8 @@ export function StateEmitter(emitterType?: EmitterType, defaultValue?: any): Sta
         }
 
         // Create the event source metadata for the decorated property
-        StateEmitter.CreateMetadata(emitterType, target, propertyKey, defaultValue);
-    }, { emitterType });
+        StateEmitter.CreateMetadata(params.emitterType, target, propertyKey, params.value);
+    }, { emitterType: params.emitterType });
 }
 
 export namespace StateEmitter {

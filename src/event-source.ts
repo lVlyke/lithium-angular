@@ -1,7 +1,8 @@
 import { Subject, Observable } from "rxjs";
 import { EventMetadata, EventType } from "./event-metadata";
+import { EventSourceBootstrap } from "./event-source-bootstrap";
 
-export type EventSourceDecorator = ((target: any, propertyKey: string) => any) & { eventType: EventType };
+export type EventSourceDecorator = PropertyDecorator & { eventType: EventType };
 
 /** @PropertyDecoratorFactory */
 export function EventSource(eventType?: EventType): EventSourceDecorator {
@@ -25,6 +26,10 @@ export function EventSource(eventType?: EventType): EventSourceDecorator {
 
 export namespace EventSource {
 
+    /** @ClassDecoratorFactory */
+    export function Bootstrap(): ClassDecorator {
+        return EventSourceBootstrap;
+    }
     export namespace Facade {
 
         /** @description
@@ -94,7 +99,7 @@ export namespace EventSource {
         }
 
         /** @PropertyDecoratorFactory */
-        export function Compose(...decorators: EventSourceDecorator[]): (target: any, propertyKey: string) => any {
+        export function Compose(...decorators: EventSourceDecorator[]): PropertyDecorator {
             /** @PropertyDecorator */
             return function (target: any, propertyKey: string) {
                 // Create the composed metadata on the target for the given propertyKey
@@ -113,7 +118,7 @@ export namespace EventSource {
         }
 
         /** @PropertyDecoratorFactory */
-        export function On(...decorators: EventSourceDecorator[]): (target: any, propertyKey: string) => any {
+        export function On(...decorators: EventSourceDecorator[]): PropertyDecorator {
             /** @PropertyDecorator */
             return function (target: any, propertyKey: string) {
                 // Create the composed metadata on the target for the given propertyKey
@@ -132,7 +137,7 @@ export namespace EventSource {
         }
 
         /** @PropertyDecoratorFactory */
-        export function WaitFor(...decorators: EventSourceDecorator[]): (target: any, propertyKey: string) => any {
+        export function WaitFor(...decorators: EventSourceDecorator[]): PropertyDecorator {
             /** @PropertyDecorator */
             return function (target: any, propertyKey: string) {
                 // Get the property key name of the wait-for property that will be created

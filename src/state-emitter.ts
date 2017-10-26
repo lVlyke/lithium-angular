@@ -1,7 +1,8 @@
 import { Subject, Observable } from "rxjs";
 import { EmitterMetadata, EmitterType } from "./emitter-metadata";
+import { StateEmitterBootstrap } from "./state-emitter-bootstrap";
 
-export type StateEmitterDecorator = ((target: any, propertyKey: string) => any) & { emitterType: EmitterType };
+export type StateEmitterDecorator = PropertyDecorator & { emitterType: EmitterType };
 
 export interface StateEmitterDecoratorParams {
     emitterType?: EmitterType;
@@ -31,6 +32,11 @@ export function StateEmitter(params?: StateEmitterDecoratorParams): StateEmitter
 }
 
 export namespace StateEmitter {
+
+    /** @ClassDecoratorFactory */
+    export function Bootstrap(): ClassDecorator {
+        return StateEmitterBootstrap;
+    }
 
     export namespace Facade {
 

@@ -4,7 +4,7 @@ import { EventMetadata } from "./event-metadata";
 /** @ClassDecorator
  *  @description Creates event proxy Subjects for all event proxy properties in the class.
  */
-export function EventTargetDecorator(constructor: any) {
+export function EventSourceBootstrap(constructor: any) {
 
     function mergeInherittedMetadata(constructor: any): EventMetadata.MetadataMap {
         let metadataMap: EventMetadata.MetadataMap = EventMetadata.GetMetadataMap(constructor);
@@ -56,9 +56,4 @@ export function EventTargetDecorator(constructor: any) {
         // Make the observable accessible on the class' prototype
         constructor.prototype[propertyKey] = subjectInfo.observable;
     }));
-}
-
-/** @ClassDecoratorFactory */
-export function EventTarget() {
-    return EventTargetDecorator;
 }

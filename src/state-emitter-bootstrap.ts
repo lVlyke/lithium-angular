@@ -4,7 +4,7 @@ import { EmitterMetadata } from "./emitter-metadata";
 /** @ClassDecorator
  *  @description Creates state emitter proxy subjects for all state emitter properties in the class.
  */
-export function EmitterTargetDecorator(constructor: any) {
+export function StateEmitterBootstrap(constructor: any) {
 
     function mergeInherittedMetadata(constructor: any): EmitterMetadata.MetadataMap {
         let metadataMap: EmitterMetadata.MetadataMap = EmitterMetadata.GetMetadataMap(constructor);
@@ -46,9 +46,4 @@ export function EmitterTargetDecorator(constructor: any) {
         // Make the subject accessible on the class' prototype
         constructor.prototype[subjectInfo.propertyKey] = subjectInfo.subject;
     });
-}
-
-/** @ClassDecoratorFactory */
-export function EmitterTarget() {
-    return EmitterTargetDecorator;
 }

@@ -4,14 +4,19 @@ A set of extensions that enable easily writing stateless Angular components usin
 
 ## Installation
 The project can be installed via **npm** using the following command:
-```$ npm install angular-rxjs-extensions```
+```
+$ npm install angular-rxjs-extensions
+```
 
 ## Quick Intro Guide
 ### EventSource
 EventSource is the main decorator used for responding to events from a component. EventSource creates a proxy method for intercepting events (such as UI events or component lifecycle events) executed via callback, and translates them into observables.
 
 **Template**
-```<button (click)="onButtonPress()"></button>```
+```
+<button (click)="onButtonPress()"></button>
+```
+
 **Component**
 ```
 class Component {

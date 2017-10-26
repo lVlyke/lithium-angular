@@ -7,6 +7,7 @@ export type StateEmitterDecorator = PropertyDecorator & { emitterType: EmitterTy
 export interface StateEmitterDecoratorParams {
     emitterType?: EmitterType;
     value?: any;
+    readOnly?: boolean;
 }
 
 /** @PropertyDecoratorFactory */
@@ -65,16 +66,16 @@ export namespace StateEmitter {
         }
     }
 
-    export function CreateMetadata(type: EmitterType, target: any, propertyKey: string, defaultValue?: any): EmitterMetadata.SubjectInfo {
+    export function CreateMetadata(type: EmitterType, target: any, propertyKey: string, readOnly?: boolean, defaultValue?: any): EmitterMetadata.SubjectInfo {
         if (target[type] && target[type].emitterType !== type) {
             // Make sure the target class doesn't have a custom method already defined for this event type
-            throw new Error(`@StateEmitter bootstrap failed. Class already has a custom ${type} method.`);
+            throw new Error(`@StateEmitter metadata creation failed. Class already has a custom ${type} method.`);
         }
         else if (!target[type]) {
             // Assign the facade getter and setter to the target object
             Object.defineProperty(target, type, {
-                get: Facade.CreateGetter(type),
-                set: Facade.CreateSetter(type)
+                get: Facade.CreateGetter(type, defaultValue),
+                set: readOnly ? undefined : Facade.CreateSetter(type)
             });
         }
 

@@ -46,7 +46,7 @@ export namespace EventSource {
     export function CreateMetadata(type: EventType, target: any, propertyKey: string): EventMetadata.SubjectInfo {
         if (target[type] && target[type].eventType !== type) {
             // Make sure the target class doesn't have a custom method already defined for this event type
-            throw new Error(`@EventSource bootstrap failed. Class already has a custom ${type} method.`);
+            throw new Error(`@EventSource metadata creation failed. Class already has a custom ${type} method.`);
         }
         else if (!target[type]) {
             // Assign the facade function for the given event type to the appropriate target class method

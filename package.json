@@ -1,7 +1,7 @@
 {
-  "name": "@angular-rxjs-lifecycle-decorators/core",
-  "version": "1.0.0-beta.45",
-  "description": "A set of decorators that allow Angular lifecycle events to be expressed as RxJS observables.",
+  "name": "@angular-rxjs-extensions/core",
+  "version": "1.0.0-rc.0",
+  "description": "A set of decorators that enable easily writing stateless Angular components using RxJS.",
   "main": "index.js",
   "author": "Mychal Thompson <mychal.r.thompson@gmail.com>",
   "license": "MIT",

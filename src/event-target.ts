@@ -51,9 +51,6 @@ export function EventTargetDecorator(constructor: any) {
                 // Set the observable to the subject
                 subjectInfo.observable = subjectInfo.subject.asObservable();
             }
-
-            // Add the Subject to the class' metadata
-            propertySubjectMap.set(propertyKey, subjectInfo);
         }
 
         // Make the observable accessible on the class' prototype

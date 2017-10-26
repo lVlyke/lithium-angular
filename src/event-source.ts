@@ -31,10 +31,9 @@ export namespace EventSource {
          *  Creates an event facade function (the function that is invoked during an event) for the given event type.
          */
         export function Create(type: EventType): Function {
-            return function (...args: any[]) {
-                // Iterate over all class properties that have a proxy subject for this event type...
-                EventMetadata.GetPropertySubjectMap(type, this.constructor)
-                    .forEach((subjectInfo: EventMetadata.SubjectInfo) => subjectInfo.subject.next(args.length > 0 ? args[0] : undefined)); // And notify each subscriber
+            return function (value: any) {
+                // Iterate over all class properties that have a proxy subject for this event type and notify each subscriber
+                EventMetadata.GetPropertySubjectMap(type, this.constructor).forEach(subjectInfo => subjectInfo.subject.next(value));
             };
         }
     }
@@ -80,9 +79,18 @@ export namespace EventSource {
 
             // Synchronize on the decorators using the specified synchronizer function
             return new Observable(observer => synchronizer(...decorators.map((decorator: EventSourceDecorator) => {
+                // Get the event proxy metadata
+                let proxySubjectMap = EventMetadata.GetPropertySubjectMap(decorator.eventType, target.constructor);
+
                 // Look up the SubjectInfo for each decorator and subscribe
-                return EventMetadata.GetPropertySubjectMap(decorator.eventType, target.constructor).get(keyResolver(decorator.eventType, propertyKey)).observable;
+                return proxySubjectMap.get(keyResolver(decorator.eventType, propertyKey)).observable;
             })).subscribe(observer));
+        }
+
+        export function IgnoreSubject(subjectInfo: EventMetadata.SubjectInfo) {
+            // Create a dummy completed subject
+            subjectInfo.subject = new Subject<any>();
+            subjectInfo.subject.complete();
         }
 
         /** @PropertyDecoratorFactory */
@@ -95,9 +103,8 @@ export namespace EventSource {
                 // Create a proxy observable that waits for all composed event proxies to emit each time
                 EventMetadata.SubjectInfo.AppendObservable(subjectInfo, SynchronizeOn(target, propertyKey, Observable.zip, ComposedEventPropertyKey, decorators));
                 
-                // Create a dummy completed subject
-                subjectInfo.subject = new Subject<any>();
-                subjectInfo.subject.complete();
+                // Ignore the subject
+                IgnoreSubject(subjectInfo);
             };
         }
 
@@ -115,9 +122,8 @@ export namespace EventSource {
                 // Create a proxy observable that emits as soon as any source decorator emits
                 EventMetadata.SubjectInfo.AppendObservable(subjectInfo, SynchronizeOn(target, propertyKey, Observable.merge, OnEventPropertyKey, decorators));
 
-                // Create a dummy completed subject
-                subjectInfo.subject = new Subject<any>();
-                subjectInfo.subject.complete();
+                // Ignore the subject
+                IgnoreSubject(subjectInfo);
             };
         }
 
@@ -143,10 +149,7 @@ export namespace EventSource {
                     // If this is metadata for the target property...
                     if (foundPropertyKey === propertyKey) {
                         // Create a proxy observable that waits for all event proxies to emit once before completing
-                        EventMetadata.SubjectInfo.PrependObservable(subjectInfo, new Observable(observer => waitForEventSubjectInfo.observable.subscribe(() => {
-                            observer.next();
-                            observer.complete();
-                        })));
+                        EventMetadata.SubjectInfo.PrependObservable(subjectInfo, waitForEventSubjectInfo.observable.take(1));
                     }
                 }));
             };

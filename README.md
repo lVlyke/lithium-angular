@@ -21,7 +21,7 @@ EventSource is the main decorator used for responding to events from a component
 ```
 class Component {
 
-    @EventSource() private onButtonPress$;
+    @EventSource() private onButtonPress$: Observable<any>;
 
     constructor () {
         this.onButtonPress$.subscribe(() => console.log("The button was pressed."));
@@ -49,6 +49,31 @@ class Component {
         this.onButtonPress$
             .flatMap(() => this.buttonPressCount$.take(1))
             .subscribe(buttonPressCount => this.buttonPressCount$.next(buttonPressCount + 1));
+    }
+}
+```
+
+### Lifecycle Events
+Helper decorators are provided that proxy all of the Angular component lifecycle events. These are:
+
+* OnChanges
+* OnInit
+* OnDestroy
+* DoCheck
+* AfterContentInit
+* AfterContentChecked
+* AfterViewInit
+* AfterViewChecked
+
+**Example**
+```
+class Component {
+
+    @OnInit() private onInit$: Observable<void>;
+
+    constructor () {
+
+        this.onInit$.subscribe(() => "Component is initialized.");
     }
 }
 ```

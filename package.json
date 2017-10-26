@@ -1,5 +1,5 @@
 {
-  "name": "@angular-rxjs-extensions/core",
+  "name": "angular-rxjs-extensions",
   "version": "1.0.0-rc.0",
   "description": "A set of decorators that enable easily writing stateless Angular components using RxJS.",
   "main": "index.js",

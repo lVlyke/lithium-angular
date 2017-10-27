@@ -9,6 +9,23 @@ $ npm install angular-rxjs-extensions
 ```
 
 ## Quick Intro Guide
+### Bootstrapping
+Bootstrapping is required on the target class to enable event sources and state emitters for each instance. This is done via the Reactive class decorator.
+
+**Example**
+```
+@Component({...})
+@Reactive()
+class Component {
+
+    @OnInit() private onInit$: Observable<void>;
+
+    constructor () {
+        this.onInit$.subscribe(() => "Hello world.");
+    }
+}
+```
+
 ### EventSource
 EventSource is the main decorator used for responding to events from a component. EventSource creates a proxy method for intercepting events (such as UI events or component lifecycle events) executed via callback, and translates them into observables.
 
@@ -78,8 +95,10 @@ class Component {
     @OnInit() private onInit$: Observable<void>;
 
     constructor () {
-
         this.onInit$.subscribe(() => "Component is initialized.");
     }
 }
 ```
+
+## Other information
+* [Ionic extensions](https://github.com/lVlyke/angular-rxjs-extensions-ionic) for angular-rxjs-extensions.

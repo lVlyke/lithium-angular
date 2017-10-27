@@ -32,4 +32,33 @@ export namespace EmitterMetadata {
     export function SetMetadataMap(target: Object, map: MetadataMap) {
         Metadata.SetMetadata<MetadataMap>(EmitterMapSymbol, target, map);
     }
+
+    /** @description Copy all metadata from the source map to the target map.
+     *  Note: This mutates the target map.
+     **/
+    export function CopyMetadata(target: MetadataMap, source: MetadataMap, overwrite?: boolean): MetadataMap {
+        // Iterate over all source metadata properties...
+        source.forEach((subjectInfo, eventType) => {
+            // And add them to this class' metadata map if not already defined
+            if (overwrite || !target.has(eventType)) {
+                target.set(eventType, Object.assign({}, subjectInfo));
+            }
+        });
+
+        return target;
+    }
+
+    /** @description Merge own and inheritted metadata into a single map.
+     *  Note: This mutates the object's metadata.
+     **/
+    export function CopyInherittedMetadata(object: any): MetadataMap {
+        if (object) {
+            let metadataMap: MetadataMap = GetMetadataMap(object);
+            let inherittedMap: MetadataMap = CopyInherittedMetadata(Object.getPrototypeOf(object));
+
+            return CopyMetadata(metadataMap, inherittedMap);
+        }
+
+        return new Map();
+    }
 }

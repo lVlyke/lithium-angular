@@ -25,7 +25,11 @@ export namespace Metadata {
             .reduce((map, key) => map.set(key, Reflect.getMetadata(key, target)), new Map());
     }
 
-    export function IsOwnMetadata(symbol: symbol | string, target: Object): boolean {
+    export function HasMetadata(symbol: symbol | string, target: Object): boolean {
+        return Reflect.hasMetadata(symbol, target);
+    }
+
+    export function HasOwnMetadata(symbol: symbol | string, target: Object): boolean {
         return Reflect.hasOwnMetadata(symbol, target);
     }
 

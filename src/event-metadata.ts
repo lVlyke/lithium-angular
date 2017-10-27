@@ -7,39 +7,6 @@ export namespace EventMetadata {
 
     export interface SubjectInfo {
         subject: Subject<any>;
-        observable: Observable<any>;
-    }
-
-    export namespace SubjectInfo {
-
-        /** @description Appends a new observable to the end of the given SubjectInfo's observable chain.
-         *               Note: This changes the SubjectInfo's observable reference.
-        */
-        export function AppendObservable(subjectInfo: SubjectInfo, observable: Observable<any>): SubjectInfo {
-            if (subjectInfo.observable) {
-                subjectInfo.observable = subjectInfo.observable.flatMap(() => observable);
-            }
-            else {
-                subjectInfo.observable = observable;
-            }
-
-            return subjectInfo;
-        }
-
-        /** @description Appends a new observable to the beginning of the given SubjectInfo's observable chain.
-         *               Note: This changes the SubjectInfo's observable reference.
-        */
-        export function PrependObservable(subjectInfo: SubjectInfo, observable: Observable<any>): SubjectInfo {
-            if (subjectInfo.observable) {
-                let nextObservable = subjectInfo.observable;
-                subjectInfo.observable = observable.flatMap(() => nextObservable);
-            }
-            else {
-                subjectInfo.observable = observable;
-            }
-
-            return subjectInfo;
-        }
     }
 
     export type PropertySubjectMap = Map<string, SubjectInfo>;
@@ -93,5 +60,46 @@ export namespace EventMetadata {
 
     export function SetMetadataMap(target: Object, map: MetadataMap) {
         Metadata.SetMetadata<MetadataMap>(EventMapSymbol, target, map);
+    }
+
+    /** @description Copy all metadata from the source map to the target map.
+     *  Note: This mutates the target map.
+     **/
+    export function CopyMetadata(target: MetadataMap, source: MetadataMap, overwrite?: boolean): MetadataMap {
+        // Iterate over all source metadata properties...
+        source.forEach((propertySubjectMap, eventType) => propertySubjectMap.forEach((value, propertyKey) => {
+            let targetPropertySubjectMap: PropertySubjectMap;
+
+            // Get the property subject map (or create it if it doesn't exist for this eventType)
+            if (target.has(eventType)) {
+                targetPropertySubjectMap = target.get(eventType);
+            }
+            else {
+                targetPropertySubjectMap = new Map();
+                target.set(eventType, targetPropertySubjectMap);
+            }
+
+            // And add them to this class' metadata map if not already defined
+            if (overwrite || !targetPropertySubjectMap.has(propertyKey)) {
+                targetPropertySubjectMap.set(propertyKey, Object.assign({}, value));
+            }
+        }));
+
+        return target;
+    }
+
+    /** @description Merge own and inheritted metadata into a single map.
+     *  Note: This mutates the object's metadata.
+     **/
+    export function CopyInherittedMetadata(object: any): MetadataMap {
+        if (object) {
+            let metadataMap: MetadataMap = GetMetadataMap(object);
+            let inherittedMap: MetadataMap = CopyInherittedMetadata(Object.getPrototypeOf(object));
+
+            // Merge own and inheritted metadata into a single map (note: this mutates object's metadata)
+            return CopyMetadata(metadataMap, inherittedMap);
+        }
+
+        return new Map();
     }
 }

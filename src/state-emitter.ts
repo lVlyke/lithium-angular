@@ -1,6 +1,5 @@
-import { Subject, Observable } from "rxjs";
+import { BehaviorSubject } from "rxjs";
 import { EmitterMetadata, EmitterType } from "./emitter-metadata";
-import { StateEmitterBootstrap } from "./state-emitter-bootstrap";
 
 export type StateEmitterDecorator = PropertyDecorator & { emitterType: EmitterType };
 
@@ -28,15 +27,27 @@ export function StateEmitter(params?: StateEmitterDecoratorParams): StateEmitter
         }
 
         // Create the event source metadata for the decorated property
-        StateEmitter.CreateMetadata(params.emitterType, target, propertyKey, params.value);
+        StateEmitter.CreateMetadata(params.emitterType, target, propertyKey, params.readOnly, params.value);
     }, { emitterType: params.emitterType });
 }
 
 export namespace StateEmitter {
 
-    /** @ClassDecoratorFactory */
-    export function Bootstrap(): ClassDecorator {
-        return StateEmitterBootstrap;
+    export function Bootstrap(targetInstance: any) {
+        // Copy all emitter metadata from the constructor to the target instance
+        let metadataMap = EmitterMetadata.CopyMetadata(EmitterMetadata.GetMetadataMap(targetInstance), EmitterMetadata.CopyInherittedMetadata(targetInstance.constructor), true);
+    
+        // Iterate over each of the target properties for each emitter type used in this class
+        metadataMap.forEach((subjectInfo, emitterType) => {
+            // If the subject hasn't been created for this property yet...
+            if (!subjectInfo.subject) {
+                // Create a new BehaviorSubject with the default value
+                subjectInfo.subject = new BehaviorSubject<any>(subjectInfo.defaultValue);
+            }
+    
+            // Make the subject accessible to the target instance
+            targetInstance[subjectInfo.propertyKey] = subjectInfo.subject;
+        });
     }
 
     export namespace Facade {
@@ -44,7 +55,7 @@ export namespace StateEmitter {
         export function CreateSetter(type: EmitterType): (value: any) => void {
             return function (value: any) {
                 // Notify the subject of the new value
-                EmitterMetadata.GetMetadataMap(this.constructor).get(type).subject.next(value);
+                EmitterMetadata.GetMetadataMap(this).get(type).subject.next(value);
             };
         }
 
@@ -56,7 +67,7 @@ export namespace StateEmitter {
                 // Create a subscription to subject changes if not subscribed
                 if (!subscription) {
                     // Update when a new value is emitted
-                    let subjectInfo: EmitterMetadata.SubjectInfo = EmitterMetadata.GetMetadataMap(this.constructor).get(type);
+                    let subjectInfo: EmitterMetadata.SubjectInfo = EmitterMetadata.GetMetadataMap(this).get(type);
                     subscription = subjectInfo.subject.subscribe((value: any) => lastValue = value);
                 }
 

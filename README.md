@@ -10,7 +10,7 @@ $ npm install angular-rxjs-extensions
 
 ## Quick Intro Guide
 ### Bootstrapping
-Bootstrapping is required on the target class to enable event sources and state emitters for each instance. This is done via the Reactive class decorator.
+Bootstrapping is required on the target class to enable event sources and state emitters for each instance. This is done via the ```Reactive``` class decorator.
 
 **Example**
 ```
@@ -27,7 +27,7 @@ class Component {
 ```
 
 ### EventSource
-EventSource is the main decorator used for responding to events from a component. EventSource creates a proxy method for intercepting events (such as UI events or component lifecycle events) executed via callback, and translates them into observables.
+```EventSource``` is the main decorator used for responding to events from a component. ```EventSource``` creates a proxy method for intercepting events (such as UI events or component lifecycle events) executed via callback, and translates them into observables.
 
 **Template**
 ```
@@ -49,7 +49,7 @@ class Component {
 ```
 
 ### StateEmitter
-StateEmitter is the decorator used to automatically synchronize state of a component, allowing for reactive communication to and from the UI via subjects.
+```StateEmitter``` is the decorator used to automatically synchronize state of a component, allowing for reactive communication to and from the UI via subjects.
 
 **Template**
 ```

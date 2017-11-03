@@ -5,10 +5,26 @@ export type EmitterType = string;
 
 export namespace EmitterMetadata {
 
+    export type ProxyMode = keyof {
+        None,
+        From,
+        Alias
+    };
+
+    export namespace ProxyMode {
+
+        export const None: ProxyMode = "None";
+        export const From: ProxyMode = "From";
+        export const Alias: ProxyMode = "Alias";
+    }
+
     export interface SubjectInfo {
         propertyKey: string;
         subject: Subject<any>;
         defaultValue?: any;
+        proxyMode?: ProxyMode;
+        proxyPath?: string;
+        readOnly?: boolean;
     }
 
     export type MetadataMap = Map<EmitterType, SubjectInfo>;

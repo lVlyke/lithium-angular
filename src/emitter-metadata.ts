@@ -75,6 +75,7 @@ export namespace EmitterMetadata {
     }
 
     /** @description Copy all metadata from the source map to the target map.
+     * 
      *  Note: This mutates the target map.
      **/
     export function CopyMetadata(target: MetadataMap, source: MetadataMap, overwrite?: boolean): MetadataMap {
@@ -90,6 +91,7 @@ export namespace EmitterMetadata {
     }
 
     /** @description Merge own and inheritted metadata into a single map.
+     * 
      *  Note: This mutates the object's metadata.
      **/
     export function CopyInherittedMetadata(object: any): MetadataMap {

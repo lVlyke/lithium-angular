@@ -87,8 +87,13 @@ export namespace StateEmitter {
                     subjectInfo.observable.next(value);
                 }
                 else {
-                    // Update the dynamic proxy value
-                    ObservableUtil.UpdateDynamicPropertyPathValue(this, subjectInfo.proxyPath, value, subjectInfo.proxyType);
+                    try {
+                        // Update the dynamic proxy value
+                        ObservableUtil.UpdateDynamicPropertyPathValue(this, subjectInfo.proxyPath, value, subjectInfo.proxyType);
+                    }
+                    catch (e) {
+                        console.error(`Unable to set value for proxy dynamic StateEmitter "${this.constructor.name}.${type}" - Property path "${subjectInfo.proxyPath}" does not contain a Subject.`);
+                    }
                 }
             };
         }
@@ -112,6 +117,25 @@ export namespace StateEmitter {
     }
 
     export function Bootstrap(targetInstance: any) {
+
+        function DefineProxySubscribableGetter(subjectInfo: EmitterMetadata.SubjectInfo, alwaysResolvePath?: boolean, onResolve?: (proxySubscribable: Subscribable<any>) => Subscribable<any> | void) {
+            let subscribable: Subscribable<any>;
+
+            // Create a getter that resolves the observable from the target proxy path
+            Object.defineProperty(subjectInfo, "observable", { get: (): Subscribable<any> => {
+                if (alwaysResolvePath || !subscribable) {
+                    // Get the proxy subscribable
+                    subscribable = ObservableUtil.CreateFromPropertyPath(targetInstance, subjectInfo.proxyPath);
+
+                    if (onResolve) {
+                        subscribable = onResolve(subscribable) || subscribable;
+                    }
+                }
+
+                return subscribable;
+            }});
+        }
+
         // Copy all emitter metadata from the constructor to the target instance
         let metadataMap = EmitterMetadata.CopyMetadata(EmitterMetadata.GetMetadataMap(targetInstance), EmitterMetadata.CopyInherittedMetadata(targetInstance.constructor), true);
     
@@ -121,8 +145,7 @@ export namespace StateEmitter {
             switch (subjectInfo.proxyMode) {
                 // Aliased emitters simply pass directly through to their source value
                 case EmitterMetadata.ProxyMode.Alias: {
-                    // Create a getter that resolves the subscribable from the target proxy path
-                    Object.defineProperty(subjectInfo, "observable", { get: () => ObservableUtil.CreateFromPropertyPath(targetInstance, subjectInfo.proxyPath) });
+                    DefineProxySubscribableGetter(subjectInfo, true);
                     break;
                 }
 
@@ -133,18 +156,12 @@ export namespace StateEmitter {
                     let subscription;
 
                     // Create a getter that returns the new subject
-                    Object.defineProperty(subjectInfo, "observable", { get: () => {
-                        // If the subscription hasn't been created yet...
-                        if (!subscription) {
-                            // Resolve the subscribable from the target proxy path
-                            let fromSubscribable: Subscribable<any> = ObservableUtil.CreateFromPropertyPath(targetInstance, subjectInfo.proxyPath);
-
-                            // Create a subscription that updates the new subject when the source value emits
-                            subscription = fromSubscribable.subscribe(value => subject.next(value));
-                        }
+                    DefineProxySubscribableGetter(subjectInfo, false, (proxySubscribable: Subscribable<any>) => {
+                        // Create a subscription that updates the new subject when the source value emits
+                        subscription = proxySubscribable.subscribe(value => subject.next(value));
 
                         return subject;
-                    }});
+                    });
                     break;
                 }
 

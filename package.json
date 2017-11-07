@@ -1,6 +1,6 @@
 {
   "name": "angular-rxjs-extensions",
-  "version": "1.0.0-rc.5-alpha.13",
+  "version": "1.0.0-rc.5-alpha.47",
   "description": "A set of extensions that enable easily writing stateless Angular components using RxJS.",
   "main": "index.js",
   "author": "Mychal Thompson <mychal.r.thompson@gmail.com>",

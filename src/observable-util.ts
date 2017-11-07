@@ -26,53 +26,35 @@ export namespace ObservableUtil {
      *  Note: Any property in the path that isn't an Observable or Subject will implicitly be converted to an Observable.
      */
     export function CreateFromPropertyPath(target: any, path: string): Observable<any> {
-        // Get all property keys in the path
-        let propertyKeys: string[] = path.split(".");
-        let observable: Observable<any>;
+        let lastPropertyKey: string = "target";
 
         /** 
          * @param target The target object.
-         * @param index The index of the property key to use.
-         * @description Resolves a property in the path by index on the target object. */
-        function resolveProperty(target: any, index: number = 0): Observable<any> {
+         * @param propertyKeys The list of property keys in the path.
+         * @description
+         * Creates an observable chain from the property path and returns the value of the last property in the path.
+         **/
+        return (function resolveProperty(target: any, propertyKeys: string[]): Observable<any> {
             if (!target) {
-                // Try to resolve the property key from the index
-                let targetName = index > 0 ? propertyKeys[index - 1] : "target";
-                throw new Error(`@StateEmitter - Failed to deduce dynamic path "${path}": ${targetName} is undefined.`);
+                throw new Error(`@StateEmitter - Failed to deduce dynamic path "${path}": ${lastPropertyKey} is undefined.`);
             }
 
-            // Get the value of the target property
-            let curProperty = target[propertyKeys[index]];
-
-            // Create an observable for the property value
-            let curObservable = CreateFromProperty(curProperty).flatMap((target) => {
-                // If this is the last property in the path...
-                if (index === propertyKeys.length - 1) {
-                    // Return the resolved property value
+            // Get the property key
+            let curPropertyKey = lastPropertyKey = propertyKeys[0];
+            
+            // Create an observable from the properties value
+            return CreateFromProperty(target[curPropertyKey]).flatMap((target) => {
+                // If it's the last property in the path...
+                if (propertyKeys.length === 1) {
+                    // Return the value
                     return Observable.of(target);
                 }
                 else {
-                    // Return the next property in the path
-                    return resolveProperty(target, index + 1);
+                    // Otherwise, return the next property in the path
+                    return resolveProperty(target, propertyKeys.slice(1));
                 }
             });
-
-            // If this is the first property in the path...
-            if (!observable) {
-                // Start the observable chain
-                observable = curObservable;
-            }
-            else {
-                // Append this observable to the end of the chain
-                observable = observable.flatMap(() => curObservable);
-            }
-            
-            // Return the obverable for the current property value
-            return curObservable;
-        }
-
-        resolveProperty(target);
-        return observable;
+        })(target, path.split("."));
     }
 
     /**
@@ -119,7 +101,7 @@ export namespace ObservableUtil {
 
     export function ResolveStaticPropertyPath<T>(target: any, path: string): Subject<T> {
         // Statically access each property and get the terminating subject
-        return path.split(".").reduce((o, i) => o[i], target);
+        return path.split(".").reduce((target, key) => target[key], target);
     }
 
     /**

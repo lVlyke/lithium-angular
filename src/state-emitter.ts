@@ -1,12 +1,14 @@
-import { BehaviorSubject, Observable } from "rxjs";
+import { BehaviorSubject, Observable, Subject } from "rxjs";
 import { EmitterMetadata, EmitterType } from "./emitter-metadata";
+import { Subscribable } from "rxjs/Observable";
+import { ObservableUtil } from "./observable-util";
 
 export type StateEmitterDecorator = PropertyDecorator & { emitterType: EmitterType };
 
 /** @PropertyDecoratorFactory */
 export function StateEmitter(params?: StateEmitter.DecoratorParams): StateEmitterDecorator {
     params = params || {};
-
+    
     /** @PropertyDecorator */
     return Object.assign(function (target: any, propertyKey: string) {
         // If an emitterType wasn't specified...
@@ -21,59 +23,54 @@ export function StateEmitter(params?: StateEmitter.DecoratorParams): StateEmitte
         }
 
         // Create the event source metadata for the decorated property
-        StateEmitter.CreateMetadata(target, params.propertyName, {
-            propertyKey: propertyKey,
-            defaultValue: params.value,
-            proxyPath: params.proxyPath,
-            proxyMode: params.proxyMode,
-            readOnly: params.readOnly,
-            subject: undefined
-        });
+        StateEmitter.CreateMetadata(target, params.propertyName, Object.assign({ propertyKey, observable: undefined }, params));
     }, { emitterType: params.propertyName });
 }
 
 export namespace StateEmitter {
 
-    export interface DecoratorParams {
+    export interface DecoratorParams extends EmitterMetadata.SubjectInfo.CoreDetails {
         propertyName?: EmitterType;
-        value?: any;
-        readOnly?: boolean;
-        proxyPath?: string;
-        proxyMode?: EmitterMetadata.ProxyMode
     }
 
     export interface AliasDecoratorParams {
-        proxyPath: string;
+        path: string;
         propertyName?: EmitterType;
+        subjectType?: EmitterMetadata.SubjectInfo.ProxyType;
     }
 
     export interface FromDecoratorParams {
-        proxyPath: string;
+        path: string;
         propertyName?: EmitterType;
+        subjectType?: EmitterMetadata.SubjectInfo.ProxyType;
     }
 
     /** @PropertyDecoratorFactory */
     export function Alias(params: AliasDecoratorParams | string): PropertyDecorator {
-        let $params = (params instanceof Object ? params : { proxyPath: params }) as AliasDecoratorParams;
+        let $params = (params instanceof Object ? params : { path: params }) as AliasDecoratorParams;
 
+        /** @PropertyDecorator */
         return function (target: any, propertyKey: string) {
             StateEmitter({
                 propertyName: $params.propertyName,
                 proxyMode: EmitterMetadata.ProxyMode.Alias,
-                proxyPath: $params.proxyPath
+                proxyPath: $params.path,
+                proxyType: $params.subjectType
             })(target, propertyKey);
         };
     }
 
     /** @PropertyDecoratorFactory */
     export function From(params: FromDecoratorParams | string): PropertyDecorator {
-        let $params = (params instanceof Object ? params : { proxyPath: params }) as FromDecoratorParams;
+        let $params = (params instanceof Object ? params : { path: params }) as FromDecoratorParams;
 
+        /** @PropertyDecorator */
         return function (target: any, propertyKey: string) {
             StateEmitter({
                 propertyName: $params.propertyName,
                 proxyMode: EmitterMetadata.ProxyMode.From,
-                proxyPath: $params.proxyPath
+                proxyPath: $params.path,
+                proxyType: $params.subjectType
             })(target, propertyKey);
         };
     }
@@ -82,13 +79,22 @@ export namespace StateEmitter {
 
         export function CreateSetter(type: EmitterType): (value: any) => void {
             return function (value: any) {
-                // Notify the subject of the new value
-                EmitterMetadata.GetMetadataMap(this).get(type).subject.next(value);
+                let subjectInfo = EmitterMetadata.GetMetadataMap(this).get(type);
+
+                // If this is a static subject...
+                if (EmitterMetadata.SubjectInfo.IsStaticAlias(subjectInfo)) {
+                    // Notify the subject of the new value
+                    subjectInfo.observable.next(value);
+                }
+                else {
+                    // Update the dynamic proxy value
+                    ObservableUtil.UpdateDynamicPropertyPathValue(this, subjectInfo.proxyPath, value, subjectInfo.proxyType);
+                }
             };
         }
 
-        export function CreateGetter(type: EmitterType, defaultValue?: any): () => any {
-            let lastValue: any = defaultValue;
+        export function CreateGetter(type: EmitterType, initialValue?: any): () => any {
+            let lastValue: any = initialValue;
             let subscription: any;
 
             return function (): any {
@@ -96,7 +102,7 @@ export namespace StateEmitter {
                 if (!subscription) {
                     // Update when a new value is emitted
                     let subjectInfo: EmitterMetadata.SubjectInfo = EmitterMetadata.GetMetadataMap(this).get(type);
-                    subscription = subjectInfo.subject.subscribe((value: any) => lastValue = value);
+                    subscription = subjectInfo.observable.subscribe((value: any) => lastValue = value);
                 }
 
                 // Return the last value that was emitted
@@ -105,50 +111,59 @@ export namespace StateEmitter {
         }
     }
 
-    export function _DeducePath(target: any, path: string): any {
-        return path.split(".").reduce((o, i) => o[i], target);
-    }
-
     export function Bootstrap(targetInstance: any) {
         // Copy all emitter metadata from the constructor to the target instance
         let metadataMap = EmitterMetadata.CopyMetadata(EmitterMetadata.GetMetadataMap(targetInstance), EmitterMetadata.CopyInherittedMetadata(targetInstance.constructor), true);
     
         // Iterate over each of the target properties for each emitter type used in this class
         metadataMap.forEach((subjectInfo, emitterType) => {
+            // Check the proxy mode for this subject
             switch (subjectInfo.proxyMode) {
+                // Aliased emitters simply pass directly through to their source value
                 case EmitterMetadata.ProxyMode.Alias: {
-                    Object.defineProperty(subjectInfo, "subject", { get: () => _DeducePath(targetInstance, subjectInfo.proxyPath) });
+                    // Create a getter that resolves the subscribable from the target proxy path
+                    Object.defineProperty(subjectInfo, "observable", { get: () => ObservableUtil.CreateFromPropertyPath(targetInstance, subjectInfo.proxyPath) });
                     break;
                 }
+
+                // From emitters create a separate copy of the source value and subscribes to all emissions from the source
                 case EmitterMetadata.ProxyMode.From: {
-                    let subject = new BehaviorSubject<any>(subjectInfo.defaultValue);
+                    // Create a new copy subject
+                    let subject = new BehaviorSubject<any>(subjectInfo.initialValue);
                     let subscription;
 
-                    Object.defineProperty(subjectInfo, "subject", { get: () => {
+                    // Create a getter that returns the new subject
+                    Object.defineProperty(subjectInfo, "observable", { get: () => {
+                        // If the subscription hasn't been created yet...
                         if (!subscription) {
-                            let fromObservable: Observable<any> = _DeducePath(targetInstance, subjectInfo.proxyPath);
-                            fromObservable.subscribe(value => subject.next(value));
+                            // Resolve the subscribable from the target proxy path
+                            let fromSubscribable: Subscribable<any> = ObservableUtil.CreateFromPropertyPath(targetInstance, subjectInfo.proxyPath);
+
+                            // Create a subscription that updates the new subject when the source value emits
+                            subscription = fromSubscribable.subscribe(value => subject.next(value));
                         }
+
                         return subject;
                     }});
                     break;
                 }
+
                 case EmitterMetadata.ProxyMode.None:
                 default: {
                     // Create a new BehaviorSubject with the default value
-                    subjectInfo.subject = new BehaviorSubject<any>(subjectInfo.defaultValue);
+                    subjectInfo.observable = new BehaviorSubject<any>(subjectInfo.initialValue);
                     break;
                 }
             }
 
-            // Assign the facade getter and setter to the target instance
+            // Assign the facade getter and setter to the target instance for this EmitterType
             Object.defineProperty(targetInstance, emitterType, {
-                get: Facade.CreateGetter(emitterType, subjectInfo.defaultValue),
+                get: Facade.CreateGetter(emitterType, subjectInfo.initialValue),
                 set: subjectInfo.readOnly ? undefined : Facade.CreateSetter(emitterType)
             });
     
-            // Make the subject accessible to the target instance via a lazy loaded getter
-            Object.defineProperty(targetInstance, subjectInfo.propertyKey, { get: () => subjectInfo.subject });
+            // Create a getter property on the targetInstance that lazily retreives the observable
+            Object.defineProperty(targetInstance, subjectInfo.propertyKey, { get: () => subjectInfo.observable });
         });
     }
 

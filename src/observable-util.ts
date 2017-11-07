@@ -1,0 +1,180 @@
+import { Observable, Subject } from "rxjs";
+import { Subscribable } from "rxjs/Observable";
+
+export namespace ObservableUtil {
+
+    /** @description
+     *  Creates an observable from the given property.
+     */
+    export function CreateFromProperty<T>(property: T | Subject<T> | Observable<T>): Observable<T> {
+        if (property instanceof Subject) {
+            return property.asObservable();
+        }
+        else if (property instanceof Observable) {
+            return property;
+        }
+        else {
+            return Observable.of<T>(property);
+        }
+    }
+
+    /** 
+     *  @param target The target object.
+     *  @param path The target property path.
+     *  @description Creates an observable chain from the given property path.
+     * 
+     *  Note: Any property in the path that isn't an Observable or Subject will implicitly be converted to an Observable.
+     */
+    export function CreateFromPropertyPath(target: any, path: string): Observable<any> {
+        // Get all property keys in the path
+        let propertyKeys: string[] = path.split(".");
+        let observable: Observable<any>;
+
+        /** 
+         * @param target The target object.
+         * @param index The index of the property key to use.
+         * @description Resolves a property in the path by index on the target object. */
+        function resolveProperty(target: any, index: number = 0): Observable<any> {
+            if (!target) {
+                // Try to resolve the property key from the index
+                let targetName = index > 0 ? propertyKeys[index - 1] : "target";
+                throw new Error(`@StateEmitter - Failed to deduce dynamic path "${path}": ${targetName} is undefined.`);
+            }
+
+            // Get the value of the target property
+            let curProperty = target[propertyKeys[index]];
+
+            // Create an observable for the property value
+            let curObservable = CreateFromProperty(curProperty).flatMap((target) => {
+                // If this is the last property in the path...
+                if (index === propertyKeys.length - 1) {
+                    // Return the resolved property value
+                    return Observable.of(target);
+                }
+                else {
+                    // Return the next property in the path
+                    return resolveProperty(target, index + 1);
+                }
+            });
+
+            // If this is the first property in the path...
+            if (!observable) {
+                // Start the observable chain
+                observable = curObservable;
+            }
+            else {
+                // Append this observable to the end of the chain
+                observable = observable.flatMap(() => curObservable);
+            }
+            
+            // Return the obverable for the current property value
+            return curObservable;
+        }
+
+        resolveProperty(target);
+        return observable;
+    }
+
+    /**
+     * @param target The target object.
+     * @param path The target property path.
+     * @description Checks if the given property path is dynamic.
+     * A path is considered dynamic or non-static if:
+     * 
+     * - It contains any Observables, or Subjects that are not the terminal property in the path.
+     * - It does not terminate with a Subject.
+     */
+    export function IsDynamicPropertyPath(target: any, path: string): boolean {
+        // Get all property keys in the path
+        let propertyKeys = path.split(".");
+
+        return propertyKeys.every((propertyKey, index) => {
+            // Get the property value
+            target = target[propertyKey];
+
+            // If this is the last property in the path...
+            if (index === propertyKeys.length - 1) {
+                // The property must be a Subject to be emittable
+                return !(target instanceof Subject);
+            }
+            else {
+                // The property must not contain any Observables or non-terminal Subjects to be emittable
+                return target instanceof Observable || target instanceof Subject;
+            }
+        });
+    }
+
+    // NOTE: Static property paths will result in a Subject (two-way binding), while dynamic property paths will result in an Observable (one-way binding)
+    export function ResolvePropertyPath(target: any, path: string): Subscribable<any> {
+        // If the path is dynamic...
+        if (IsDynamicPropertyPath(target, path)) {
+            // Create an observable chain from the property path
+            return CreateFromPropertyPath(target, path);
+        }
+        else {
+            // Resolve the subject from the path
+            return ResolveStaticPropertyPath(target, path);
+        }
+    }
+
+    export function ResolveStaticPropertyPath<T>(target: any, path: string): Subject<T> {
+        // Statically access each property and get the terminating subject
+        return path.split(".").reduce((o, i) => o[i], target);
+    }
+
+    /**
+     * @param target The target object.
+     * @param path The target property path.
+     * @param value The new value of the property.
+     * @param wrapperType The class type to wrap the emitted value with.
+     * @description Traverses the property path for a Subject, and appropriately wraps and emits the given value from the Subject.
+     */
+    export function UpdateDynamicPropertyPathValue<T>(target: any, path: string, value: T, wrapperType?: new (value: T) => any) {
+        // Get all property keys in the path
+        let propertyKeys = path.split(".");
+        let subject: Subject<any>;
+        let subjectIndex: number;
+
+        // Iterate over each property key to find a Subject
+        propertyKeys.every((propertyKey, index) => {
+            // If the current property is a Subject...
+            if (target[propertyKey] instanceof Subject) {
+                // Record this subject
+                subject = target[propertyKey];
+                subjectIndex = index;
+
+                // Stop searching for a subject
+                return false;
+            }
+
+            return true;
+        });
+
+        // If there is no Subject in the path, throw an error
+        if (!subject) {
+            throw new Error(`Failed to update value for dynamic property ${path} - Path does not contain a Subject.`);
+        }
+
+        // Resolve the subject value
+        let subjectValue = propertyKeys
+            // Ignore all static property keys that come before the target subject
+            .slice(subjectIndex + 1)
+            // Iterate over the property path in reverse and build up the subject value
+            .reduceRight((value, propertyKey, index) => {
+                // If this is the final object in the path and a wrapper type was specified...
+                if (index === 0 && wrapperType) {
+                    // Wrap the value in the wrapperType
+                    return new wrapperType(value);
+                }
+                else {
+                    // Otherwise, simply wrap the value with the new key
+                    let newValue = {};
+                    newValue[propertyKey] = value;
+                    return newValue;
+                }
+            }, value);
+
+        // Emit from the target subject with the resolve subject value
+        subject.next(subjectValue);
+    }
+}

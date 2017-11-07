@@ -18,13 +18,38 @@ export namespace EmitterMetadata {
         export const Alias: ProxyMode = "Alias";
     }
 
-    export interface SubjectInfo {
+    export interface SubjectInfo extends SubjectInfo.CoreDetails {
         propertyKey: string;
-        subject: Subject<any>;
-        defaultValue?: any;
-        proxyMode?: ProxyMode;
-        proxyPath?: string;
-        readOnly?: boolean;
+        observable: Subject<any> | Observable<any>;
+    }
+
+    export namespace SubjectInfo {
+
+        export interface CoreDetails {
+            initialValue?: any;
+            readOnly?: boolean;
+            proxyMode?: ProxyMode;
+            proxyPath?: string;
+            proxyType?: SubjectInfo.ProxyType;
+        }
+
+        export type ProxyType = new (value: any) => any;
+
+        export interface WithDynamicAlias extends SubjectInfo {
+            observable: Observable<any>;
+        }
+
+        export interface WithStaticAlias extends SubjectInfo {
+            observable: Subject<any>;
+        }
+
+        export function IsDynamicAlias(subjectInfo: SubjectInfo): subjectInfo is SubjectInfo.WithDynamicAlias {
+            return !IsStaticAlias(subjectInfo);
+        }
+
+        export function IsStaticAlias(subjectInfo: SubjectInfo): subjectInfo is SubjectInfo.WithStaticAlias {
+            return (subjectInfo.observable instanceof Subject);
+        }
     }
 
     export type MetadataMap = Map<EmitterType, SubjectInfo>;

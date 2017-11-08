@@ -70,7 +70,7 @@ export namespace ObservableUtil {
         // Get all property keys in the path
         let propertyKeys = path.split(".");
 
-        return propertyKeys.every((propertyKey, index) => {
+        return propertyKeys.some((propertyKey, index) => {
             // Get the property value
             target = target[propertyKey];
 
@@ -108,10 +108,10 @@ export namespace ObservableUtil {
      * @param target The target object.
      * @param path The target property path.
      * @param value The new value of the property.
-     * @param wrapperType The class type to wrap the emitted value with.
+     * @param mergeValue Whether or not the newly emitted value should be merged into the last emitted value.
      * @description Traverses the property path for a Subject, and appropriately wraps and emits the given value from the Subject.
      */
-    export function UpdateDynamicPropertyPathValue<T>(target: any, path: string, value: T, wrapperType?: new (value: T) => any) {
+    export function UpdateDynamicPropertyPathValue<T>(target: any, path: string, value: T, mergeValue?: boolean) {
         // Get all property keys in the path
         let propertyKeys = path.split(".");
         let subject: Subject<any>;
@@ -138,25 +138,19 @@ export namespace ObservableUtil {
         }
 
         // Resolve the subject value
-        let subjectValue = propertyKeys
+        let updatedSubjectValue = propertyKeys
             // Ignore all static property keys that come before the target subject
             .slice(subjectIndex + 1)
             // Iterate over the property path in reverse and build up the subject value
-            .reduceRight((value, propertyKey, index) => {
-                // If this is the final object in the path and a wrapper type was specified...
-                if (index === 0 && wrapperType) {
-                    // Wrap the value in the wrapperType
-                    return new wrapperType(value);
-                }
-                else {
-                    // Otherwise, simply wrap the value with the new key
-                    let newValue = {};
-                    newValue[propertyKey] = value;
-                    return newValue;
-                }
-            }, value);
-
-        // Emit from the target subject with the resolve subject value
-        subject.next(subjectValue);
+            .reduceRight<any>((value, propertyKey) => ({ [propertyKey]: value }), value);
+        
+        if (mergeValue) {
+            // Get the last value from the subject and emit the merged properties
+            subject.take(1).subscribe(lastValue => subject.next(Object.assign(lastValue, updatedSubjectValue)));
+        }
+        else {
+            // Emit the new value
+            subject.next(updatedSubjectValue);
+        }
     }
 }

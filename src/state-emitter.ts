@@ -36,13 +36,13 @@ export namespace StateEmitter {
     export interface AliasDecoratorParams {
         path: string;
         propertyName?: EmitterType;
-        subjectType?: EmitterMetadata.SubjectInfo.ProxyType;
+        mergeUpdates?: boolean;
     }
 
     export interface FromDecoratorParams {
         path: string;
         propertyName?: EmitterType;
-        subjectType?: EmitterMetadata.SubjectInfo.ProxyType;
+        mergeUpdates?: boolean;
     }
 
     /** @PropertyDecoratorFactory */
@@ -55,7 +55,7 @@ export namespace StateEmitter {
                 propertyName: $params.propertyName,
                 proxyMode: EmitterMetadata.ProxyMode.Alias,
                 proxyPath: $params.path,
-                proxyType: $params.subjectType
+                proxyMergeUpdates: $params.mergeUpdates
             })(target, propertyKey);
         };
     }
@@ -70,7 +70,7 @@ export namespace StateEmitter {
                 propertyName: $params.propertyName,
                 proxyMode: EmitterMetadata.ProxyMode.From,
                 proxyPath: $params.path,
-                proxyType: $params.subjectType
+                proxyMergeUpdates: $params.mergeUpdates
             })(target, propertyKey);
         };
     }
@@ -88,11 +88,15 @@ export namespace StateEmitter {
                 }
                 else {
                     try {
+                        // If value merging wasn't explicitly enabled or disabled then only enable it if the incoming value is an Object
+                        let mergeUpdates = subjectInfo.proxyMergeUpdates;
+                        mergeUpdates = (mergeUpdates !== null && mergeUpdates !== undefined) ? mergeUpdates : value instanceof Object;
+
                         // Update the dynamic proxy value
-                        ObservableUtil.UpdateDynamicPropertyPathValue(this, subjectInfo.proxyPath, value, subjectInfo.proxyType);
+                        ObservableUtil.UpdateDynamicPropertyPathValue(this, subjectInfo.proxyPath, value, mergeUpdates);
                     }
                     catch (e) {
-                        console.error(`Unable to set value for proxy dynamic StateEmitter "${this.constructor.name}.${type}" - Property path "${subjectInfo.proxyPath}" does not contain a Subject.`);
+                        console.error(`Unable to set value for proxy StateEmitter "${this.constructor.name}.${type}" with dynamic property path "${subjectInfo.proxyPath}" - Path does not contain a Subject.`);
                     }
                 }
             };
@@ -125,7 +129,7 @@ export namespace StateEmitter {
             Object.defineProperty(subjectInfo, "observable", { get: (): Subscribable<any> => {
                 if (alwaysResolvePath || !subscribable) {
                     // Get the proxy subscribable
-                    subscribable = ObservableUtil.CreateFromPropertyPath(targetInstance, subjectInfo.proxyPath);
+                    subscribable = ObservableUtil.ResolvePropertyPath(targetInstance, subjectInfo.proxyPath);
 
                     if (onResolve) {
                         subscribable = onResolve(subscribable) || subscribable;

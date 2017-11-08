@@ -30,10 +30,8 @@ export namespace EmitterMetadata {
             readOnly?: boolean;
             proxyMode?: ProxyMode;
             proxyPath?: string;
-            proxyType?: SubjectInfo.ProxyType;
+            proxyMergeUpdates?: boolean;
         }
-
-        export type ProxyType = new (value: any) => any;
 
         export interface WithDynamicAlias extends SubjectInfo {
             observable: Observable<any>;

@@ -141,7 +141,7 @@ export namespace StateEmitter {
         }
 
         // Copy all emitter metadata from the constructor to the target instance
-        let metadataMap = EmitterMetadata.CopyMetadata(EmitterMetadata.GetMetadataMap(targetInstance), EmitterMetadata.CopyInherittedMetadata(targetInstance.constructor), true);
+        let metadataMap = EmitterMetadata.CopyMetadata(EmitterMetadata.GetOwnMetadataMap(targetInstance), EmitterMetadata.CopyInherittedMetadata(targetInstance.constructor), true);
     
         // Iterate over each of the target properties for each emitter type used in this class
         metadataMap.forEach((subjectInfo, emitterType) => {

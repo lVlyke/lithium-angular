@@ -27,7 +27,7 @@ export namespace EventSource {
 
     export function Bootstrap(targetInstance: any) {
         // Copy all event metadata from the constructor to the target instance
-        let metadataMap = EventMetadata.CopyMetadata(EventMetadata.GetMetadataMap(targetInstance), EventMetadata.CopyInherittedMetadata(targetInstance.constructor), true);
+        let metadataMap = EventMetadata.CopyMetadata(EventMetadata.GetOwnMetadataMap(targetInstance), EventMetadata.CopyInherittedMetadata(targetInstance.constructor), true);
     
         // Iterate over each of the target properties for each proxied event type used in this class
         metadataMap.forEach((propertySubjectMap, eventType) => propertySubjectMap.forEach((subjectInfo, propertyKey) => {

@@ -78,7 +78,7 @@ class Component {
 
     @EventSource() private onButtonPress$: Observable<any>;
 
-    @StateEmitter({value: 0}) private buttonPressCount$: Subject<number>;
+    @StateEmitter({initialValue: 0}) private buttonPressCount$: Subject<number>;
 
     constructor () {
         this.onButtonPress$
@@ -120,7 +120,7 @@ class Component {
 }
 ```
 
-#### Static vs Dynamic Proxy Property Paths
+#### Static vs dynamic proxy property paths
 
 Proxy paths are considered either dynamic or static depending on the type of the properties within it. If a proxy path is dynamic, the resulting reference to the property will be an ```Observable```. If a path is static, the reference will be a ```Subject```.
 
@@ -163,7 +163,9 @@ class FormComponent {
 
 In the above example, the proxy path ```settingsService.settings$``` is considered static, because the last property is a ```Subject``` and the rest of the path does not contain any ```Observable```s or ```Subject```s. The proxy path ```settings$.notificationsEnabled``` is not static, because the last property is not a ```Subject```, and the first property in the path is a ```Subject```.
 
-While a property that is proxied via a dynamic property path can only be observed, the value can still be updated if there is at least one ```Subject``` in the property path. The example below illustrates two-way binding with an ```Alias``` proxy ```StateEmitter``` with a dynamic property path.
+#### Updating Subjects in dynamic proxy property paths
+
+If a dynamic property path contains a ```Subject```, it will automatically be notified of changes to the proxied property. The example below illustrates two-way binding of an aliased property with a dynamic property path containing a ```Subject```.
 
 ##### Example
 
@@ -186,7 +188,7 @@ class FormComponent {
 }
 ```
 
-When ```notificationsEnabled``` is updated via the form input, ```settingsService.settings$``` will automatically emit a new ```Settings``` object with the new value of ```notificationsEnabled```. All other property values on the ```Settings``` object will also be preserved.
+When ```notificationsEnabled``` is updated via the form input, ```settingsService.settings$``` will automatically emit a merged ```Settings``` object with the new value of ```notificationsEnabled```. All other property values on the ```Settings``` object will also be preserved.
 
 ### Types of StateEmitter Proxies
 
@@ -259,7 +261,7 @@ The ```From``` proxy type creates a separate ```Subject``` that subscribes to al
 @Reactive()
 class FormComponent {
 
-    @StateEmitter.From("sessionManager.session$.username") private username$: Observable<string>;
+    @StateEmitter.From("sessionManager.session$.username") private username$: Subject<string>;
 
     constructor (private sessionManager: SessionManager) { }
 }

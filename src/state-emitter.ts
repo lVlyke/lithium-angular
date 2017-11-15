@@ -5,26 +5,24 @@ import { ObservableUtil } from "./observable-util";
 
 export type StateEmitterDecorator = PropertyDecorator & { emitterType: EmitterType };
 
-/** @PropertyDecoratorFactory */
-export function StateEmitter(params?: StateEmitter.DecoratorParams): StateEmitterDecorator {
-    params = params || {};
-    
-    /** @PropertyDecorator */
-    return Object.assign(function (target: any, propertyKey: string) {
-        // If an emitterType wasn't specified...
-        if (!params.propertyName) {
-            // Try to deduce the emitterType from the propertyKey
-            if (propertyKey.endsWith("$")) {
-                params.propertyName = propertyKey.substring(0, propertyKey.length - 1);
-            }
-            else {
-                throw new Error(`@StateEmitter error: emitterType could not be deduced from propertyKey "${propertyKey}" (only keys ending with '$' can be auto-deduced).`);
-            }
-        }
+export function StateEmitter(): StateEmitterDecorator;
+export function StateEmitter(...propertyDecorators: PropertyDecorator[]): StateEmitterDecorator;
+export function StateEmitter(params: StateEmitter.DecoratorParams, ...propertyDecorators: PropertyDecorator[]): StateEmitterDecorator;
 
-        // Create the event source metadata for the decorated property
-        StateEmitter.CreateMetadata(target, params.propertyName, Object.assign({ propertyKey, observable: undefined }, params));
-    }, { emitterType: params.propertyName });
+/** @PropertyDecoratorFactory */
+export function StateEmitter(...args: any[]): StateEmitterDecorator {
+    let paramsArg: StateEmitter.DecoratorParams | PropertyDecorator;
+
+    if (args.length > 0) {
+        paramsArg = args[0];
+    }
+
+    if (!paramsArg || paramsArg instanceof Function) {
+        return StateEmitter.WithParams(undefined, ...args);
+    }
+    else {
+        return StateEmitter.WithParams(paramsArg, ...args.slice(1));
+    }
 }
 
 export namespace StateEmitter {
@@ -46,33 +44,55 @@ export namespace StateEmitter {
     }
 
     /** @PropertyDecoratorFactory */
-    export function Alias(params: AliasDecoratorParams | string): PropertyDecorator {
-        let $params = (params instanceof Object ? params : { path: params }) as AliasDecoratorParams;
+    export function WithParams(params?: StateEmitter.DecoratorParams, ...propertyDecorators: PropertyDecorator[]): StateEmitterDecorator {
+        params = params || {};
 
         /** @PropertyDecorator */
-        return function (target: any, propertyKey: string) {
-            StateEmitter({
-                propertyName: $params.propertyName,
-                proxyMode: EmitterMetadata.ProxyMode.Alias,
-                proxyPath: $params.path,
-                proxyMergeUpdates: $params.mergeUpdates
-            })(target, propertyKey);
-        };
+        return Object.assign(function (target: any, propertyKey: string) {
+            // If an emitterType wasn't specified...
+            if (!params.propertyName) {
+                // Try to deduce the emitterType from the propertyKey
+                if (propertyKey.endsWith("$")) {
+                    params.propertyName = propertyKey.substring(0, propertyKey.length - 1);
+                }
+                else {
+                    throw new Error(`@StateEmitter error: emitterType could not be deduced from propertyKey "${propertyKey}" (only keys ending with '$' can be auto-deduced).`);
+                }
+            }
+
+            // Apply any property decorators to the property
+            propertyDecorators.forEach(propertyDecorator => propertyDecorator(target, params.propertyName));
+
+            // Create the event source metadata for the decorated property
+            StateEmitter.CreateMetadata(target, params.propertyName, Object.assign({ propertyKey, observable: undefined }, params));
+        }, { emitterType: params.propertyName });
+    }
+
+    //# Helper Decorators
+    /////////////////////////////
+
+    /** @PropertyDecoratorFactory */
+    export function Alias(params: AliasDecoratorParams | string, ...propertyDecorators: PropertyDecorator[]): PropertyDecorator {
+        let $params = (params instanceof Object ? params : { path: params }) as AliasDecoratorParams;
+
+        return WithParams({
+            propertyName: $params.propertyName,
+            proxyMode: EmitterMetadata.ProxyMode.Alias,
+            proxyPath: $params.path,
+            proxyMergeUpdates: $params.mergeUpdates
+        }, ...propertyDecorators);
     }
 
     /** @PropertyDecoratorFactory */
-    export function From(params: FromDecoratorParams | string): PropertyDecorator {
+    export function From(params: FromDecoratorParams | string, ...propertyDecorators: PropertyDecorator[]): PropertyDecorator {
         let $params = (params instanceof Object ? params : { path: params }) as FromDecoratorParams;
 
-        /** @PropertyDecorator */
-        return function (target: any, propertyKey: string) {
-            StateEmitter({
-                propertyName: $params.propertyName,
-                proxyMode: EmitterMetadata.ProxyMode.From,
-                proxyPath: $params.path,
-                proxyMergeUpdates: $params.mergeUpdates
-            })(target, propertyKey);
-        };
+        return WithParams({
+            propertyName: $params.propertyName,
+            proxyMode: EmitterMetadata.ProxyMode.From,
+            proxyPath: $params.path,
+            proxyMergeUpdates: $params.mergeUpdates
+        }, ...propertyDecorators);
     }
 
     export namespace Facade {

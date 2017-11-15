@@ -8,7 +8,8 @@ export namespace EmitterMetadata {
     export type ProxyMode = keyof {
         None,
         From,
-        Alias
+        Alias,
+        Merge
     };
 
     export namespace ProxyMode {
@@ -16,6 +17,7 @@ export namespace EmitterMetadata {
         export const None: ProxyMode = "None";
         export const From: ProxyMode = "From";
         export const Alias: ProxyMode = "Alias";
+        export const Merge: ProxyMode = "Merge";
     }
 
     export interface SubjectInfo extends SubjectInfo.CoreDetails {

@@ -1,6 +1,5 @@
 import { BehaviorSubject, Observable, Subject } from "rxjs";
 import { EmitterMetadata, EmitterType } from "./emitter-metadata";
-import { Subscribable } from "rxjs/Observable";
 import { ObservableUtil } from "./observable-util";
 
 export type StateEmitterDecorator = PropertyDecorator & { emitterType: EmitterType };
@@ -31,13 +30,7 @@ export namespace StateEmitter {
         propertyName?: EmitterType;
     }
 
-    export interface AliasDecoratorParams {
-        path: string;
-        propertyName?: EmitterType;
-        mergeUpdates?: boolean;
-    }
-
-    export interface FromDecoratorParams {
+    export interface ProxyDecoratorParams {
         path: string;
         propertyName?: EmitterType;
         mergeUpdates?: boolean;
@@ -70,10 +63,13 @@ export namespace StateEmitter {
 
     //# Helper Decorators
     /////////////////////////////
+    export function _ResolveProxyDecoratorParams(params: ProxyDecoratorParams | string): ProxyDecoratorParams {
+        return typeof params === "string" ? { path: params } : params;
+    }
 
     /** @PropertyDecoratorFactory */
-    export function Alias(params: AliasDecoratorParams | string, ...propertyDecorators: PropertyDecorator[]): PropertyDecorator {
-        let $params = (params instanceof Object ? params : { path: params }) as AliasDecoratorParams;
+    export function Alias(params: ProxyDecoratorParams | string, ...propertyDecorators: PropertyDecorator[]): PropertyDecorator {
+        let $params = _ResolveProxyDecoratorParams(params);
 
         return WithParams({
             propertyName: $params.propertyName,
@@ -84,12 +80,24 @@ export namespace StateEmitter {
     }
 
     /** @PropertyDecoratorFactory */
-    export function From(params: FromDecoratorParams | string, ...propertyDecorators: PropertyDecorator[]): PropertyDecorator {
-        let $params = (params instanceof Object ? params : { path: params }) as FromDecoratorParams;
+    export function From(params: ProxyDecoratorParams | string, ...propertyDecorators: PropertyDecorator[]): PropertyDecorator {
+        let $params = _ResolveProxyDecoratorParams(params);
 
         return WithParams({
             propertyName: $params.propertyName,
             proxyMode: EmitterMetadata.ProxyMode.From,
+            proxyPath: $params.path,
+            proxyMergeUpdates: $params.mergeUpdates
+        }, ...propertyDecorators);
+    }
+
+    /** @PropertyDecoratorFactory */
+    export function Merge(params: ProxyDecoratorParams | string, ...propertyDecorators: PropertyDecorator[]): PropertyDecorator {
+        let $params = _ResolveProxyDecoratorParams(params);
+
+        return WithParams({
+            propertyName: $params.propertyName,
+            proxyMode: EmitterMetadata.ProxyMode.Merge,
             proxyPath: $params.path,
             proxyMergeUpdates: $params.mergeUpdates
         }, ...propertyDecorators);
@@ -142,21 +150,21 @@ export namespace StateEmitter {
 
     export function Bootstrap(targetInstance: any) {
 
-        function DefineProxySubscribableGetter(subjectInfo: EmitterMetadata.SubjectInfo, alwaysResolvePath?: boolean, onResolve?: (proxySubscribable: Subscribable<any>) => Subscribable<any> | void) {
-            let subscribable: Subscribable<any>;
+        function DefineProxyObservableGetter(subjectInfo: EmitterMetadata.SubjectInfo, alwaysResolvePath?: boolean, onResolve?: (proxySubscribable: Observable<any>) => Observable<any> | void) {
+            let observable: Observable<any>;
 
             // Create a getter that resolves the observable from the target proxy path
-            Object.defineProperty(subjectInfo, "observable", { get: (): Subscribable<any> => {
-                if (alwaysResolvePath || !subscribable) {
-                    // Get the proxy subscribable
-                    subscribable = ObservableUtil.ResolvePropertyPath(targetInstance, subjectInfo.proxyPath);
+            Object.defineProperty(subjectInfo, "observable", { get: (): Observable<any> => {
+                if (alwaysResolvePath || !observable) {
+                    // Get the proxy observable
+                    observable = ObservableUtil.ResolvePropertyPath(targetInstance, subjectInfo.proxyPath);
 
                     if (onResolve) {
-                        subscribable = onResolve(subscribable) || subscribable;
+                        observable = onResolve(observable) || observable;
                     }
                 }
 
-                return subscribable;
+                return observable;
             }});
         }
 
@@ -169,20 +177,25 @@ export namespace StateEmitter {
             switch (subjectInfo.proxyMode) {
                 // Aliased emitters simply pass directly through to their source value
                 case EmitterMetadata.ProxyMode.Alias: {
-                    DefineProxySubscribableGetter(subjectInfo, true);
+                    DefineProxyObservableGetter(subjectInfo, true);
                     break;
                 }
 
-                // From emitters create a separate copy of the source value and subscribes to all emissions from the source
+                // Merge emitters create a separate subject that subscribes to all emissions from the source
+                // From emitters create a separate subject that sets the initial value from the source
+                case EmitterMetadata.ProxyMode.Merge:
                 case EmitterMetadata.ProxyMode.From: {
                     // Create a new copy subject
                     let subject = new BehaviorSubject<any>(subjectInfo.initialValue);
-                    let subscription;
 
                     // Create a getter that returns the new subject
-                    DefineProxySubscribableGetter(subjectInfo, false, (proxySubscribable: Subscribable<any>) => {
-                        // Create a subscription that updates the new subject when the source value emits
-                        subscription = proxySubscribable.subscribe(value => subject.next(value));
+                    DefineProxyObservableGetter(subjectInfo, false, (proxyObservable: Observable<any>) => {
+                        // Only take the first value if this is a From proxy
+                        if (subjectInfo.proxyMode === EmitterMetadata.ProxyMode.From) {
+                            proxyObservable = proxyObservable.take(1);
+                        }
+
+                        proxyObservable.subscribe(value => subject.next(value));
 
                         return subject;
                     });

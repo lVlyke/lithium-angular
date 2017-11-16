@@ -6,6 +6,7 @@
   "author": "Mychal Thompson <mychal.r.thompson@gmail.com>",
   "repository": "https://github.com/lVlyke/angular-rxjs-extensions",
   "license": "MIT",
+  "keywords": ["angular-rxjs-extensions", "angular", "angular2", "ng", "rxjs", "typescript", "decorators", "component"],
   "scripts": {
     "build:js": "rimraf ./dist && ngc && cp ./package.json ./dist/package.json"
   },

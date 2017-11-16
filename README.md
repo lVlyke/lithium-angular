@@ -2,7 +2,7 @@
 
 # Angular RxJS Extensions
 
-A set of extensions that enable easily writing stateless Angular components using RxJS.
+A set of extensions that enable easily writing reactive Angular components using RxJS.
 
 ## Installation
 
@@ -58,6 +58,25 @@ class Component {
 }
 ```
 
+#### EventSource method decorators
+
+Method decorators may be passed to ```EventSource``` and will be applied to the underlying facade method.
+
+##### Example
+
+```ts
+@Component({...})
+@Reactive()
+class Component {
+
+    @EventSource(HostListener("click")) private onClick$: Observable<any>;
+
+    constructor () {
+        this.onClick$.subscribe(() => console.log("Component was clicked."));
+    }
+}
+```
+
 ### StateEmitter
 
 ```StateEmitter``` is the decorator used to automatically synchronize state of a component, allowing for reactive communication to and from the UI via subjects.
@@ -84,6 +103,32 @@ class Component {
         this.onButtonPress$
             .flatMap(() => this.buttonPressCount$.take(1))
             .subscribe(buttonPressCount => this.buttonPressCount$.next(buttonPressCount + 1));
+    }
+}
+```
+
+#### StateEmitter property decorators
+
+Property decorators may be passed to ```StateEmitter``` and will be applied to the underlying property.
+
+##### Example
+
+```html
+<component [disabled]="true"></component>
+```
+
+```ts
+@Component({
+    selector: "component",
+    ...
+})
+@Reactive()
+class Component {
+
+    @StateEmitter(Input()) private disabled$: Subject<boolean>;
+
+    constructor () {
+        this.disabled$.subscribe(disabled => console.log(`Disabled: ${disabled}`)); // Output: Disabled: true
     }
 }
 ```
@@ -246,7 +291,7 @@ class Component {
 
 #### From
 
-The ```From``` proxy type creates a separate ```Subject``` that subscribes to all updates from the source property, but captures any updates without sharing them with the source.
+The ```From``` proxy type creates a new ```Subject``` that gets its initial value from the source.
 
 ##### Example
 
@@ -267,7 +312,32 @@ class FormComponent {
 }
 ```
 
-In the above example, any form updates to ```username``` will only be reflected within ```FormComponent```, and ```sessionManager.session$``` will not receive any updates.
+In the above example, any form updates to ```username``` will only be reflected on ```FormComponent.username$```. ```sessionManager.session$``` will not receive any updates.
+
+#### Merge
+
+The ```Merge``` proxy type creates a new ```Subject``` that subscribes to all updates from the source.
+
+##### Example
+
+```html
+<form>
+    <input type="date" [(ngModel)]="date">
+</form>
+```
+
+```ts
+@Component({...})
+@Reactive()
+class FormComponent {
+
+    @StateEmitter.Merge("fooService.date$") private date$: Subject<Date>;
+
+    constructor (private fooService: FooService) { }
+}
+```
+
+In the above example, any form updates to ```date``` will only be reflected on ```FormComponent.date$```. ```fooService.date$``` will not receive any updates.
 
 ### Lifecycle Events
 
@@ -294,6 +364,96 @@ class Component {
     constructor () {
         this.onInit$.subscribe(() => "Component is initialized.");
     }
+}
+```
+
+## API
+
+### ```Reactive```
+
+```ts
+function Reactive(): ClassDecorator
+```
+
+### ```EventSource```
+
+```ts
+function EventSource(): EventSourceDecorator
+```
+```ts
+function EventSource(...methodDecorators: MethodDecorator[]): EventSourceDecorator
+```
+```ts
+function EventSource(eventType?: EventType, ...methodDecorators: MethodDecorator[]): EventSourceDecorator
+```
+
+### ```StateEmitter```
+
+```ts
+function StateEmitter(): StateEmitterDecorator
+```
+```ts
+function StateEmitter(...propertyDecorators: PropertyDecorator[]): StateEmitterDecorator
+```
+```ts
+function StateEmitter(params: StateEmitter.DecoratorParams, ...propertyDecorators: PropertyDecorator[]): StateEmitterDecorator
+```
+
+#### ```StateEmitter.Alias```
+
+```ts
+function Alias(params: ProxyDecoratorParams | string, ...propertyDecorators: PropertyDecorator[]): PropertyDecorator
+```
+
+#### ```StateEmitter.From```
+
+```ts
+function From(params: ProxyDecoratorParams | string, ...propertyDecorators: PropertyDecorator[]): PropertyDecorator
+```
+
+#### ```StateEmitter.Merge```
+
+```ts
+function Merge(params: ProxyDecoratorParams | string, ...propertyDecorators: PropertyDecorator[]): PropertyDecorator
+```
+
+#### ```StateEmitter.DecoratorParams```
+
+```ts
+interface DecoratorParams {
+    propertyName?: EmitterType;
+    initialValue?: any;
+    readOnly?: boolean;
+    proxyMode?: ProxyMode;
+    proxyPath?: string;
+    proxyMergeUpdates?: boolean;
+}
+```
+
+#### ```StateEmitter.ProxyDecoratorParams```
+
+```ts
+interface ProxyDecoratorParams {
+    path: string;
+    propertyName?: EmitterType;
+    mergeUpdates?: boolean;
+}
+```
+
+#### ```StateEmitter.EmitterType```
+
+```ts
+type EmitterType = string;
+```
+
+#### ```StateEmitter.ProxyMode```
+
+```ts
+type ProxyMode = keyof {
+    None,
+    From,
+    Alias,
+    Merge
 }
 ```
 

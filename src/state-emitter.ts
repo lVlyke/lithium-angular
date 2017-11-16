@@ -41,7 +41,7 @@ export namespace StateEmitter {
         params = params || {};
 
         /** @PropertyDecorator */
-        return Object.assign(function (target: any, propertyKey: string) {
+        return function $$StateEmitterDecorator(target: any, propertyKey: string) {
             // If an emitterType wasn't specified...
             if (!params.propertyName) {
                 // Try to deduce the emitterType from the propertyKey
@@ -53,12 +53,15 @@ export namespace StateEmitter {
                 }
             }
 
+            // Set the emitter type of the decorator
+            $$StateEmitterDecorator["emitterType"] = params.propertyName;
+
             // Apply any property decorators to the property
             propertyDecorators.forEach(propertyDecorator => propertyDecorator(target, params.propertyName));
 
             // Create the event source metadata for the decorated property
             StateEmitter.CreateMetadata(target, params.propertyName, Object.assign({ propertyKey, observable: undefined }, params));
-        }, { emitterType: params.propertyName });
+        } as StateEmitterDecorator;
     }
 
     //# Helper Decorators

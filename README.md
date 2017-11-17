@@ -237,7 +237,9 @@ When ```notificationsEnabled``` is updated via the form input, ```settingsServic
 
 ### Types of StateEmitter Proxies
 
-There are currently two types of proxy emitters, ```Alias``` and ```From```.
+* ```Alias```
+* ```From```
+* ```Merge```
 
 #### Alias
 
@@ -375,46 +377,89 @@ class Component {
 function Reactive(): ClassDecorator
 ```
 
+Bootstraps the target class, which wires up all own and inherited ```EventSource```s and ```StateEmitter```s to each class instance.
+
 ### ```EventSource```
 
 ```ts
 function EventSource(): EventSourceDecorator
-```
-```ts
 function EventSource(...methodDecorators: MethodDecorator[]): EventSourceDecorator
-```
-```ts
 function EventSource(eventType?: EventType, ...methodDecorators: MethodDecorator[]): EventSourceDecorator
 ```
+
+Creates an event source, which is an ```Observable``` that automatically emits when the given function (```eventType```) is called.
+
+```eventType``` - The name of the function that represents the event or action.
+
+```methodDecorators``` - A list of ```MethodDecorator```s that should be applied to the underlying event function.
+
+Note: If the target property's name is of the format "```<eventType>$```", ```eventType``` can be omitted and automatically deduced from the property name.
 
 ### ```StateEmitter```
 
 ```ts
 function StateEmitter(): StateEmitterDecorator
-```
-```ts
 function StateEmitter(...propertyDecorators: PropertyDecorator[]): StateEmitterDecorator
-```
-```ts
 function StateEmitter(params: StateEmitter.DecoratorParams, ...propertyDecorators: PropertyDecorator[]): StateEmitterDecorator
 ```
 
+Creates a state emitter, which is a ```Subject``` that automatically emits when the underlying property value is modified, and automatically updates the property value when the ```Subject``` emits.
+
+```params``` - The parameters to use for this state emitter. See [```StateEmitter.DecoratorParams```](#StateEmitterDecoratorParams).
+
+```propertyDecorators``` - A list of ```PropertyDecorator```s that should be applied to the underlying property.
+
+Note: If the target property's name is of the format "```<emitterType>$```", ```params.propertyName``` can be omitted and automatically deduced from the property name.
+
 #### ```StateEmitter.Alias```
+
+Helper decorator that creates a ```StateEmitter``` with ```proxyMode``` set to ```Alias```.
 
 ```ts
 function Alias(params: ProxyDecoratorParams | string, ...propertyDecorators: PropertyDecorator[]): PropertyDecorator
 ```
 
+```params``` - The parameters to use for this state emitter, or a ```string``` that is shorthand for passing the ```path``` parameter. See [```StateEmitter.ProxyDecoratorParams```](#StateEmitterProxyDecoratorParams).
+
+```propertyDecorators``` - A list of ```PropertyDecorator```s that should be applied to the underlying property.
+
+Note: This is functionally equivalent to:
+```ts
+StateEmitter({proxyMode: EmitterMetadata.ProxyMode.Alias});
+```
+
 #### ```StateEmitter.From```
+
+Helper decorator that creates a ```StateEmitter``` with ```proxyMode``` set to ```From```.
 
 ```ts
 function From(params: ProxyDecoratorParams | string, ...propertyDecorators: PropertyDecorator[]): PropertyDecorator
 ```
 
+```params``` - The parameters to use for this state emitter, or a ```string``` that is shorthand for passing the ```path``` parameter. See [```StateEmitter.ProxyDecoratorParams```](#StateEmitterProxyDecoratorParams).
+
+```propertyDecorators``` - A list of ```PropertyDecorator```s that should be applied to the underlying property.
+
+Note: This is functionally equivalent to:
+```ts
+StateEmitter({proxyMode: EmitterMetadata.ProxyMode.From});
+```
+
 #### ```StateEmitter.Merge```
+
+Helper decorator that creates a ```StateEmitter``` with ```proxyMode``` set to ```Merge```.
 
 ```ts
 function Merge(params: ProxyDecoratorParams | string, ...propertyDecorators: PropertyDecorator[]): PropertyDecorator
+```
+
+```params``` - The parameters to use for this state emitter, or a ```string``` that is shorthand for passing the ```path``` parameter. See [```StateEmitter.ProxyDecoratorParams```](#StateEmitterProxyDecoratorParams).
+
+```propertyDecorators``` - A list of ```PropertyDecorator```s that should be applied to the underlying property.
+
+Note: This is functionally equivalent to:
+```ts
+StateEmitter({proxyMode: EmitterMetadata.ProxyMode.Merge});
 ```
 
 #### ```StateEmitter.DecoratorParams```
@@ -430,6 +475,18 @@ interface DecoratorParams {
 }
 ```
 
+```propertyName``` - (Optional) The name of the underlying property that should be created for use by the component's template. If not specified, the name will try to be deduced from the name of the ```StateEmitter``` property.
+
+```initialValue``` - (Optional) The initial value to be emitted. Defaults to ```undefined```.
+
+```readOnly``` - (Optional) Whether or not the underlying property being created should be read-only. Defaults to ```false```.
+
+```proxyMode``` - (Optional) The proxy mode to use for the ```StateEmitter```. Defaults to ```None```. For all possible values, see [```StateEmitter.ProxyMode```](#StateEmitterProxyMode).
+
+```proxyPath``` - (Conditional) The path of the property to be proxied. Required if ```proxyMode``` is not set to ```None```.
+
+```proxyMergeUpdates``` - (Optional) Whether or not newly emitted values via dynamic proxy property paths should be merged with the previously emitted value. Defaults to ```true``` if the emitted value is an instance of ```Object```, otherwise defaults to ```false```.
+
 #### ```StateEmitter.ProxyDecoratorParams```
 
 ```ts
@@ -438,6 +495,18 @@ interface ProxyDecoratorParams {
     propertyName?: EmitterType;
     mergeUpdates?: boolean;
 }
+```
+
+```path``` - See [```StateEmitter.DecoratorParams.proxyPath```](#StateEmitterDecoratorParams).
+
+```propertyName``` - (Optional) See [```StateEmitter.DecoratorParams.propertyName```](#StateEmitterDecoratorParams).
+
+```mergeUpdates``` - (Optional) See [```StateEmitter.DecoratorParams.proxyMergeUpdates```](#StateEmitterDecoratorParams).
+
+#### ```StateEmitter.EventType```
+
+```ts
+type EventType = string;
 ```
 
 #### ```StateEmitter.EmitterType```
@@ -455,6 +524,56 @@ type ProxyMode = keyof {
     Alias,
     Merge
 }
+```
+
+### Angular Lifecycle ```EventSource``` decorators
+
+#### ```OnChanges```
+
+```ts
+function OnChanges(): EventSourceDecorator
+```
+
+#### ```OnInit```
+
+```ts
+function OnInit(): EventSourceDecorator
+```
+
+#### ```OnDestroy```
+
+```ts
+function OnDestroy(): EventSourceDecorator
+```
+
+#### ```DoCheck```
+
+```ts
+function DoCheck(): EventSourceDecorator
+```
+
+#### ```AfterContentInit```
+
+```ts
+function AfterContentInit(): EventSourceDecorator
+```
+
+#### ```AfterContentChecked```
+
+```ts
+function AfterContentChecked(): EventSourceDecorator
+```
+
+#### ```AfterViewInit```
+
+```ts
+function AfterViewInit(): EventSourceDecorator
+```
+
+#### ```AfterViewChecked```
+
+```ts
+function AfterViewChecked(): EventSourceDecorator
 ```
 
 ## Other information

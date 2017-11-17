@@ -389,9 +389,9 @@ function EventSource(eventType?: EventType, ...methodDecorators: MethodDecorator
 
 Creates an event source, which is an ```Observable``` that automatically emits when the given function (```eventType```) is called.
 
-```eventType``` - The name of the function that represents the event or action.
+**```eventType```** - The name of the function that represents the event or action.
 
-```methodDecorators``` - A list of ```MethodDecorator```s that should be applied to the underlying event function.
+**```methodDecorators```** - A list of ```MethodDecorator```s that should be applied to the underlying event function.
 
 Note: If the target property's name is of the format "```<eventType>$```", ```eventType``` can be omitted and automatically deduced from the property name.
 
@@ -405,9 +405,9 @@ function StateEmitter(params: StateEmitter.DecoratorParams, ...propertyDecorator
 
 Creates a state emitter, which is a ```Subject``` that automatically emits when the underlying property value is modified, and automatically updates the property value when the ```Subject``` emits.
 
-```params``` - The parameters to use for this state emitter. See [```StateEmitter.DecoratorParams```](#StateEmitterDecoratorParams).
+**```params```** - The parameters to use for this state emitter. See [**```StateEmitter.DecoratorParams```**](#stateemitterdecoratorparams).
 
-```propertyDecorators``` - A list of ```PropertyDecorator```s that should be applied to the underlying property.
+**```propertyDecorators```** - A list of ```PropertyDecorator```s that should be applied to the underlying property.
 
 Note: If the target property's name is of the format "```<emitterType>$```", ```params.propertyName``` can be omitted and automatically deduced from the property name.
 
@@ -419,9 +419,9 @@ Helper decorator that creates a ```StateEmitter``` with ```proxyMode``` set to `
 function Alias(params: ProxyDecoratorParams | string, ...propertyDecorators: PropertyDecorator[]): PropertyDecorator
 ```
 
-```params``` - The parameters to use for this state emitter, or a ```string``` that is shorthand for passing the ```path``` parameter. See [```StateEmitter.ProxyDecoratorParams```](#StateEmitterProxyDecoratorParams).
+**```params```** - The parameters to use for this state emitter, or a ```string``` that is shorthand for passing the ```path``` parameter. See [**```StateEmitter.ProxyDecoratorParams```**](#stateemitterproxydecoratorparams).
 
-```propertyDecorators``` - A list of ```PropertyDecorator```s that should be applied to the underlying property.
+**```propertyDecorators```** - A list of ```PropertyDecorator```s that should be applied to the underlying property.
 
 Note: This is functionally equivalent to:
 ```ts
@@ -436,9 +436,9 @@ Helper decorator that creates a ```StateEmitter``` with ```proxyMode``` set to `
 function From(params: ProxyDecoratorParams | string, ...propertyDecorators: PropertyDecorator[]): PropertyDecorator
 ```
 
-```params``` - The parameters to use for this state emitter, or a ```string``` that is shorthand for passing the ```path``` parameter. See [```StateEmitter.ProxyDecoratorParams```](#StateEmitterProxyDecoratorParams).
+**```params```** - The parameters to use for this state emitter, or a ```string``` that is shorthand for passing the ```path``` parameter. See [**```StateEmitter.ProxyDecoratorParams```**](#stateemitterproxydecoratorparams).
 
-```propertyDecorators``` - A list of ```PropertyDecorator```s that should be applied to the underlying property.
+**```propertyDecorators```** - A list of ```PropertyDecorator```s that should be applied to the underlying property.
 
 Note: This is functionally equivalent to:
 ```ts
@@ -453,9 +453,9 @@ Helper decorator that creates a ```StateEmitter``` with ```proxyMode``` set to `
 function Merge(params: ProxyDecoratorParams | string, ...propertyDecorators: PropertyDecorator[]): PropertyDecorator
 ```
 
-```params``` - The parameters to use for this state emitter, or a ```string``` that is shorthand for passing the ```path``` parameter. See [```StateEmitter.ProxyDecoratorParams```](#StateEmitterProxyDecoratorParams).
+**```params```** - The parameters to use for this state emitter, or a ```string``` that is shorthand for passing the ```path``` parameter. See [**```StateEmitter.ProxyDecoratorParams```**](#stateemitterproxydecoratorparams).
 
-```propertyDecorators``` - A list of ```PropertyDecorator```s that should be applied to the underlying property.
+**```propertyDecorators```** - A list of ```PropertyDecorator```s that should be applied to the underlying property.
 
 Note: This is functionally equivalent to:
 ```ts
@@ -475,17 +475,17 @@ interface DecoratorParams {
 }
 ```
 
-```propertyName``` - (Optional) The name of the underlying property that should be created for use by the component's template. If not specified, the name will try to be deduced from the name of the ```StateEmitter``` property.
+**```propertyName```** - (Optional) The name of the underlying property that should be created for use by the component's template. If not specified, the name will try to be deduced from the name of the ```StateEmitter``` property.
 
-```initialValue``` - (Optional) The initial value to be emitted. Defaults to ```undefined```.
+**```initialValue```** - (Optional) The initial value to be emitted. Defaults to ```undefined```.
 
-```readOnly``` - (Optional) Whether or not the underlying property being created should be read-only. Defaults to ```false```.
+**```readOnly```** - (Optional) Whether or not the underlying property being created should be read-only. Defaults to ```false```.
 
-```proxyMode``` - (Optional) The proxy mode to use for the ```StateEmitter```. Defaults to ```None```. For all possible values, see [```StateEmitter.ProxyMode```](#StateEmitterProxyMode).
+**```proxyMode```** - (Optional) The proxy mode to use for the ```StateEmitter```. Defaults to ```None```. For all possible values, see [**```StateEmitter.ProxyMode```**](#stateemitterproxymode).
 
-```proxyPath``` - (Conditional) The path of the property to be proxied. Required if ```proxyMode``` is not set to ```None```.
+**```proxyPath```** - (Conditional) The path of the property to be proxied. Required if ```proxyMode``` is not set to ```None```.
 
-```proxyMergeUpdates``` - (Optional) Whether or not newly emitted values via dynamic proxy property paths should be merged with the previously emitted value. Defaults to ```true``` if the emitted value is an instance of ```Object```, otherwise defaults to ```false```.
+**```proxyMergeUpdates```** - (Optional) Whether or not newly emitted values via dynamic proxy property paths should be merged with the previously emitted value. Defaults to ```true``` if the emitted value is an instance of ```Object```, otherwise defaults to ```false```.
 
 #### ```StateEmitter.ProxyDecoratorParams```
 
@@ -497,11 +497,11 @@ interface ProxyDecoratorParams {
 }
 ```
 
-```path``` - See [```StateEmitter.DecoratorParams.proxyPath```](#StateEmitterDecoratorParams).
+**```path```** - See [**```StateEmitter.DecoratorParams.proxyPath```**](#stateemitterdecoratorparams).
 
-```propertyName``` - (Optional) See [```StateEmitter.DecoratorParams.propertyName```](#StateEmitterDecoratorParams).
+**```propertyName```** - (Optional) See [**```StateEmitter.DecoratorParams.propertyName```**](#stateemitterdecoratorparams).
 
-```mergeUpdates``` - (Optional) See [```StateEmitter.DecoratorParams.proxyMergeUpdates```](#StateEmitterDecoratorParams).
+**```mergeUpdates```** - (Optional) See [**```StateEmitter.DecoratorParams.proxyMergeUpdates```**](#stateemitterdecoratorparams).
 
 #### ```StateEmitter.EventType```
 

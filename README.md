@@ -33,6 +33,8 @@ class Component {
 }
 ```
 
+[**API reference**](#reactive)
+
 ### EventSource
 
 ```EventSource``` is the main decorator used for responding to events from a component. ```EventSource``` creates a proxy method for intercepting events (such as UI events or component lifecycle events) executed via callback, and translates them into observables.
@@ -76,6 +78,8 @@ class Component {
     }
 }
 ```
+
+[**API reference**](#eventsource-1)
 
 ### StateEmitter
 
@@ -341,6 +345,8 @@ class FormComponent {
 
 In the above example, any form updates to ```date``` will only be reflected on ```FormComponent.date$```. ```fooService.date$``` will not receive any updates.
 
+[**API reference**](#stateemitter-1)
+
 ### Lifecycle Events
 
 Helper decorators are provided that proxy all of the Angular component lifecycle events. These are:
@@ -368,6 +374,8 @@ class Component {
     }
 }
 ```
+
+[**API reference**](#angular-lifecycle-eventsource-decorators)
 
 ## API
 

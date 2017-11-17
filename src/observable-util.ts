@@ -1,5 +1,4 @@
 import { Observable, Subject } from "rxjs";
-import { Subscribable } from "rxjs/Observable";
 
 export namespace ObservableUtil {
 
@@ -87,7 +86,7 @@ export namespace ObservableUtil {
     }
 
     // NOTE: Static property paths will result in a Subject (two-way binding), while dynamic property paths will result in an Observable (one-way binding)
-    export function ResolvePropertyPath(target: any, path: string): Subscribable<any> {
+    export function ResolvePropertyPath(target: any, path: string): Observable<any> {
         // If the path is dynamic...
         if (IsDynamicPropertyPath(target, path)) {
             // Create an observable chain from the property path

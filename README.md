@@ -254,11 +254,7 @@ The ```Alias``` proxy type simply resolves the given property path and creates a
 ```ts
 class SessionManager {
 
-    private _session$: Subject<Session>;
-
-    public get session$(): Observable<Session> {
-        return this._session$.asObservable();
-    }
+    public session$: Subject<Session>;
 }
 ```
 

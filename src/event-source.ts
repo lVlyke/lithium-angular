@@ -1,14 +1,12 @@
 import { Subject } from "rxjs";
 import { EventMetadata, EventType } from "./event-metadata";
 
-export type EventSourceDecorator = PropertyDecorator & { eventType: EventType };
-
-export function EventSource(): EventSourceDecorator;
-export function EventSource(...methodDecorators: MethodDecorator[]): EventSourceDecorator;
-export function EventSource(eventType?: EventType, ...methodDecorators: MethodDecorator[]): EventSourceDecorator;
+export function EventSource(): PropertyDecorator;
+export function EventSource(...methodDecorators: MethodDecorator[]): PropertyDecorator;
+export function EventSource(eventType?: EventType, ...methodDecorators: MethodDecorator[]): PropertyDecorator;
 
 /** @PropertyDecoratorFactory */
-export function EventSource(...args: any[]): EventSourceDecorator {
+export function EventSource(...args: any[]): PropertyDecorator {
     let paramsArg: EventType | MethodDecorator;
 
     if (args.length > 0) {
@@ -26,9 +24,10 @@ export function EventSource(...args: any[]): EventSourceDecorator {
 export namespace EventSource {
 
     /** @PropertyDecoratorFactory */
-    export function WithParams(eventType?: EventType, ...methodDecorators: MethodDecorator[]): EventSourceDecorator {
+    export function WithParams(eventType?: EventType, ...methodDecorators: MethodDecorator[]): PropertyDecorator {
+
         /** @PropertyDecorator */
-        return function $$EventSourceDecorator(target: any, propertyKey: string) {
+        return function(target: any, propertyKey: string) {
             // If an eventType wasn't specified...
             if (!eventType) {
                 // Try to deduce the eventType from the propertyKey
@@ -40,15 +39,12 @@ export namespace EventSource {
                 }
             }
 
-            // Set the event type of the decorator
-            $$EventSourceDecorator["eventType"] = eventType;
-
             // Create the event source metadata for the decorated property
             EventSource.CreateMetadata(eventType, target, propertyKey);
 
             // Apply any method decorators to the facade function
             methodDecorators.forEach(methodDecorator => methodDecorator(target, eventType, Object.getOwnPropertyDescriptor(target, eventType)));
-        } as EventSourceDecorator;
+        };
     }
 
     export function Bootstrap(targetInstance: any) {
@@ -73,11 +69,11 @@ export namespace EventSource {
         /** @description
          *  Creates an event facade function (the function that is invoked during an event) for the given event type.
          */
-        export function Create(type: EventType): Function {
-            return function (value: any) {
+        export function Create(eventType: EventType): Function & { eventType: EventType } {
+            return Object.assign(function (value: any) {
                 // Iterate over all class properties that have a proxy subject for this event type and notify each subscriber
-                EventMetadata.GetPropertySubjectMap(type, this).forEach(subjectInfo => subjectInfo.subject.next(value));
-            };
+                EventMetadata.GetPropertySubjectMap(eventType, this).forEach(subjectInfo => subjectInfo.subject.next(value));
+            }, { eventType });
         }
     }
 

@@ -2,14 +2,12 @@ import { BehaviorSubject, Observable, Subject } from "rxjs";
 import { EmitterMetadata, EmitterType } from "./emitter-metadata";
 import { ObservableUtil } from "./observable-util";
 
-export type StateEmitterDecorator = PropertyDecorator & { emitterType: EmitterType };
-
-export function StateEmitter(): StateEmitterDecorator;
-export function StateEmitter(...propertyDecorators: PropertyDecorator[]): StateEmitterDecorator;
-export function StateEmitter(params: StateEmitter.DecoratorParams, ...propertyDecorators: PropertyDecorator[]): StateEmitterDecorator;
+export function StateEmitter(): PropertyDecorator;
+export function StateEmitter(...propertyDecorators: PropertyDecorator[]): PropertyDecorator;
+export function StateEmitter(params: StateEmitter.DecoratorParams, ...propertyDecorators: PropertyDecorator[]): PropertyDecorator;
 
 /** @PropertyDecoratorFactory */
-export function StateEmitter(...args: any[]): StateEmitterDecorator {
+export function StateEmitter(...args: any[]): PropertyDecorator {
     let paramsArg: StateEmitter.DecoratorParams | PropertyDecorator;
 
     if (args.length > 0) {
@@ -37,7 +35,7 @@ export namespace StateEmitter {
     }
 
     /** @PropertyDecoratorFactory */
-    export function WithParams(params?: StateEmitter.DecoratorParams, ...propertyDecorators: PropertyDecorator[]): StateEmitterDecorator {
+    export function WithParams(params?: StateEmitter.DecoratorParams, ...propertyDecorators: PropertyDecorator[]): PropertyDecorator {
         params = params || {};
 
         /** @PropertyDecorator */
@@ -61,7 +59,7 @@ export namespace StateEmitter {
 
             // Create the event source metadata for the decorated property
             StateEmitter.CreateMetadata(target, params.propertyName, Object.assign({ propertyKey, observable: undefined }, params));
-        } as StateEmitterDecorator;
+        };
     }
 
     //# Helper Decorators
@@ -225,9 +223,9 @@ export namespace StateEmitter {
     }
 
     export function CreateMetadata(target: any, type: EmitterType, metadata: EmitterMetadata.SubjectInfo) {
-        if (target[type] && target[type].emitterType !== type) {
-            // Make sure the target class doesn't have a custom method already defined for this event type
-            throw new Error(`@StateEmitter metadata creation failed. Class already has a custom ${type} method.`);
+        if (target[type]) {
+            // Make sure the target class doesn't have a custom property already defined for this event type
+            throw new Error(`@StateEmitter metadata creation failed. Class already has a custom ${type} property.`);
         }
 
         // Add the propertyKey to the class' metadata

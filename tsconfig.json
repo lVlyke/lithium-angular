@@ -28,7 +28,6 @@
         "rewriteTsConfig": false
     },
     "angularCompilerOptions": {
-        "genDir": "dist",
-        "skipMetadataEmit": false
+        "genDir": "dist"
     }
 }

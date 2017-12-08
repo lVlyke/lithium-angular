@@ -41,3 +41,6 @@ export namespace Metadata {
         return GetOwnMetadata<Map<K, V>>(symbol, target, new Map<K, V>());
     }
 }
+
+// Workaround for angular-cli 5.0.0 metadata gen bug
+export interface Metadata {}

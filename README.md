@@ -1,18 +1,26 @@
-<!-- markdownlint-disable MD024 MD031 -->
+<!-- markdownlint-disable MD024 MD031 --> 
 
-# Angular RxJS Extensions
+# Lithium for Angular
 
-A set of extensions that enable easily writing reactive Angular components using RxJS.
+A set of extensions for Angular that enable writing highly reactive components using RxJS.
 
 ## Installation
 
 The project can be installed via **npm** using the following command:
 
 ```bash
-npm install angular-rxjs-extensions
+npm install @lithiumjs/angular
 ```
 
 ## Quick Intro Guide
+
+* [Bootstrapping](#bootstrapping)
+* [EventSource](#eventsource)
+* [StateEmitter](#stateemitter)
+* [Proxied StateEmitters](#proxied-stateemitters)
+* [Lifecycle Event Decorators](#lifecycle-event-decorators)
+
+(For more information, see the full [**API reference**](#api))
 
 ### Bootstrapping
 
@@ -25,10 +33,10 @@ Bootstrapping is required on the target class to enable event sources and state 
 @Reactive()
 class Component {
 
-    @OnInit() private onInit$: Observable<void>;
+    @OnInit() private onInit$: Observable<void> ;
 
     constructor () {
-        this.onInit$.subscribe(() => "Hello world.");
+        this.onInit$.subscribe(() =>  console.log("Hello world."));
     }
 }
 ```
@@ -42,7 +50,7 @@ class Component {
 #### Template
 
 ```html
-<button (click)="onButtonPress()"></button>
+<button (click)="onButtonPress()"> </button> 
 ```
 
 #### Component
@@ -52,10 +60,10 @@ class Component {
 @Reactive()
 class Component {
 
-    @EventSource() private onButtonPress$: Observable<any>;
+    @EventSource() private onButtonPress$: Observable<any> ;
 
     constructor () {
-        this.onButtonPress$.subscribe(() => console.log("The button was pressed."));
+        this.onButtonPress$.subscribe(() =>  console.log("The button was pressed."));
     }
 }
 ```
@@ -71,10 +79,10 @@ Method decorators may be passed to ```EventSource``` and will be applied to the 
 @Reactive()
 class Component {
 
-    @EventSource(HostListener("click")) private onClick$: Observable<any>;
+    @EventSource(HostListener("click")) private onClick$: Observable<any> ;
 
     constructor () {
-        this.onClick$.subscribe(() => console.log("Component was clicked."));
+        this.onClick$.subscribe(() =>  console.log("Component was clicked."));
     }
 }
 ```
@@ -88,8 +96,8 @@ class Component {
 #### Template
 
 ```html
-<div>You clicked the button {{buttonPressCount}} times.</div>
-<button (click)="onButtonPress()"></button>
+<div> You clicked the button {{buttonPressCount}} times.</div> 
+<button (click)="onButtonPress()"> </button> 
 ```
 
 #### Component
@@ -99,14 +107,14 @@ class Component {
 @Reactive()
 class Component {
 
-    @EventSource() private onButtonPress$: Observable<any>;
+    @EventSource() private onButtonPress$: Observable<any> ;
 
-    @StateEmitter({initialValue: 0}) private buttonPressCount$: Subject<number>;
+    @StateEmitter({initialValue: 0}) private buttonPressCount$: Subject<number> ;
 
     constructor () {
         this.onButtonPress$
-            .flatMap(() => this.buttonPressCount$.take(1))
-            .subscribe(buttonPressCount => this.buttonPressCount$.next(buttonPressCount + 1));
+            .flatMap(() =>  this.buttonPressCount$.take(1))
+            .subscribe(buttonPressCount =>  this.buttonPressCount$.next(buttonPressCount + 1));
     }
 }
 ```
@@ -118,7 +126,7 @@ Property decorators may be passed to ```StateEmitter``` and will be applied to t
 ##### Example
 
 ```html
-<component [disabled]="true"></component>
+<component [disabled]="true"> </component> 
 ```
 
 ```ts
@@ -129,10 +137,10 @@ Property decorators may be passed to ```StateEmitter``` and will be applied to t
 @Reactive()
 class Component {
 
-    @StateEmitter(Input()) private disabled$: Subject<boolean>;
+    @StateEmitter(Input()) private disabled$: Subject<boolean> ;
 
     constructor () {
-        this.disabled$.subscribe(disabled => console.log(`Disabled: ${disabled}`)); // Output: Disabled: true
+        this.disabled$.subscribe(disabled =>  console.log(`Disabled: ${disabled}`)); // Output: Disabled: true
     }
 }
 ```
@@ -163,7 +171,7 @@ class Component {
         proxyMode: EmitterMetadata.ProxyMode.Alias,
         proxyPath: "fooService.nestedProperty",
     })
-    private nestedProperty$: Observable<number>;
+    private nestedProperty$: Observable<number> ;
 
     constructor (private fooService: FooService) { }
 }
@@ -188,7 +196,7 @@ interface Settings {
 
 class SettingsService {
 
-    public settings$ = new BehaviorSubject<Settings>({
+    public settings$ = new BehaviorSubject<Settings> ({
         notificationsEnabled: true,
         someOtherSetting: 1
     });
@@ -201,10 +209,10 @@ class SettingsService {
 class FormComponent {
 
     @StateEmitter.Alias("settingsService.settings$")
-    private settings$: Subject<Settings>;
+    private settings$: Subject<Settings> ;
 
     @StateEmitter.Alias("settings$.notificationsEnabled")
-    private notificationsEnabled$: Observable<boolean>;
+    private notificationsEnabled$: Observable<boolean> ;
 
     constructor (private settingsService: SettingsService) { }
 }
@@ -219,9 +227,9 @@ If a dynamic property path contains a ```Subject```, it will automatically be no
 ##### Example
 
 ```html
-<form>
-    <input [(ngModel)]="notificationsEnabled" type="checkbox">
-</form>
+<form> 
+    <input [(ngModel)]="notificationsEnabled" type="checkbox"> 
+</form> 
 ```
 
 ```ts
@@ -231,7 +239,7 @@ class FormComponent {
 
     // Dynamic proxy property path that contains a Subject
     @StateEmitter.Alias("settingsService.settings$.notificationsEnabled")
-    private notificationsEnabled$: Observable<boolean>;
+    private notificationsEnabled$: Observable<boolean> ;
 
     constructor (private settingsService: SettingsService) { }
 }
@@ -254,12 +262,12 @@ The ```Alias``` proxy type simply resolves the given property path and creates a
 ```ts
 class SessionManager {
 
-    public session$: Subject<Session>;
+    public session$: Subject<Session> ;
 }
 ```
 
 ```html
-<div>Welcome back, {{session.username}}</div>
+<div> Welcome back, {{session.username}}</div> 
 ```
 
 ```ts
@@ -267,7 +275,7 @@ class SessionManager {
 @Reactive()
 class Component {
 
-    @StateEmitter.Alias("sessionManager.session$") private session$: Subject<Session>;
+    @StateEmitter.Alias("sessionManager.session$") private session$: Subject<Session> ;
 
     constructor (private sessionManager: SessionManager) { }
 }
@@ -276,7 +284,7 @@ class Component {
 ```Alias``` can also be used with other ```StateEmitter``` references:
 
 ```html
-<div>Welcome back, {{username}}</div>
+<div> Welcome back, {{username}}</div> 
 ```
 
 ```ts
@@ -284,8 +292,8 @@ class Component {
 @Reactive()
 class Component {
 
-    @StateEmitter.Alias("sessionManager.session$") private session$: Subject<Session>;
-    @StateEmitter.Alias("session$.username") private username$: Observable<string>;
+    @StateEmitter.Alias("sessionManager.session$") private session$: Subject<Session> ;
+    @StateEmitter.Alias("session$.username") private username$: Observable<string> ;
 
     constructor (private sessionManager: SessionManager) { }
 }
@@ -298,9 +306,9 @@ The ```From``` proxy type creates a new ```Subject``` that gets its initial valu
 ##### Example
 
 ```html
-<form>
-    <input type="text" [(ngModel)]="username">
-</form>
+<form> 
+    <input type="text" [(ngModel)]="username"> 
+</form> 
 ```
 
 ```ts
@@ -308,7 +316,7 @@ The ```From``` proxy type creates a new ```Subject``` that gets its initial valu
 @Reactive()
 class FormComponent {
 
-    @StateEmitter.From("sessionManager.session$.username") private username$: Subject<string>;
+    @StateEmitter.From("sessionManager.session$.username") private username$: Subject<string> ;
 
     constructor (private sessionManager: SessionManager) { }
 }
@@ -323,9 +331,9 @@ The ```Merge``` proxy type creates a new ```Subject``` that subscribes to all up
 ##### Example
 
 ```html
-<form>
-    <input type="date" [(ngModel)]="date">
-</form>
+<form> 
+    <input type="date" [(ngModel)]="date"> 
+</form> 
 ```
 
 ```ts
@@ -333,7 +341,7 @@ The ```Merge``` proxy type creates a new ```Subject``` that subscribes to all up
 @Reactive()
 class FormComponent {
 
-    @StateEmitter.Merge("fooService.date$") private date$: Subject<Date>;
+    @StateEmitter.Merge("fooService.date$") private date$: Subject<Date> ;
 
     constructor (private fooService: FooService) { }
 }
@@ -343,7 +351,7 @@ In the above example, any form updates to ```date``` will only be reflected on `
 
 [**API reference**](#stateemitter-1)
 
-### Lifecycle Events
+### Lifecycle Event Decorators
 
 Helper decorators are provided that proxy all of the Angular component lifecycle events. These are:
 
@@ -363,10 +371,10 @@ Helper decorators are provided that proxy all of the Angular component lifecycle
 @Reactive()
 class Component {
 
-    @OnInit() private onInit$: Observable<void>;
+    @OnInit() private onInit$: Observable<void> ;
 
     constructor () {
-        this.onInit$.subscribe(() => "Component is initialized.");
+        this.onInit$.subscribe(() =>  "Component is initialized.");
     }
 }
 ```
@@ -397,7 +405,7 @@ Creates an event source, which is an ```Observable``` that automatically emits w
 
 **```methodDecorators```** - A list of ```MethodDecorator```s that should be applied to the underlying event function.
 
-Note: If the target property's name is of the format "```<eventType>$```", ```eventType``` can be omitted and automatically deduced from the property name.
+Note: If the target property's name is of the format "```<eventType> $```", ```eventType``` can be omitted and automatically deduced from the property name.
 
 ### ```StateEmitter```
 
@@ -413,7 +421,7 @@ Creates a state emitter, which is a ```Subject``` that automatically emits when 
 
 **```propertyDecorators```** - A list of ```PropertyDecorator```s that should be applied to the underlying property.
 
-Note: If the target property's name is of the format "```<emitterType>$```", ```params.propertyName``` can be omitted and automatically deduced from the property name.
+Note: If the target property's name is of the format "```<emitterType> $```", ```params.propertyName``` can be omitted and automatically deduced from the property name.
 
 #### ```StateEmitter.Alias```
 
@@ -582,4 +590,4 @@ function AfterViewChecked(): EventSourceDecorator
 
 ## Other information
 
-* [Ionic extensions](https://github.com/lVlyke/angular-rxjs-extensions-ionic) for angular-rxjs-extensions.
+* Lithium for [Ionic](https://github.com/lVlyke/lithium-ionic).

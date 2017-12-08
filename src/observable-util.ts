@@ -153,3 +153,6 @@ export namespace ObservableUtil {
         }
     }
 }
+
+// Workaround for angular-cli 5.0.0 metadata gen bug
+export interface ObservableUtil {}

@@ -39,7 +39,7 @@ export namespace StateEmitter {
         params = params || {};
 
         /** @PropertyDecorator */
-        return function $$StateEmitterDecorator(target: any, propertyKey: string) {
+        return function (target: any, propertyKey: string) {
             // If an emitterType wasn't specified...
             if (!params.propertyName) {
                 // Try to deduce the emitterType from the propertyKey
@@ -50,9 +50,6 @@ export namespace StateEmitter {
                     throw new Error(`@StateEmitter error: emitterType could not be deduced from propertyKey "${propertyKey}" (only keys ending with '$' can be auto-deduced).`);
                 }
             }
-
-            // Set the emitter type of the decorator
-            $$StateEmitterDecorator["emitterType"] = params.propertyName;
 
             // Apply any property decorators to the property
             propertyDecorators.forEach(propertyDecorator => propertyDecorator(target, params.propertyName));
@@ -213,6 +210,7 @@ export namespace StateEmitter {
 
             // Assign the facade getter and setter to the target instance for this EmitterType
             Object.defineProperty(targetInstance, emitterType, {
+                enumerable: true,
                 get: Facade.CreateGetter(emitterType, subjectInfo.initialValue),
                 set: subjectInfo.readOnly ? undefined : Facade.CreateSetter(emitterType)
             });

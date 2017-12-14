@@ -26,11 +26,13 @@ npm install @lithiumjs/angular
 
 Bootstrapping is required on the target class to enable event sources and state emitters for each instance. This is done via the ```Reactive``` class decorator.
 
+**IMPORTANT NOTE: If you're using Angular 5 or above, the ```@Reactive``` decorator must be declared above any Angular class decorators (i.e. ```@Component``` or ```@Directive```), or Angular will see any ```@Input``` or ```@Output``` metadata associated with the class.**
+
 #### Example
 
 ```ts
-@Component({...})
 @Reactive()
+@Component({...})
 class Component {
 
     @OnInit() private onInit$: Observable<void> ;
@@ -56,8 +58,8 @@ class Component {
 #### Component
 
 ```ts
-@Component({...})
 @Reactive()
+@Component({...})
 class Component {
 
     @EventSource() private onButtonPress$: Observable<any> ;
@@ -75,8 +77,8 @@ Method decorators may be passed to ```EventSource``` and will be applied to the 
 ##### Example
 
 ```ts
-@Component({...})
 @Reactive()
+@Component({...})
 class Component {
 
     @EventSource(HostListener("click")) private onClick$: Observable<any> ;
@@ -103,8 +105,8 @@ class Component {
 #### Component
 
 ```ts
-@Component({...})
 @Reactive()
+@Component({...})
 class Component {
 
     @EventSource() private onButtonPress$: Observable<any> ;
@@ -130,11 +132,11 @@ Property decorators may be passed to ```StateEmitter``` and will be applied to t
 ```
 
 ```ts
+@Reactive()
 @Component({
     selector: "component",
     ...
 })
-@Reactive()
 class Component {
 
     @StateEmitter(Input()) private disabled$: Subject<boolean> ;
@@ -163,8 +165,8 @@ class FooService {
 ```
 
 ```ts
-@Component({...})
 @Reactive()
+@Component({...})
 class Component {
 
     @StateEmitter({
@@ -204,8 +206,8 @@ class SettingsService {
 ```
 
 ```ts
-@Component({...})
 @Reactive()
+@Component({...})
 class FormComponent {
 
     @StateEmitter.Alias("settingsService.settings$")
@@ -227,14 +229,14 @@ If a dynamic property path contains a ```Subject```, it will automatically be no
 ##### Example
 
 ```html
-<form> 
-    <input [(ngModel)]="notificationsEnabled" type="checkbox"> 
-</form> 
+<form>
+    <input [(ngModel)]="notificationsEnabled" type="checkbox">
+</form>
 ```
 
 ```ts
-@Component({...})
 @Reactive()
+@Component({...})
 class FormComponent {
 
     // Dynamic proxy property path that contains a Subject
@@ -271,8 +273,8 @@ class SessionManager {
 ```
 
 ```ts
-@Component({...})
 @Reactive()
+@Component({...})
 class Component {
 
     @StateEmitter.Alias("sessionManager.session$") private session$: Subject<Session> ;
@@ -288,8 +290,8 @@ class Component {
 ```
 
 ```ts
-@Component({...})
 @Reactive()
+@Component({...})
 class Component {
 
     @StateEmitter.Alias("sessionManager.session$") private session$: Subject<Session> ;
@@ -306,14 +308,14 @@ The ```From``` proxy type creates a new ```Subject``` that gets its initial valu
 ##### Example
 
 ```html
-<form> 
-    <input type="text" [(ngModel)]="username"> 
-</form> 
+<form>
+    <input type="text" [(ngModel)]="username">
+</form>
 ```
 
 ```ts
-@Component({...})
 @Reactive()
+@Component({...})
 class FormComponent {
 
     @StateEmitter.From("sessionManager.session$.username") private username$: Subject<string> ;
@@ -331,14 +333,14 @@ The ```Merge``` proxy type creates a new ```Subject``` that subscribes to all up
 ##### Example
 
 ```html
-<form> 
-    <input type="date" [(ngModel)]="date"> 
-</form> 
+<form>
+    <input type="date" [(ngModel)]="date">
+</form>
 ```
 
 ```ts
-@Component({...})
 @Reactive()
+@Component({...})
 class FormComponent {
 
     @StateEmitter.Merge("fooService.date$") private date$: Subject<Date> ;
@@ -367,8 +369,8 @@ Helper decorators are provided that proxy all of the Angular component lifecycle
 #### Example
 
 ```ts
-@Component({...})
 @Reactive()
+@Component({...})
 class Component {
 
     @OnInit() private onInit$: Observable<void> ;
@@ -389,7 +391,16 @@ class Component {
 function Reactive(): ClassDecorator
 ```
 
-Bootstraps the target class, which wires up all own and inherited ```EventSource```s and ```StateEmitter```s to each class instance.
+A decorator that bootstraps the target class, which wires up all own and inherited ```EventSource```s and ```StateEmitter```s to each class instance.
+
+**Note**: This decorator must be applied **above** any Angular class decorators if using Angular >= 5. Example:
+
+```ts
+@Reactive()
+@Component({...})
+class Component {
+}
+```
 
 ### ```EventSource```
 

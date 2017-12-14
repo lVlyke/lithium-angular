@@ -1,6 +1,6 @@
 {
   "name": "@lithiumjs/angular",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "A set of extensions for Angular that enable writing highly reactive components using RxJS.",
   "main": "index.js",
   "author": "Mychal Thompson <mychal.r.thompson@gmail.com>",

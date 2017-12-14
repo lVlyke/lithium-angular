@@ -26,8 +26,6 @@ npm install @lithiumjs/angular
 
 Bootstrapping is required on the target class to enable event sources and state emitters for each instance. This is done via the ```Reactive``` class decorator.
 
-**IMPORTANT NOTE: If you're using Angular 5 or above, the ```@Reactive``` decorator must be declared above any Angular class decorators (i.e. ```@Component``` or ```@Directive```), or Angular will not see any ```@Input``` or ```@Output``` metadata associated with the class.**
-
 #### Example
 
 ```ts
@@ -392,15 +390,6 @@ function Reactive(): ClassDecorator
 ```
 
 A decorator that bootstraps the target class, which wires up all own and inherited ```EventSource```s and ```StateEmitter```s to each class instance.
-
-**Note**: This decorator must be applied **above** any Angular class decorators if using Angular >= 5. Example:
-
-```ts
-@Reactive()
-@Component({...})
-class Component {
-}
-```
 
 ### ```EventSource```
 

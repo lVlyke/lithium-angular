@@ -1,5 +1,6 @@
 import { Subject } from "rxjs";
 import { EventMetadata, EventType } from "./event-metadata";
+import { AngularMetadata } from "./angular-metadata";
 
 export function EventSource(): PropertyDecorator;
 export function EventSource(...methodDecorators: MethodDecorator[]): PropertyDecorator;
@@ -44,6 +45,11 @@ export namespace EventSource {
 
             // Apply any method decorators to the facade function
             methodDecorators.forEach(methodDecorator => methodDecorator(target, eventType, Object.getOwnPropertyDescriptor(target, eventType)));
+
+            // Point any Angular metadata attached to the EventSource to the underlying facade method
+            if (AngularMetadata.hasPropMetadataEntry(target.constructor, propertyKey)) {
+                AngularMetadata.renamePropMetadataEntry(target.constructor, propertyKey, eventType);
+            }
         };
     }
 
@@ -59,8 +65,12 @@ export namespace EventSource {
                 subjectInfo.subject = new Subject<any>();
             }
     
-            // Make the observable accessible to the target instance
-            targetInstance[propertyKey] = subjectInfo.subject.asObservable();
+            // Set the property key to a function that will invoke the facade method when called
+            // (This is needed to allow EventSources with attached Angular metadata decorators to work with AoT)
+            targetInstance[propertyKey] = targetInstance[eventType];
+            
+            // Compose the function with the observable
+            Object.setPrototypeOf(targetInstance[propertyKey], subjectInfo.subject.asObservable());
         }));
     }
 

@@ -1,6 +1,7 @@
 import { BehaviorSubject, Observable, Subject } from "rxjs";
 import { EmitterMetadata, EmitterType } from "./emitter-metadata";
 import { ObservableUtil } from "./observable-util";
+import { AngularMetadata } from "./angular-metadata";
 
 export function StateEmitter(): PropertyDecorator;
 export function StateEmitter(...propertyDecorators: PropertyDecorator[]): PropertyDecorator;
@@ -56,6 +57,11 @@ export namespace StateEmitter {
 
             // Create the event source metadata for the decorated property
             StateEmitter.CreateMetadata(target, params.propertyName, Object.assign({ propertyKey, observable: undefined }, params));
+
+            // Point any Angular metadata attached to the StateEmitter to the underlying facade property
+            if (AngularMetadata.hasPropMetadataEntry(target.constructor, propertyKey)) {
+                AngularMetadata.renamePropMetadataEntry(target.constructor, propertyKey, params.propertyName);
+            }
         };
     }
 
@@ -208,15 +214,23 @@ export namespace StateEmitter {
                 }
             }
 
+            let facadeSetter = subjectInfo.readOnly ? undefined : Facade.CreateSetter(emitterType);
+
             // Assign the facade getter and setter to the target instance for this EmitterType
             Object.defineProperty(targetInstance, emitterType, {
                 enumerable: true,
                 get: Facade.CreateGetter(emitterType, subjectInfo.initialValue),
-                set: subjectInfo.readOnly ? undefined : Facade.CreateSetter(emitterType)
+                set: facadeSetter
             });
     
-            // Create a getter property on the targetInstance that lazily retreives the observable
-            Object.defineProperty(targetInstance, subjectInfo.propertyKey, { get: () => subjectInfo.observable });
+            // Define the StateEmitter reference
+            Object.defineProperty(targetInstance, subjectInfo.propertyKey, {
+                // Create a getter that lazily retreives the observable
+                get: () => subjectInfo.observable,
+                // Allow updates to the subject via the setter of the StateEmitter property
+                // (This is needed to allow StateEmitters with attached Angular metadata decorators to work with AoT)
+                set: facadeSetter
+            });
         });
     }
 

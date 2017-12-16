@@ -1,6 +1,7 @@
 import { EventSource } from "./event-source";
 import { StateEmitter } from "./state-emitter";
 import { Metadata } from "./metadata";
+import { AngularMetadata } from "./angular-metadata";
 
 /** @ClassDecoratorFactory */
 export function Reactive(): ClassDecorator {
@@ -29,26 +30,20 @@ export function Reactive(): ClassDecorator {
 
 export namespace Reactive {
 
-    export namespace AngularMetadata {
-        export const ANNOTATIONS = "__annotations__";
-        export const PARAMETERS = "__paramaters__";
-        export const PROP_METADATA = "__prop__metadata__";
-    }
-
     export function CopyAngularMetadata(dest: any, src: any) {
         // Copy all metadata used by Angular to the new constructor
-        let annotationsMetadata = Object.getOwnPropertyDescriptor(src, AngularMetadata.ANNOTATIONS);
-        let parametersMetadata = Object.getOwnPropertyDescriptor(src, AngularMetadata.PARAMETERS);
-        let propMetadata = Object.getOwnPropertyDescriptor(src, AngularMetadata.PROP_METADATA);
+        let annotationsMetadata = AngularMetadata.getAnnotationsMetadata(src);
+        let parametersMetadata = AngularMetadata.getParametersMetadata(src);
+        let propMetadata = AngularMetadata.getPropMetadata(src);
 
         if (annotationsMetadata) {
-            Object.defineProperty(dest, AngularMetadata.ANNOTATIONS, { value: annotationsMetadata.value });
+            Object.defineProperty(dest, AngularMetadata.ANNOTATIONS, { value: annotationsMetadata });
         }
         if (parametersMetadata) {
-            Object.defineProperty(dest, AngularMetadata.PARAMETERS, { value: parametersMetadata.value });
+            Object.defineProperty(dest, AngularMetadata.PARAMETERS, { value: parametersMetadata });
         }
         if (propMetadata) {
-            Object.defineProperty(dest, AngularMetadata.PROP_METADATA, { value: propMetadata.value });
+            Object.defineProperty(dest, AngularMetadata.PROP_METADATA, { value: propMetadata });
         }
     }
 

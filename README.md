@@ -19,6 +19,7 @@ npm install @lithiumjs/angular
 * [StateEmitter](#stateemitter)
 * [Proxied StateEmitters](#proxied-stateemitters)
 * [Lifecycle Event Decorators](#lifecycle-event-decorators)
+* [Angular AoT Compiler](#angular-aot-compiler)
 
 (For more information, see the full [**API reference**](#api))
 
@@ -33,7 +34,7 @@ Bootstrapping is required on the target class to enable event sources and state 
 @Component({...})
 class Component {
 
-    @OnInit() private onInit$: Observable<void> ;
+    @OnInit() private onInit$: Observable<void>;
 
     constructor () {
         this.onInit$.subscribe(() =>  console.log("Hello world."));
@@ -50,7 +51,7 @@ class Component {
 #### Template
 
 ```html
-<button (click)="onButtonPress()"> </button> 
+<button (click)="onButtonPress()"> </button>
 ```
 
 #### Component
@@ -60,7 +61,7 @@ class Component {
 @Component({...})
 class Component {
 
-    @EventSource() private onButtonPress$: Observable<any> ;
+    @EventSource() private onButtonPress$: Observable<any>;
 
     constructor () {
         this.onButtonPress$.subscribe(() =>  console.log("The button was pressed."));
@@ -79,10 +80,30 @@ Method decorators may be passed to ```EventSource``` and will be applied to the 
 @Component({...})
 class Component {
 
-    @EventSource(HostListener("click")) private onClick$: Observable<any> ;
+    // Given "Throttle" is a method decorator factory:
+    @EventSource(Throttle(1000)) private onButtonPress$: Observable<any>;
 
     constructor () {
-        this.onClick$.subscribe(() =>  console.log("Component was clicked."));
+        this.onButtonPress$.subscribe(() =>  console.log("The button was pressed."));
+    }
+}
+```
+
+Angular decorators may also be declared on the ```EventSource``` property itself. Lithium will automatically move the associated metadata to the underlying facade method. This is useful for staying compliant with Angular's AoT compiler.
+
+##### Example
+
+```ts
+@Reactive()
+@Component({...})
+class Component {
+
+    @EventSource()
+    @HostListener("click")
+    private onClick$: Observable<any>;
+
+    constructor () {
+        this.onClick$.subscribe(() =>  console.log("The component was clicked."));
     }
 }
 ```
@@ -96,8 +117,8 @@ class Component {
 #### Template
 
 ```html
-<div> You clicked the button {{buttonPressCount}} times.</div> 
-<button (click)="onButtonPress()"> </button> 
+<div> You clicked the button {{buttonPressCount}} times.</div>
+<button (click)="onButtonPress()"> </button>
 ```
 
 #### Component
@@ -107,9 +128,9 @@ class Component {
 @Component({...})
 class Component {
 
-    @EventSource() private onButtonPress$: Observable<any> ;
+    @EventSource() private onButtonPress$: Observable<any>;
 
-    @StateEmitter({initialValue: 0}) private buttonPressCount$: Subject<number> ;
+    @StateEmitter({initialValue: 0}) private buttonPressCount$: Subject<number>;
 
     constructor () {
         this.onButtonPress$
@@ -125,10 +146,6 @@ Property decorators may be passed to ```StateEmitter``` and will be applied to t
 
 ##### Example
 
-```html
-<component [disabled]="true"> </component> 
-```
-
 ```ts
 @Reactive()
 @Component({
@@ -137,7 +154,31 @@ Property decorators may be passed to ```StateEmitter``` and will be applied to t
 })
 class Component {
 
-    @StateEmitter(Input()) private disabled$: Subject<boolean> ;
+    // Given "NonNull" is a property decorator factory:
+    @StateEmitter(NonNull()) private name$: Subject<string>;
+
+    constructor () {
+        this.name$.subscribe(name =>  console.log(`Name: ${name}`));
+    }
+}
+```
+
+Angular decorators may also be declared on the ```StateEmitter``` property itself. Lithium will automatically move the associated metadata to the underlying facade property. This is useful for staying compliant with Angular's AoT compiler.
+
+##### Example
+
+```html
+<component [disabled]="true"> </component>
+```
+
+```ts
+@Reactive()
+@Component({...})
+class Component {
+
+    @StateEmitter()
+    @Input("disabled")
+    private disabled$: Subject<boolean>;
 
     constructor () {
         this.disabled$.subscribe(disabled =>  console.log(`Disabled: ${disabled}`)); // Output: Disabled: true
@@ -267,7 +308,7 @@ class SessionManager {
 ```
 
 ```html
-<div> Welcome back, {{session.username}}</div> 
+<div> Welcome back, {{session.username}}</div>
 ```
 
 ```ts
@@ -275,7 +316,7 @@ class SessionManager {
 @Component({...})
 class Component {
 
-    @StateEmitter.Alias("sessionManager.session$") private session$: Subject<Session> ;
+    @StateEmitter.Alias("sessionManager.session$") private session$: Subject<Session>;
 
     constructor (private sessionManager: SessionManager) { }
 }
@@ -292,8 +333,8 @@ class Component {
 @Component({...})
 class Component {
 
-    @StateEmitter.Alias("sessionManager.session$") private session$: Subject<Session> ;
-    @StateEmitter.Alias("session$.username") private username$: Observable<string> ;
+    @StateEmitter.Alias("sessionManager.session$") private session$: Subject<Session>;
+    @StateEmitter.Alias("session$.username") private username$: Observable<string>;
 
     constructor (private sessionManager: SessionManager) { }
 }
@@ -316,7 +357,7 @@ The ```From``` proxy type creates a new ```Subject``` that gets its initial valu
 @Component({...})
 class FormComponent {
 
-    @StateEmitter.From("sessionManager.session$.username") private username$: Subject<string> ;
+    @StateEmitter.From("sessionManager.session$.username") private username$: Subject<string>;
 
     constructor (private sessionManager: SessionManager) { }
 }
@@ -341,7 +382,7 @@ The ```Merge``` proxy type creates a new ```Subject``` that subscribes to all up
 @Component({...})
 class FormComponent {
 
-    @StateEmitter.Merge("fooService.date$") private date$: Subject<Date> ;
+    @StateEmitter.Merge("fooService.date$") private date$: Subject<Date>;
 
     constructor (private fooService: FooService) { }
 }
@@ -371,7 +412,7 @@ Helper decorators are provided that proxy all of the Angular component lifecycle
 @Component({...})
 class Component {
 
-    @OnInit() private onInit$: Observable<void> ;
+    @OnInit() private onInit$: Observable<void>;
 
     constructor () {
         this.onInit$.subscribe(() =>  "Component is initialized.");
@@ -380,6 +421,84 @@ class Component {
 ```
 
 [**API reference**](#angular-lifecycle-eventsource-decorators)
+
+### Angular AoT Compiler
+
+Lithium for Angular is fully compliant with Angular's AoT compiler. There are a couple things to keep in mind when using Lithium with AoT:
+
+**When applying an Angular decorator to an ```EventSource```, the decorator should be applied to the property directly instead of being passed into ```EventSource```.**
+
+The following example will fail to work when compiled with AoT:
+
+```ts
+@Reactive()
+@Component({...})
+class Component {
+
+    @EventSource(HostListener("click"))
+    private onClick$: Observable<any>;
+
+    constructor () {
+        // This will never emit when compiled with AoT
+        this.onClick$.subscribe(() =>  console.log("The component was clicked."));
+    }
+}
+```
+
+In the above example, ```HostListener``` should be declared on the property instead. The following example will work correctly when compiled with AoT:
+
+```ts
+@Reactive()
+@Component({...})
+class Component {
+
+    @EventSource()
+    @HostListener("click")
+    private onClick$: Observable<any>;
+
+    constructor () {
+        // This will emit as expected
+        this.onClick$.subscribe(() =>  console.log("The component was clicked."));
+    }
+}
+```
+
+**When applying an Angular decorator to a ```StateEmitter```, the decorator should be applied to the property directly instead of being passed into ```StateEmitter```.**
+
+The following example will fail to work when compiled with AoT:
+
+```ts
+@Reactive()
+@Component({...})
+class Component {
+
+    // This will generate a compiler error when "disabled" is bound to in a template.
+    @StateEmitter(Input("disabled"))
+    private disabled$: Subject<boolean>;
+
+    constructor () {
+        this.disabled$.subscribe(disabled =>  console.log(`Disabled: ${disabled}`));
+    }
+}
+```
+
+In the above example, ```Input``` should be declared on the property instead. The following example will work correctly when compiled with AoT:
+
+```ts
+@Reactive()
+@Component({...})
+class Component {
+
+    // This will allow "disabled" to be bound in a template without generating a compiler error
+    @StateEmitter()
+    @Input("disabled")
+    private disabled$: Subject<boolean>;
+
+    constructor () {
+        this.disabled$.subscribe(disabled =>  console.log(`Disabled: ${disabled}`));
+    }
+}
+```
 
 ## API
 

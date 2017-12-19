@@ -7,7 +7,7 @@ export namespace EventMetadata {
 
     export interface ConfigOptions {
         eventType: EventType;
-        skipMethodChecks?: boolean;
+        skipMethodCheck?: boolean;
     }
 
     export interface SubjectInfo extends ConfigOptions {

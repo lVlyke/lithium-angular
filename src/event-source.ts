@@ -99,7 +99,7 @@ export namespace EventSource {
             return (isCustomMethod && !isExcludedClass) || (target.prototype && ContainsCustomMethod(target.prototype));
         };
 
-        if (!options.skipMethodChecks && ContainsCustomMethod()) {
+        if (!options.skipMethodCheck && ContainsCustomMethod()) {
             // Make sure the target class doesn't have a custom method already defined for this event type
             throw new Error(`@EventSource metadata creation failed. Class already has a custom ${options.eventType} method.`);
         }

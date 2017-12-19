@@ -1,14 +1,15 @@
 import { Subject } from "rxjs";
 import { EventMetadata, EventType } from "./event-metadata";
 import { AngularMetadata } from "./angular-metadata";
+import { AotAware } from "./aot";
 
 export function EventSource(): PropertyDecorator;
 export function EventSource(...methodDecorators: MethodDecorator[]): PropertyDecorator;
-export function EventSource(eventType?: EventType, ...methodDecorators: MethodDecorator[]): PropertyDecorator;
+export function EventSource(options: EventMetadata.ConfigOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator;
 
 /** @PropertyDecoratorFactory */
 export function EventSource(...args: any[]): PropertyDecorator {
-    let paramsArg: EventType | MethodDecorator;
+    let paramsArg: EventMetadata.ConfigOptions | MethodDecorator;
 
     if (args.length > 0) {
         paramsArg = args[0];
@@ -25,15 +26,16 @@ export function EventSource(...args: any[]): PropertyDecorator {
 export namespace EventSource {
 
     /** @PropertyDecoratorFactory */
-    export function WithParams(eventType?: EventType, ...methodDecorators: MethodDecorator[]): PropertyDecorator {
+    export function WithParams(options?: EventMetadata.ConfigOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator {
+        options = options || {};
 
         /** @PropertyDecorator */
         return function(target: any, propertyKey: string) {
             // If an eventType wasn't specified...
-            if (!eventType) {
+            if (!options.eventType) {
                 // Try to deduce the eventType from the propertyKey
                 if (propertyKey.endsWith("$")) {
-                    eventType = propertyKey.substring(0, propertyKey.length - 1);
+                    options.eventType = propertyKey.substring(0, propertyKey.length - 1);
                 }
                 else {
                     throw new Error(`@EventSource error: eventType could not be deduced from propertyKey "${propertyKey}" (only keys ending with '$' can be auto-deduced).`);
@@ -41,14 +43,14 @@ export namespace EventSource {
             }
 
             // Create the event source metadata for the decorated property
-            EventSource.CreateMetadata(eventType, target, propertyKey);
+            EventSource.CreateMetadata(options, target, propertyKey);
 
             // Apply any method decorators to the facade function
-            methodDecorators.forEach(methodDecorator => methodDecorator(target, eventType, Object.getOwnPropertyDescriptor(target, eventType)));
+            methodDecorators.forEach(methodDecorator => methodDecorator(target, options.eventType, Object.getOwnPropertyDescriptor(target, options.eventType)));
 
             // Point any Angular metadata attached to the EventSource to the underlying facade method
             if (AngularMetadata.hasPropMetadataEntry(target.constructor, propertyKey)) {
-                AngularMetadata.renamePropMetadataEntry(target.constructor, propertyKey, eventType);
+                AngularMetadata.renamePropMetadataEntry(target.constructor, propertyKey, options.eventType);
             }
         };
     }
@@ -87,21 +89,24 @@ export namespace EventSource {
         }
     }
 
-    export function CreateMetadata(type: EventType, target: any, propertyKey: string): EventMetadata.SubjectInfo {
-        if (target[type] && target[type].eventType !== type) {
+    export function CreateMetadata(options: EventMetadata.ConfigOptions, target: any, propertyKey: string) {
+        const ContainsCustomMethod = ($class = target) => {
+            let method = Object.getOwnPropertyDescriptor($class, options.eventType);
+            let isCustomMethod = method && method.value && method.value.eventType !== options.eventType;
+            let isExcludedClass = $class.name === AotAware.name;
+            return (isCustomMethod && !isExcludedClass) || (target.prototype && ContainsCustomMethod(target.prototype));
+        };
+
+        if (!options.skipMethodChecks && ContainsCustomMethod()) {
             // Make sure the target class doesn't have a custom method already defined for this event type
-            throw new Error(`@EventSource metadata creation failed. Class already has a custom ${type} method.`);
+            throw new Error(`@EventSource metadata creation failed. Class already has a custom ${options.eventType} method.`);
         }
-        else if (!target[type]) {
+        else {
             // Assign the facade function for the given event type to the appropriate target class method
-            target[type] = Facade.Create(type);
+            target[options.eventType] = Facade.Create(options.eventType);
         }
 
-        // Create initial metadata
-        let metadata: EventMetadata.SubjectInfo = { subject: undefined };
-
-        // Add the propertyKey to the class' metadata
-        EventMetadata.GetOwnPropertySubjectMap(type, target.constructor).set(propertyKey, metadata);
-        return metadata;
+        // Add the EventSource options to the class' metadata
+        EventMetadata.GetOwnPropertySubjectMap(options.eventType, target.constructor).set(propertyKey, options as EventMetadata.SubjectInfo);
     }
 }

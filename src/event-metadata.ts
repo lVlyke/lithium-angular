@@ -5,7 +5,12 @@ export type EventType = string;
 
 export namespace EventMetadata {
 
-    export interface SubjectInfo {
+    export interface ConfigOptions {
+        eventType?: EventType;
+        skipMethodChecks?: boolean;
+    }
+
+    export interface SubjectInfo extends ConfigOptions {
         subject: Subject<any>;
     }
 
@@ -59,7 +64,7 @@ export namespace EventMetadata {
     }
 
     export function SetMetadataMap(target: Object, map: MetadataMap) {
-        Metadata.SetMetadata<MetadataMap>(EventMapSymbol, target, map);
+        Metadata.SetMetadata(EventMapSymbol, target, map);
     }
 
     /** @description Copy all metadata from the source map to the target map.

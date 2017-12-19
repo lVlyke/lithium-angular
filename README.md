@@ -1,8 +1,14 @@
-<!-- markdownlint-disable MD024 MD031 --> 
+<!-- markdownlint-disable MD024 MD031 -->
 
 # Lithium for Angular
 
-A set of extensions for Angular that enable writing highly reactive components using RxJS.
+A decorator-based library for Angular that enables writing highly reactive components using RxJS.
+
+* [Installation](#installation)
+* [Quick Intro Guide](#quick-intro-guide)
+* [Angular AoT Compiler](#angular-aot-compiler)
+* [API](#api)
+* [Other Information](#other-information)
 
 ## Installation
 
@@ -19,7 +25,6 @@ npm install @lithiumjs/angular
 * [StateEmitter](#stateemitter)
 * [Proxied StateEmitters](#proxied-stateemitters)
 * [Lifecycle Event Decorators](#lifecycle-event-decorators)
-* [Angular AoT Compiler](#angular-aot-compiler)
 
 (For more information, see the full [**API reference**](#api))
 
@@ -41,6 +46,8 @@ class Component {
     }
 }
 ```
+
+**NOTE:** If you are using Angular's AoT compiler, additional considerations are required to write fully AoT-compliant components with Lithium. See the [Angular AoT Compiler](#angular-aot-compiler) section for details.
 
 [**API reference**](#reactive)
 
@@ -89,7 +96,7 @@ class Component {
 }
 ```
 
-Angular decorators may also be declared on the ```EventSource``` property itself. Lithium will automatically move the associated metadata to the underlying facade method. This is useful for staying compliant with Angular's AoT compiler.
+Angular decorators may also be declared on the ```EventSource``` property itself. Lithium will automatically move the associated metadata to the underlying facade method. This is useful for [staying compliant with Angular's AoT compiler](#angular-aot-compiler).
 
 ##### Example
 
@@ -163,7 +170,7 @@ class Component {
 }
 ```
 
-Angular decorators may also be declared on the ```StateEmitter``` property itself. Lithium will automatically move the associated metadata to the underlying facade property. This is useful for staying compliant with Angular's AoT compiler.
+Angular decorators may also be declared on the ```StateEmitter``` property itself. Lithium will automatically move the associated metadata to the underlying facade property. This is useful for [staying compliant with Angular's AoT compiler](#angular-aot-compiler).
 
 ##### Example
 
@@ -212,7 +219,7 @@ class Component {
         proxyMode: EmitterMetadata.ProxyMode.Alias,
         proxyPath: "fooService.nestedProperty",
     })
-    private nestedProperty$: Observable<number> ;
+    private nestedProperty$: Observable<number>;
 
     constructor (private fooService: FooService) { }
 }
@@ -250,10 +257,10 @@ class SettingsService {
 class FormComponent {
 
     @StateEmitter.Alias("settingsService.settings$")
-    private settings$: Subject<Settings> ;
+    private settings$: Subject<Settings>;
 
     @StateEmitter.Alias("settings$.notificationsEnabled")
-    private notificationsEnabled$: Observable<boolean> ;
+    private notificationsEnabled$: Observable<boolean>;
 
     constructor (private settingsService: SettingsService) { }
 }
@@ -325,7 +332,7 @@ class Component {
 ```Alias``` can also be used with other ```StateEmitter``` references:
 
 ```html
-<div> Welcome back, {{username}}</div> 
+<div> Welcome back, {{username}}</div>
 ```
 
 ```ts
@@ -415,18 +422,80 @@ class Component {
     @OnInit() private onInit$: Observable<void>;
 
     constructor () {
-        this.onInit$.subscribe(() =>  "Component is initialized.");
+        this.onInit$.subscribe(() =>  console.log("Component is initialized."));
     }
 }
 ```
 
 [**API reference**](#angular-lifecycle-eventsource-decorators)
 
-### Angular AoT Compiler
+## Angular AoT Compiler
 
-Lithium for Angular is fully compliant with Angular's AoT compiler. There are a couple things to keep in mind when using Lithium with AoT:
+Lithium for Angular is compatible with Angular's AoT compiler. However, due to current limitations of the compiler there are a few rules that need to be adhered to in order to write fully AoT-compliant code with Lithium:
 
-**When applying an Angular decorator to an ```EventSource```, the decorator should be applied to the property directly instead of being passed into ```EventSource```.**
+**1. Angular component lifecycle ```EventSource``` decorators will not work in AoT mode unless a corresponding method declaration is created for the event.**
+
+When using component lifecycle events (i.e. ```ngOnInit```), Angular's AoT compiler requires that a method for that event be explicitly declared in the class or a parent class for it to be invoked. However, Lithium adds these methods dynamically through a class decorator, and since the AoT compiler does not evaluate expressions, the corresponding lifecycle ```EventSource``` decorator will never emit.
+
+For example, the following code, while valid without the AoT compiler, will fail to work correctly when compiled with AoT:
+
+```ts
+@Reactive()
+@Component({...})
+class Component {
+
+    // EventSource proxy for ngOnInit
+    @OnInit() private onInit$: Observable<void>;
+
+    constructor () {
+        // ngOnInit will *never* fire in AoT mode for this class, because we did not explicitly declare an ngOnInit method (note that the AoT compiler cannot resolve mixins/anonymous classes).
+        this.onInit$.subscribe(() =>  console.log("Component is initialized."));
+    }
+}
+```
+
+To help with this limitation, Lithium for Angular provides an ```AotAware``` class that a component class can extend to resolve this automatically:
+
+```ts
+@Reactive()
+@Component({...})
+// Extending AotAware takes care of providing the Angular lifecycle event method declarations.
+class Component extends AotAware {
+    // EventSource proxy for ngOnInit
+    @OnInit() private onInit$: Observable<void>;
+
+    constructor () {
+        super();
+
+        // This will fire as expected.
+        this.onInit$.subscribe(() =>  console.log("Component is initialized."));
+    }
+}
+```
+
+If you do not wish to use the ```AotAware``` class, you must provide an empty stub declaration of the corresponding Angular event method and set ```skipMethodChecks``` to ```true``` for the ```EventSource``` decorator. Example:
+
+```ts
+@Reactive()
+@Component({...})
+class Component {
+    // EventSource proxy for ngOnInit
+    // Disable EventSource method usage checks
+    @OnInit({ skipMethodChecks: true }) private onInit$: Observable<void>;
+
+    // This stub declaration must be provided to allow onInit$ to fire in AoT mode.
+    public ngOnInit() {}
+
+    constructor () {
+        // This will fire as expected.
+        this.onInit$.subscribe(() =>  console.log("Component is initialized."));
+    }
+}
+```
+
+Please note that the method declaration will be overidden by Lithium. Any code inside the declaration will be ignored.
+
+**2. When applying an Angular decorator to an ```EventSource```, the decorator should be applied to the property directly instead of being passed into ```EventSource```.**
 
 The following example will fail to work when compiled with AoT:
 
@@ -463,7 +532,7 @@ class Component {
 }
 ```
 
-**When applying an Angular decorator to a ```StateEmitter```, the decorator should be applied to the property directly instead of being passed into ```StateEmitter```.**
+**3. When applying an Angular decorator to a ```StateEmitter```, the decorator should be applied to the property directly instead of being passed into ```StateEmitter```.**
 
 The following example will fail to work when compiled with AoT:
 
@@ -510,21 +579,51 @@ function Reactive(): ClassDecorator
 
 A decorator that bootstraps the target class, which wires up all own and inherited ```EventSource```s and ```StateEmitter```s to each class instance.
 
+### ```AotAware```
+
+```ts
+abstract class AotAware {
+    public ngOnChanges();
+    public ngOnInit();
+    public ngOnDestroy();
+    public ngDoCheck();
+    public ngAfterContentInit();
+    public ngAfterContentChecked();
+    public ngAfterViewInit();
+    public ngAfterViewChecked();
+}
+```
+
+An abstract class that an Angular component class can extend to automatically handle defining lifecycle event methods for the AoT compiler.
+
 ### ```EventSource```
 
 ```ts
 function EventSource(): EventSourceDecorator
 function EventSource(...methodDecorators: MethodDecorator[]): EventSourceDecorator
-function EventSource(eventType?: EventType, ...methodDecorators: MethodDecorator[]): EventSourceDecorator
+function EventSource(options: EventMetadata.ConfigOptions, ...methodDecorators: MethodDecorator[]): EventSourceDecorator
 ```
 
 Creates an event source, which is an ```Observable``` that automatically emits when the given function (```eventType```) is called.
 
-**```eventType```** - The name of the function that represents the event or action.
+**```options```** - The options to use for this event source. See [**```EventMetadata.ConfigOptions```**](#eventmetadataconfigoptions).
 
 **```methodDecorators```** - A list of ```MethodDecorator```s that should be applied to the underlying event function.
 
-Note: If the target property's name is of the format "```<eventType> $```", ```eventType``` can be omitted and automatically deduced from the property name.
+Note: If the target property's name is of the format "```<eventType>$```", ```options.eventType``` can be omitted and automatically deduced from the property name.
+
+#### ```EventMetadata.ConfigOptions```
+
+```ts
+interface ConfigOptions {
+    eventType?: EventType;
+    skipMethodChecks?: boolean;
+}
+```
+
+**```eventType```** - (Optional) The name of the function that represents the event or action. If not specified, the name will try to be deduced from the name of the ```EventSource``` property.
+
+**```skipMethodChecks```** - (Optional) Whether or not to ignore existing method declarations in the class when defining the ```EventSource```. If set to ```false```, an error will be thrown if a method is defined with the same name as the ```eventType```. Defaults to ```false```.
 
 ### ```StateEmitter```
 
@@ -540,7 +639,7 @@ Creates a state emitter, which is a ```Subject``` that automatically emits when 
 
 **```propertyDecorators```** - A list of ```PropertyDecorator```s that should be applied to the underlying property.
 
-Note: If the target property's name is of the format "```<emitterType> $```", ```params.propertyName``` can be omitted and automatically deduced from the property name.
+Note: If the target property's name is of the format "```<emitterType>$```", ```params.propertyName``` can be omitted and automatically deduced from the property name.
 
 #### ```StateEmitter.Alias```
 
@@ -662,50 +761,66 @@ type ProxyMode = keyof {
 #### ```OnChanges```
 
 ```ts
-function OnChanges(): EventSourceDecorator
+function OnChanges(options?: EventMetadata.ConfigOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator
 ```
+
+See [**```EventSource```**](#eventsource-1).
 
 #### ```OnInit```
 
 ```ts
-function OnInit(): EventSourceDecorator
+function OnInit(options?: EventMetadata.ConfigOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator
 ```
+
+See [**```EventSource```**](#eventsource-1).
 
 #### ```OnDestroy```
 
 ```ts
-function OnDestroy(): EventSourceDecorator
+function OnDestroy(options?: EventMetadata.ConfigOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator
 ```
+
+See [**```EventSource```**](#eventsource-1).
 
 #### ```DoCheck```
 
 ```ts
-function DoCheck(): EventSourceDecorator
+function DoCheck(options?: EventMetadata.ConfigOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator
 ```
+
+See [**```EventSource```**](#eventsource-1).
 
 #### ```AfterContentInit```
 
 ```ts
-function AfterContentInit(): EventSourceDecorator
+function AfterContentInit(options?: EventMetadata.ConfigOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator
 ```
+
+See [**```EventSource```**](#eventsource-1).
 
 #### ```AfterContentChecked```
 
 ```ts
-function AfterContentChecked(): EventSourceDecorator
+function AfterContentChecked(options?: EventMetadata.ConfigOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator
 ```
+
+See [**```EventSource```**](#eventsource-1).
 
 #### ```AfterViewInit```
 
 ```ts
-function AfterViewInit(): EventSourceDecorator
+function AfterViewInit(options?: EventMetadata.ConfigOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator
 ```
+
+See [**```EventSource```**](#eventsource-1).
 
 #### ```AfterViewChecked```
 
 ```ts
-function AfterViewChecked(): EventSourceDecorator
+function AfterViewChecked(options?: EventMetadata.ConfigOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator
 ```
+
+See [**```EventSource```**](#eventsource-1).
 
 ## Other information
 

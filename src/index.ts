@@ -1,3 +1,4 @@
+export * from "./aot";
 export * from "./component";
 export * from "./emitter-metadata";
 export * from "./event-metadata";

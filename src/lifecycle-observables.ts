@@ -1,5 +1,5 @@
 import { EventSource } from "./event-source";
-import { EventType } from "./event-metadata";
+import { EventType, EventMetadata } from "./event-metadata";
 
 export type AngularLifecycleType = keyof {
     ngOnChanges,
@@ -14,7 +14,7 @@ export type AngularLifecycleType = keyof {
 
 export namespace AngularLifecycleType {
 
-    export type DecoratorFactory = () => PropertyDecorator;
+    export type DecoratorFactory = (options?: EventMetadata.ConfigOptions, ...methodDecorators: MethodDecorator[]) => PropertyDecorator;
 
     export const OnChanges: AngularLifecycleType = "ngOnChanges";
     export const OnInit: AngularLifecycleType = "ngOnInit";
@@ -37,9 +37,9 @@ export namespace AngularLifecycleType {
     ];
 
     /** @PropertyDecoratorMetaFactory */
-    export function DecoratorFactory(type: EventType): DecoratorFactory {
-        return function (): PropertyDecorator {
-            return EventSource(type);
+    export function DecoratorFactory(eventType: EventType): DecoratorFactory {
+        return function (options?: EventMetadata.ConfigOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator {
+            return EventSource(Object.assign({ eventType }, options), ...methodDecorators);
         };
     }
 }

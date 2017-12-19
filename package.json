@@ -24,7 +24,7 @@
     "build:js": "rimraf ./dist && ngc && cp ./package.json ./dist/package.json"
   },
   "peerDependencies": {
-    "@angular/core": "4.x.x, 5.x.x",
+    "@angular/core": "4.x.x - 5.x.x",
     "rxjs": "5.x.x"
   },
   "devDependencies": {

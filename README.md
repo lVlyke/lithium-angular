@@ -473,7 +473,7 @@ class Component extends AotAware {
 }
 ```
 
-If you do not wish to use the ```AotAware``` class, you must provide an empty stub declaration of the corresponding Angular event method and set ```skipMethodChecks``` to ```true``` for the ```EventSource``` decorator. Example:
+If you do not wish to use the ```AotAware``` class, you must provide an empty stub declaration of the corresponding Angular event method and set ```skipMethodCheck``` to ```true``` for the ```EventSource``` decorator. Example:
 
 ```ts
 @Reactive()
@@ -481,7 +481,7 @@ If you do not wish to use the ```AotAware``` class, you must provide an empty st
 class Component {
     // EventSource proxy for ngOnInit
     // Disable EventSource method usage checks
-    @OnInit({ skipMethodChecks: true }) private onInit$: Observable<void>;
+    @OnInit({ skipMethodCheck: true }) private onInit$: Observable<void>;
 
     // This stub declaration must be provided to allow onInit$ to fire in AoT mode.
     public ngOnInit() {}
@@ -617,13 +617,13 @@ Note: If the target property's name is of the format "```<eventType>$```", ```op
 ```ts
 interface DecoratorOptions {
     eventType?: EventType;
-    skipMethodChecks?: boolean;
+    skipMethodCheck?: boolean;
 }
 ```
 
 **```eventType```** - (Optional) The name of the function that represents the event or action. If not specified, the name will try to be deduced from the name of the ```EventSource``` property.
 
-**```skipMethodChecks```** - (Optional) Whether or not to ignore existing method declarations in the class when defining the ```EventSource```. If set to ```false```, an error will be thrown if a method is defined with the same name as the ```eventType```. Defaults to ```false```.
+**```skipMethodCheck```** - (Optional) Whether or not to ignore existing method declarations in the class when defining the ```EventSource```. If set to ```false```, an error will be thrown if a method is defined with the same name as the ```eventType```. Defaults to ```false```.
 
 #### ```EventType```
 

@@ -6,7 +6,7 @@ export type EventType = string;
 export namespace EventMetadata {
 
     export interface ConfigOptions {
-        eventType?: EventType;
+        eventType: EventType;
         skipMethodChecks?: boolean;
     }
 

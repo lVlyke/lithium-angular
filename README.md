@@ -601,21 +601,21 @@ An abstract class that an Angular component class can extend to automatically ha
 ```ts
 function EventSource(): EventSourceDecorator
 function EventSource(...methodDecorators: MethodDecorator[]): EventSourceDecorator
-function EventSource(options: EventMetadata.ConfigOptions, ...methodDecorators: MethodDecorator[]): EventSourceDecorator
+function EventSource(options: EventSource.DecoratorOptions, ...methodDecorators: MethodDecorator[]): EventSourceDecorator
 ```
 
 Creates an event source, which is an ```Observable``` that automatically emits when the given function (```eventType```) is called.
 
-**```options```** - The options to use for this event source. See [**```EventMetadata.ConfigOptions```**](#eventmetadataconfigoptions).
+**```options```** - The options to use for this event source. See [**```EventSource.DecoratorOptions```**](#eventsourcedecoratoroptions).
 
 **```methodDecorators```** - A list of ```MethodDecorator```s that should be applied to the underlying event function.
 
 Note: If the target property's name is of the format "```<eventType>$```", ```options.eventType``` can be omitted and automatically deduced from the property name.
 
-#### ```EventMetadata.ConfigOptions```
+#### ```EventSource.DecoratorOptions```
 
 ```ts
-interface ConfigOptions {
+interface DecoratorOptions {
     eventType?: EventType;
     skipMethodChecks?: boolean;
 }
@@ -624,6 +624,14 @@ interface ConfigOptions {
 **```eventType```** - (Optional) The name of the function that represents the event or action. If not specified, the name will try to be deduced from the name of the ```EventSource``` property.
 
 **```skipMethodChecks```** - (Optional) Whether or not to ignore existing method declarations in the class when defining the ```EventSource```. If set to ```false```, an error will be thrown if a method is defined with the same name as the ```eventType```. Defaults to ```false```.
+
+#### ```EventType```
+
+```ts
+type EventType = string;
+```
+
+```EventType``` represents the name of the function being proxied.
 
 ### ```StateEmitter```
 
@@ -733,12 +741,6 @@ interface ProxyDecoratorParams {
 
 **```mergeUpdates```** - (Optional) See [**```StateEmitter.DecoratorParams.proxyMergeUpdates```**](#stateemitterdecoratorparams).
 
-#### ```StateEmitter.EventType```
-
-```ts
-type EventType = string;
-```
-
 #### ```StateEmitter.EmitterType```
 
 ```ts
@@ -761,7 +763,7 @@ type ProxyMode = keyof {
 #### ```OnChanges```
 
 ```ts
-function OnChanges(options?: EventMetadata.ConfigOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator
+function OnChanges(options?: EventSource.DecoratorOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator
 ```
 
 See [**```EventSource```**](#eventsource-1).
@@ -769,7 +771,7 @@ See [**```EventSource```**](#eventsource-1).
 #### ```OnInit```
 
 ```ts
-function OnInit(options?: EventMetadata.ConfigOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator
+function OnInit(options?: EventSource.DecoratorOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator
 ```
 
 See [**```EventSource```**](#eventsource-1).
@@ -777,7 +779,7 @@ See [**```EventSource```**](#eventsource-1).
 #### ```OnDestroy```
 
 ```ts
-function OnDestroy(options?: EventMetadata.ConfigOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator
+function OnDestroy(options?: EventSource.DecoratorOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator
 ```
 
 See [**```EventSource```**](#eventsource-1).
@@ -785,7 +787,7 @@ See [**```EventSource```**](#eventsource-1).
 #### ```DoCheck```
 
 ```ts
-function DoCheck(options?: EventMetadata.ConfigOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator
+function DoCheck(options?: EventSource.DecoratorOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator
 ```
 
 See [**```EventSource```**](#eventsource-1).
@@ -793,7 +795,7 @@ See [**```EventSource```**](#eventsource-1).
 #### ```AfterContentInit```
 
 ```ts
-function AfterContentInit(options?: EventMetadata.ConfigOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator
+function AfterContentInit(options?: EventSource.DecoratorOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator
 ```
 
 See [**```EventSource```**](#eventsource-1).
@@ -801,7 +803,7 @@ See [**```EventSource```**](#eventsource-1).
 #### ```AfterContentChecked```
 
 ```ts
-function AfterContentChecked(options?: EventMetadata.ConfigOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator
+function AfterContentChecked(options?: EventSource.DecoratorOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator
 ```
 
 See [**```EventSource```**](#eventsource-1).
@@ -809,7 +811,7 @@ See [**```EventSource```**](#eventsource-1).
 #### ```AfterViewInit```
 
 ```ts
-function AfterViewInit(options?: EventMetadata.ConfigOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator
+function AfterViewInit(options?: EventSource.DecoratorOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator
 ```
 
 See [**```EventSource```**](#eventsource-1).
@@ -817,7 +819,7 @@ See [**```EventSource```**](#eventsource-1).
 #### ```AfterViewChecked```
 
 ```ts
-function AfterViewChecked(options?: EventMetadata.ConfigOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator
+function AfterViewChecked(options?: EventSource.DecoratorOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator
 ```
 
 See [**```EventSource```**](#eventsource-1).

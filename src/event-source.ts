@@ -5,11 +5,11 @@ import { AotAware } from "./aot";
 
 export function EventSource(): PropertyDecorator;
 export function EventSource(...methodDecorators: MethodDecorator[]): PropertyDecorator;
-export function EventSource(options: EventMetadata.ConfigOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator;
+export function EventSource(options: EventSource.DecoratorOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator;
 
 /** @PropertyDecoratorFactory */
 export function EventSource(...args: any[]): PropertyDecorator {
-    let paramsArg: EventMetadata.ConfigOptions | MethodDecorator;
+    let paramsArg: EventSource.DecoratorOptions | MethodDecorator;
 
     if (args.length > 0) {
         paramsArg = args[0];
@@ -25,8 +25,10 @@ export function EventSource(...args: any[]): PropertyDecorator {
 
 export namespace EventSource {
 
+    export type DecoratorOptions = Partial<EventMetadata.ConfigOptions>;
+
     /** @PropertyDecoratorFactory */
-    export function WithParams(options?: EventMetadata.ConfigOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator {
+    export function WithParams(options?: DecoratorOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator {
         options = options || {};
 
         /** @PropertyDecorator */
@@ -43,7 +45,7 @@ export namespace EventSource {
             }
 
             // Create the event source metadata for the decorated property
-            EventSource.CreateMetadata(options, target, propertyKey);
+            EventSource.CreateMetadata(options as EventMetadata.SubjectInfo, target, propertyKey);
 
             // Apply any method decorators to the facade function
             methodDecorators.forEach(methodDecorator => methodDecorator(target, options.eventType, Object.getOwnPropertyDescriptor(target, options.eventType)));
@@ -69,7 +71,7 @@ export namespace EventSource {
     
             // Set the property key to a function that will invoke the facade method when called
             // (This is needed to allow EventSources with attached Angular metadata decorators to work with AoT)
-            targetInstance[propertyKey] = targetInstance[eventType];
+            targetInstance[propertyKey] = Facade.Create(eventType);
             
             // Compose the function with the observable
             Object.setPrototypeOf(targetInstance[propertyKey], subjectInfo.subject.asObservable());
@@ -89,7 +91,7 @@ export namespace EventSource {
         }
     }
 
-    export function CreateMetadata(options: EventMetadata.ConfigOptions, target: any, propertyKey: string) {
+    export function CreateMetadata(options: EventMetadata.SubjectInfo, target: any, propertyKey: string) {
         const ContainsCustomMethod = ($class = target) => {
             let method = Object.getOwnPropertyDescriptor($class, options.eventType);
             let isCustomMethod = method && method.value && method.value.eventType !== options.eventType;
@@ -107,6 +109,6 @@ export namespace EventSource {
         }
 
         // Add the EventSource options to the class' metadata
-        EventMetadata.GetOwnPropertySubjectMap(options.eventType, target.constructor).set(propertyKey, options as EventMetadata.SubjectInfo);
+        EventMetadata.GetOwnPropertySubjectMap(options.eventType, target.constructor).set(propertyKey, options);
     }
 }

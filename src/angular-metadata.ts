@@ -37,3 +37,6 @@ export namespace AngularMetadata {
         delete metadata[propName];
     }
 }
+
+// Workaround for angular-cli 5.0.0 metadata gen bug
+export interface AngularMetadata {}

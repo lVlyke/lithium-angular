@@ -1,14 +1,14 @@
 import { EventSource } from "./event-source";
 
 export type AngularLifecycleType = keyof {
-    ngOnChanges,
-    ngOnInit,
-    ngOnDestroy
-    ngDoCheck,
-    ngAfterContentInit,
-    ngAfterContentChecked,
-    ngAfterViewInit,
-    ngAfterViewChecked
+    ngOnChanges: any,
+    ngOnInit: any,
+    ngOnDestroy: any
+    ngDoCheck: any,
+    ngAfterContentInit: any,
+    ngAfterContentChecked: any,
+    ngAfterViewInit: any,
+    ngAfterViewChecked: any
 };
 
 export namespace AngularLifecycleType {

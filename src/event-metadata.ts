@@ -1,4 +1,4 @@
-import { Subject, Observable } from "rxjs";
+import { Subject } from "rxjs";
 import { Metadata } from "./metadata";
 
 export type EventType = string;

@@ -92,7 +92,7 @@ export namespace EventSource {
     }
 
     export function CreateMetadata(options: EventMetadata.SubjectInfo, target: any, propertyKey: string) {
-        const ContainsCustomMethod = ($class = target) => {
+        const ContainsCustomMethod = ($class = target): boolean => {
             let method = Object.getOwnPropertyDescriptor($class, options.eventType);
             let isCustomMethod = method && method.value && method.value.eventType !== options.eventType;
             let isExcludedClass = $class.name === AotAware.name;

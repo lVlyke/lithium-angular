@@ -6,10 +6,10 @@ export type EmitterType = string;
 export namespace EmitterMetadata {
 
     export type ProxyMode = keyof {
-        None,
-        From,
-        Alias,
-        Merge
+        None: any,
+        From: any,
+        Alias: any,
+        Merge: any
     };
 
     export namespace ProxyMode {

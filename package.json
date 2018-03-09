@@ -1,6 +1,6 @@
 {
   "name": "@lithiumjs/angular",
-  "version": "1.3.0-rc.2",
+  "version": "1.3.0",
   "description": "A decorator-based library for Angular that enables writing highly reactive components using RxJS.",
   "main": "index.js",
   "author": "Mychal Thompson <mychal.r.thompson@gmail.com>",

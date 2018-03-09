@@ -433,7 +433,11 @@ class Component {
 
 Lithium for Angular is compatible with Angular's AoT compiler. However, due to current limitations of the compiler there are a few rules that need to be adhered to in order to write fully AoT-compliant code with Lithium:
 
-**1. Angular component lifecycle ```EventSource``` decorators will not work in AoT mode unless a corresponding method declaration is created for the event.**
+**1. ```skipTemplateCodegen``` must be set to ```false```.**
+
+Because Lithium's ```StateEmitter``` takes care of managing the properties that a component's view template will access, it is incompatible with how the current Angular AoT compiler generates template metadata. To remedy this issue, you must set the ```skipTemplateCodegen``` flag to ```false``` under ```angularCompilerOptions``` in your project's ```tsconfig.json```. For more info, see the [official Angular AoT compiler documentation](https://angular.io/guide/aot-compiler#skiptemplatecodegen).
+
+**2. Angular component lifecycle ```EventSource``` decorators will not work in AoT mode unless a corresponding method declaration is created for the event.**
 
 When using component lifecycle events (i.e. ```ngOnInit```), Angular's AoT compiler requires that a method for that event be explicitly declared in the class or a parent class for it to be invoked. However, Lithium adds these methods dynamically through a class decorator, and since the AoT compiler does not evaluate expressions, the corresponding lifecycle ```EventSource``` decorator will never emit.
 
@@ -495,7 +499,7 @@ class Component {
 
 Please note that the method declaration will be overidden by Lithium. Any code inside the declaration will be ignored.
 
-**2. When applying an Angular decorator to an ```EventSource```, the decorator should be applied to the property directly instead of being passed into ```EventSource```.**
+**3. When applying an Angular decorator to an ```EventSource```, the decorator should be applied to the property directly instead of being passed into ```EventSource```.**
 
 The following example will fail to work when compiled with AoT:
 
@@ -532,7 +536,7 @@ class Component {
 }
 ```
 
-**3. When applying an Angular decorator to a ```StateEmitter```, the decorator should be applied to the property directly instead of being passed into ```StateEmitter```.**
+**4. When applying an Angular decorator to a ```StateEmitter```, the decorator should be applied to the property directly instead of being passed into ```StateEmitter```.**
 
 The following example will fail to work when compiled with AoT:
 

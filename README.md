@@ -12,7 +12,7 @@ A decorator-based library for Angular that enables writing highly reactive compo
 
 ## Installation
 
-The project can be installed via **npm** using the following command:
+The project can be installed [via **npm**](https://www.npmjs.com/package/@lithiumjs/angular) using the following command:
 
 ```bash
 npm install @lithiumjs/angular
@@ -433,9 +433,9 @@ class Component {
 
 Lithium for Angular is compatible with Angular's AoT compiler. However, due to current limitations of the compiler there are a few rules that need to be adhered to in order to write fully AoT-compliant code with Lithium:
 
-**1. ```skipTemplateCodegen``` must be set to ```false```.**
+**1. ```skipTemplateCodegen``` must be set to ```true```.**
 
-Because Lithium's ```StateEmitter``` takes care of managing the properties that a component's view template will access, it is incompatible with how the current Angular AoT compiler generates template metadata. To remedy this issue, you must set the ```skipTemplateCodegen``` flag to ```false``` under ```angularCompilerOptions``` in your project's ```tsconfig.json```. For more info, see the [official Angular AoT compiler documentation](https://angular.io/guide/aot-compiler#skiptemplatecodegen).
+Because Lithium's ```StateEmitter``` takes care of managing the properties that a component's view template will access, it is incompatible with how the current Angular AoT compiler generates template metadata. To remedy this issue, you must set the ```skipTemplateCodegen``` flag to ```true``` under ```angularCompilerOptions``` in your project's ```tsconfig.json```. For more info, see the [official Angular AoT compiler documentation](https://angular.io/guide/aot-compiler#skiptemplatecodegen).
 
 **2. Angular component lifecycle ```EventSource``` decorators will not work in AoT mode unless a corresponding method declaration is created for the event.**
 

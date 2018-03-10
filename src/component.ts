@@ -18,7 +18,7 @@ export function Reactive(): ClassDecorator {
 
         // Assign the target ctor's prototype chain and data to the new constructor
         bootstrapConstructor.prototype = constructor.prototype;
-        Object.setPrototypeOf(bootstrapConstructor, Object.getPrototypeOf(constructor));
+        Object.setPrototypeOf(bootstrapConstructor, constructor);
 
         // Copy all metadata from the original class
         Reactive.CopyMetadata(bootstrapConstructor, constructor);

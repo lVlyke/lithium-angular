@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+
+"use strict";
+
 const fs = require("fs-extra");
 const child_process = require("child_process");
 const path = require("path");

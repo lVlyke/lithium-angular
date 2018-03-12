@@ -21,7 +21,9 @@
     "reactive"
   ],
   "scripts": {
-    "build:js": "node ./scripts/build.js"
+    "build:js": "node ./scripts/build.js",
+    "pretest": "./scripts/pretest.js",
+    "test": "jasmine"
   },
   "peerDependencies": {
     "@angular/core": "4.x.x - 5.x.x",
@@ -31,10 +33,16 @@
     "@angular/compiler": "5.0.0",
     "@angular/compiler-cli": "5.0.0",
     "@angular/core": "5.0.0",
+    "@types/jasmine": "^2.8.6",
     "@types/reflect-metadata": "^0.0.5",
     "fs-extra": "^5.0.0",
+    "jasmine": "^3.1.0",
     "rxjs": "5.5.x",
+    "source-map-support": "^0.5.3",
     "typescript": "~2.4.2",
     "zone.js": "0.8.18"
+  },
+  "dependencies": {
+    "bdd-test-helpers": "^1.0.0-rc.0"
   }
 }

@@ -238,7 +238,7 @@ describe("An EventSource decorator", () => {
                     });
                 }
 
-                spec.it("should set the expected metadata for the", (params) => {
+                spec.it("should set the expected metadata for the class", (params) => {
                     const metadata: EventSource.DecoratorOptions = EventMetadata
                         .GetOwnPropertySubjectMap(eventType, params.targetClass)
                         .get(propertyKey);

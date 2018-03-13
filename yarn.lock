@@ -116,9 +116,9 @@ bcrypt-pbkdf@^1.0.0:
   dependencies:
     tweetnacl "^0.14.3"
 
-bdd-test-helpers@^1.0.0-rc.0:
-  version "1.0.0-rc.0"
-  resolved "https://registry.npmjs.org/bdd-test-helpers/-/bdd-test-helpers-1.0.0-rc.0.tgz#809da2b5c41aee6361a44ea1797e32da46147e2d"
+bdd-test-helpers@^1.0.0-rc.1:
+  version "1.0.0-rc.1"
+  resolved "https://registry.npmjs.org/bdd-test-helpers/-/bdd-test-helpers-1.0.0-rc.1.tgz#fa3ae0f49e155d3cd7a2e3949f3aa90145e8f3ab"
 
 binary-extensions@^1.0.0:
   version "1.11.0"

@@ -1,8 +1,16 @@
 import { EventSource } from "../src/event-source";
-import { Suite, Random, Template } from "bdd-test-helpers";
+import { Reactive } from "../src/component";
+import { Spec, Random, Template } from "bdd-test-helpers";
+import { EventMetadata } from "../src/event-metadata";
+import { Subject, Observable } from 'rxjs';
 
-const spec = Suite.create<{
-    targetObject: any;
+const spec = Spec.create<{
+    targetPrototype: any;
+    targetClass: any;
+    bootstrappedClass: any;
+    targetInstance: any;
+    facadeData: string;
+    observable: Observable<string>;
 }>();
 
 describe("An EventSource decorator", () => {
@@ -31,6 +39,90 @@ describe("An EventSource decorator", () => {
             options: {
                 eventType: Random.string()
             }
+        },
+        {
+            propertyKey: Random.string(),
+            options: {
+                eventType: Random.string(),
+                skipMethodCheck: true
+            }
+        },
+        {
+            propertyKey: Random.string() + "$",
+            options: {
+                eventType: Random.string(),
+                skipMethodCheck: true
+            }
+        },
+        {
+            propertyKey: Random.string(),
+            options: {
+                eventType: Random.string(),
+                skipMethodCheck: false
+            }
+        },
+        {
+            propertyKey: Random.string() + "$",
+            options: {
+                eventType: Random.string(),
+                skipMethodCheck: false
+            }
+        },
+
+
+        {
+            propertyKey: Random.string(),
+            methodDecorators: [jasmine.createSpy("methodDecorator")]
+        },
+        {
+            propertyKey: Random.string() + "$",
+            methodDecorators: [jasmine.createSpy("methodDecorator")]
+        },
+        {
+            propertyKey: Random.string(),
+            options: {
+                eventType: Random.string()
+            },
+            methodDecorators: [jasmine.createSpy("methodDecorator")]
+        },
+        {
+            propertyKey: Random.string() + "$",
+            options: {
+                eventType: Random.string()
+            },
+            methodDecorators: [jasmine.createSpy("methodDecorator")]
+        },
+        {
+            propertyKey: Random.string(),
+            options: {
+                eventType: Random.string(),
+                skipMethodCheck: true
+            },
+            methodDecorators: [jasmine.createSpy("methodDecorator")]
+        },
+        {
+            propertyKey: Random.string() + "$",
+            options: {
+                eventType: Random.string(),
+                skipMethodCheck: true
+            },
+            methodDecorators: [jasmine.createSpy("methodDecorator")]
+        },
+        {
+            propertyKey: Random.string(),
+            options: {
+                eventType: Random.string(),
+                skipMethodCheck: false
+            },
+            methodDecorators: [jasmine.createSpy("methodDecorator")]
+        },
+        {
+            propertyKey: Random.string() + "$",
+            options: {
+                eventType: Random.string(),
+                skipMethodCheck: false
+            },
+            methodDecorators: [jasmine.createSpy("methodDecorator")]
         }
     ];
 
@@ -38,17 +130,23 @@ describe("An EventSource decorator", () => {
 
     describe("when constructed", Template(ConstructionTemplateKeys, (propertyKey: string, options?: EventSource.DecoratorOptions, methodDecorators?: MethodDecorator[]) => {
         methodDecorators = methodDecorators || [];
+        const is$ = propertyKey.endsWith("$");
+        const eventType = (options && options.eventType) ? options.eventType : (is$ ? propertyKey.slice(0, -1) : undefined);
+        const isValid = !!eventType;
         const createEventSource = () => options ? EventSource(options, ...methodDecorators) : EventSource(...methodDecorators);
-
+        const getOptions = (): EventSource.DecoratorOptions => is$ ? Object.assign({ eventType }, options) : options;
+        
         spec.beforeEach((params) => {
-            params.targetObject = {
-                [propertyKey]: Random.string()
-            };
+            params.targetClass = class TestTargetClass {}; // Make sure a fresh class is created each time
+            params.targetPrototype = params.targetClass.prototype;
+
+            // Bootstrap the class
+            params.bootstrappedClass = Reactive()(params.targetClass);
         });
 
-        if (propertyKey.endsWith("$")) {
+        if (is$) {
             spec.beforeEach(((params) => {
-                createEventSource()(params.targetObject, propertyKey);
+                createEventSource()(params.targetPrototype, propertyKey);
             }));
 
             describe("when the property key ends with '$'", () => {
@@ -57,11 +155,11 @@ describe("An EventSource decorator", () => {
                     describe("when an eventType is specified", () => {
 
                         spec.it("should create a facade function for the eventType", (params) => {
-                            expect(params.targetObject[options.eventType]).toEqual(jasmine.any(Function));
+                            expect(params.targetPrototype[options.eventType]).toEqual(jasmine.any(Function));
                         });
 
                         spec.it("should NOT create a facade function for the property key", (params) => {
-                            expect(params.targetObject[propertyKey.slice(0, -1)]).not.toBeDefined();
+                            expect(params.targetPrototype[propertyKey.slice(0, -1)]).not.toBeDefined();
                         });
                     });
                 }
@@ -69,7 +167,7 @@ describe("An EventSource decorator", () => {
                     describe("when an eventType is NOT specified", () => {
 
                         spec.it("should create a facade function for the property key", (params) => {
-                            expect(params.targetObject[propertyKey.slice(0, -1)]).toEqual(jasmine.any(Function));
+                            expect(params.targetPrototype[propertyKey.slice(0, -1)]).toEqual(jasmine.any(Function));
                         });
                     });
                 }
@@ -82,11 +180,11 @@ describe("An EventSource decorator", () => {
                     describe("when an eventType is specified", () => {
 
                         spec.beforeEach(((params) => {
-                            createEventSource()(params.targetObject, propertyKey);
+                            createEventSource()(params.targetPrototype, propertyKey);
                         }));
 
                         spec.it("should create a facade function for the eventType", (params) => {
-                            expect(params.targetObject[options.eventType]).toEqual(jasmine.any(Function));
+                            expect(params.targetPrototype[options.eventType]).toEqual(jasmine.any(Function));
                         });
                     });
                 }
@@ -94,12 +192,110 @@ describe("An EventSource decorator", () => {
                     describe("when an eventType is NOT specified", () => {
 
                         spec.it("should throw an error", (params) => {
-                            expect(() => createEventSource()(params.targetObject, propertyKey)).toThrow();
+                            expect(() => createEventSource()(params.targetPrototype, propertyKey)).toThrow();
                         });
                     });
                 }
             });
         }
 
+        if (isValid) {
+            describe("when there's a method collision", () => {
+
+                spec.beforeEach((params) => {
+                    //Object.setPrototypeOf(params.targetObject, Object.assign(params.targetClass, { [eventType] : function() {} }));
+                    params.targetPrototype[eventType] = function () {};
+                });
+
+                if (options && options.skipMethodCheck) {
+                    spec.it("should NOT throw an error", (params) => {
+                        expect(() => createEventSource()(params.targetPrototype, propertyKey)).not.toThrowError();
+                    });
+                }
+                else {
+                    spec.it("should throw an error", (params) => {
+                        expect(() => createEventSource()(params.targetPrototype, propertyKey)).toThrowError();
+                    });
+                }
+            });
+
+            describe("when there's NOT a method collision", () => {
+
+                spec.beforeEach(((params) => {
+                    createEventSource()(params.targetPrototype, propertyKey);
+                }));
+
+                if (methodDecorators.length > 0) {
+                    describe("when there are method decorators", () => {
+
+                        spec.it("should apply all of the method decorators", (params) => {
+                            methodDecorators.forEach(methodDecorator => expect(methodDecorator).toHaveBeenCalledWith(
+                                params.targetPrototype,
+                                eventType,
+                                Object.getOwnPropertyDescriptor(params.targetPrototype, eventType)
+                            ));
+                        });
+                    });
+                }
+
+                spec.it("should set the expected metadata for the", (params) => {
+                    const metadata: EventSource.DecoratorOptions = EventMetadata
+                        .GetOwnPropertySubjectMap(eventType, params.targetClass)
+                        .get(propertyKey);
+
+                    expect(metadata).toEqual(getOptions());
+                });
+
+                describe("when a new instance is created", () => {
+
+                    spec.beforeEach(((params) => {
+                        params.targetInstance = new params.bootstrappedClass();
+                    }));
+
+                    spec.it("should create the expected eventType facade function on the instance", (params) => {
+                        expect(params.targetInstance[eventType]).toEqual(jasmine.any(Function));
+                    });
+
+                    spec.it("should create the expected propertyKey facade function on the instance for AoT", (params) => {
+                        expect(params.targetInstance[propertyKey]).toEqual(jasmine.any(Function));
+                    });
+
+                    spec.it("should create the expected propertyKey Observable on the instance", (params) => {
+                        expect(params.targetInstance[propertyKey]).toEqual(jasmine.any(Observable));
+                    });
+
+                    spec.it("should set the expected metadata for the instance", (params) => {
+                        const metadata: EventMetadata.SubjectInfo = EventMetadata
+                            .GetOwnPropertySubjectMap(eventType, params.targetInstance)
+                            .get(propertyKey);
+    
+                        expect(<any>metadata).toEqual(jasmine.objectContaining(Object.assign({}, getOptions(), {
+                            subject: jasmine.any(Subject)
+                        })));
+                    });
+
+                    describe("when the facade function is invoked", Template(["facadeFnKey"], (facadeFnKey: string) => {
+
+                        spec.beforeEach((params) => {
+                            params.observable = params.targetInstance[propertyKey].shareReplay();
+
+                            // Subscribe first to capture the facade fn event
+                            params.observable.subscribe();
+
+                            // Invoke the facade function
+                            params.facadeData = Random.string();
+                            params.targetInstance[facadeFnKey](params.facadeData);
+                        });
+
+                        spec.it("should update the Observable with the data passed to the function", (params) => {
+                            return params.observable
+                                .map(data => { expect(data).toEqual(params.facadeData) })
+                                .take(1)
+                                .toPromise();
+                        });
+                    }, { facadeFnKey: eventType }, { facadeFnKey: propertyKey }));
+                });
+            });
+        }
     }, ...ConstructionTemplateInput));
 });

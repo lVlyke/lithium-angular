@@ -43,6 +43,6 @@
     "zone.js": "0.8.18"
   },
   "dependencies": {
-    "bdd-test-helpers": "^1.0.0-rc.0"
+    "bdd-test-helpers": "^1.0.0-rc.1"
   }
 }

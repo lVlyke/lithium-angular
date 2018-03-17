@@ -1,6 +1,6 @@
 import { EventSource } from "../src/event-source";
 import { Reactive } from "../src/component";
-import { Spec, Random, Template } from "bdd-test-helpers";
+import { Spec, Random, Template, InputBuilder } from "detest-bdd";
 import { EventMetadata } from "../src/event-metadata";
 import { Subject, Observable } from 'rxjs';
 
@@ -21,114 +21,18 @@ describe("An EventSource decorator", () => {
         methodDecorators?: MethodDecorator[];
     };
 
-    const ConstructionTemplateInput: ConstructionTemplateInput[] = [
-        {
-            propertyKey: Random.string()
-        },
-        {
-            propertyKey: Random.string() + "$"
-        },
-        {
-            propertyKey: Random.string(),
-            options: {
-                eventType: Random.string()
-            }
-        },
-        {
-            propertyKey: Random.string() + "$",
-            options: {
-                eventType: Random.string()
-            }
-        },
-        {
-            propertyKey: Random.string(),
-            options: {
-                eventType: Random.string(),
-                skipMethodCheck: true
-            }
-        },
-        {
-            propertyKey: Random.string() + "$",
-            options: {
-                eventType: Random.string(),
-                skipMethodCheck: true
-            }
-        },
-        {
-            propertyKey: Random.string(),
-            options: {
-                eventType: Random.string(),
-                skipMethodCheck: false
-            }
-        },
-        {
-            propertyKey: Random.string() + "$",
-            options: {
-                eventType: Random.string(),
-                skipMethodCheck: false
-            }
-        },
-
-
-        {
-            propertyKey: Random.string(),
-            methodDecorators: [jasmine.createSpy("methodDecorator")]
-        },
-        {
-            propertyKey: Random.string() + "$",
-            methodDecorators: [jasmine.createSpy("methodDecorator")]
-        },
-        {
-            propertyKey: Random.string(),
-            options: {
-                eventType: Random.string()
-            },
-            methodDecorators: [jasmine.createSpy("methodDecorator")]
-        },
-        {
-            propertyKey: Random.string() + "$",
-            options: {
-                eventType: Random.string()
-            },
-            methodDecorators: [jasmine.createSpy("methodDecorator")]
-        },
-        {
-            propertyKey: Random.string(),
-            options: {
-                eventType: Random.string(),
-                skipMethodCheck: true
-            },
-            methodDecorators: [jasmine.createSpy("methodDecorator")]
-        },
-        {
-            propertyKey: Random.string() + "$",
-            options: {
-                eventType: Random.string(),
-                skipMethodCheck: true
-            },
-            methodDecorators: [jasmine.createSpy("methodDecorator")]
-        },
-        {
-            propertyKey: Random.string(),
-            options: {
-                eventType: Random.string(),
-                skipMethodCheck: false
-            },
-            methodDecorators: [jasmine.createSpy("methodDecorator")]
-        },
-        {
-            propertyKey: Random.string() + "$",
-            options: {
-                eventType: Random.string(),
-                skipMethodCheck: false
-            },
-            methodDecorators: [jasmine.createSpy("methodDecorator")]
-        }
-    ];
+    const ConstructionTemplateInput = InputBuilder
+        .fragmentList<ConstructionTemplateInput>({ propertyKey: [Random.string(), Random.string() + "$"] })
+        .fragmentList({ methodDecorators: [undefined, [jasmine.createSpy("methodDecorator")]] })
+        .fragment({ options: undefined })
+        .fragmentBuilder<EventSource.DecoratorOptions>("options", InputBuilder
+            .fragmentList<EventSource.DecoratorOptions>({ eventType: [undefined, Random.string()] })
+            .fragmentList({ skipMethodCheck: [true, false, undefined] })
+        );
 
     const ConstructionTemplateKeys: (keyof ConstructionTemplateInput)[] = ["propertyKey", "options", "methodDecorators"];
 
-    describe("when constructed", Template(ConstructionTemplateKeys, (propertyKey: string, options?: EventSource.DecoratorOptions, methodDecorators?: MethodDecorator[]) => {
+    describe("when constructed", Template(ConstructionTemplateKeys, ConstructionTemplateInput, (propertyKey: string, options?: EventSource.DecoratorOptions, methodDecorators?: MethodDecorator[]) => {
         methodDecorators = methodDecorators || [];
         const is$ = propertyKey.endsWith("$");
         const eventType = (options && options.eventType) ? options.eventType : (is$ ? propertyKey.slice(0, -1) : undefined);
@@ -192,7 +96,7 @@ describe("An EventSource decorator", () => {
                     describe("when an eventType is NOT specified", () => {
 
                         spec.it("should throw an error", (params) => {
-                            expect(() => createEventSource()(params.targetPrototype, propertyKey)).toThrow();
+                            expect(() => createEventSource()(params.targetPrototype, propertyKey)).toThrowError();
                         });
                     });
                 }
@@ -203,7 +107,6 @@ describe("An EventSource decorator", () => {
             describe("when there's a method collision", () => {
 
                 spec.beforeEach((params) => {
-                    //Object.setPrototypeOf(params.targetObject, Object.assign(params.targetClass, { [eventType] : function() {} }));
                     params.targetPrototype[eventType] = function () {};
                 });
 
@@ -274,7 +177,7 @@ describe("An EventSource decorator", () => {
                         })));
                     });
 
-                    describe("when the facade function is invoked", Template(["facadeFnKey"], (facadeFnKey: string) => {
+                    describe("when the facade function is invoked", Template.withInputs(["facadeFnKey"], (facadeFnKey: string) => {
 
                         spec.beforeEach((params) => {
                             params.observable = params.targetInstance[propertyKey].shareReplay();
@@ -297,5 +200,5 @@ describe("An EventSource decorator", () => {
                 });
             });
         }
-    }, ...ConstructionTemplateInput));
+    }));
 });

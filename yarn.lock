@@ -116,10 +116,6 @@ bcrypt-pbkdf@^1.0.0:
   dependencies:
     tweetnacl "^0.14.3"
 
-bdd-test-helpers@^1.0.0-rc.1:
-  version "1.0.0-rc.1"
-  resolved "https://registry.npmjs.org/bdd-test-helpers/-/bdd-test-helpers-1.0.0-rc.1.tgz#fa3ae0f49e155d3cd7a2e3949f3aa90145e8f3ab"
-
 binary-extensions@^1.0.0:
   version "1.11.0"
   resolved "https://registry.yarnpkg.com/binary-extensions/-/binary-extensions-1.11.0.tgz#46aa1751fb6a2f93ee5e689bb1087d4b14c6c205"
@@ -229,6 +225,10 @@ delegates@^1.0.0:
 detect-libc@^1.0.2:
   version "1.0.3"
   resolved "https://registry.yarnpkg.com/detect-libc/-/detect-libc-1.0.3.tgz#fa137c4bd698edf55cd5cd02ac559f91a4c4ba9b"
+
+detest-bdd@^1.0.0-rc.4:
+  version "1.0.0-rc.4"
+  resolved "https://registry.npmjs.org/detest-bdd/-/detest-bdd-1.0.0-rc.4.tgz#4d46e4424af3ea74ac949b0ea045e6c55e0def09"
 
 ecc-jsbn@~0.1.1:
   version "0.1.1"

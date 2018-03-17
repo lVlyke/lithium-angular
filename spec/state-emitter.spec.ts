@@ -1,4 +1,4 @@
-import { Spec, Template, Random } from "bdd-test-helpers";
+import { Spec, Template, Random, InputBuilder } from "detest-bdd";
 import { StateEmitter } from "../src/state-emitter";
 import { Reactive } from "../src/component";
 import { EmitterMetadata } from "../src/emitter-metadata";
@@ -18,54 +18,17 @@ describe("Given a StateEmitter decorator", () => {
         propertyDecorators?: PropertyDecorator[];
     };
 
-    const ConstructionTemplateInput: ConstructionTemplateInput[] = [
-        {
-            propertyKey: Random.string()
-        },
-        {
-            propertyKey: Random.string() + "$"
-        },
-        {
-            propertyKey: Random.string(),
-            options: {
-                propertyName: Random.string()
-            }
-        },
-        {
-            propertyKey: Random.string() + "$",
-            options: {
-                propertyName: Random.string()
-            }
-        },
-
-
-        {
-            propertyKey: Random.string(),
-            propertyDecorators: [jasmine.createSpy("propertyDecorator")]
-        },
-        {
-            propertyKey: Random.string() + "$",
-            propertyDecorators: [jasmine.createSpy("propertyDecorator")]
-        },
-        {
-            propertyKey: Random.string(),
-            options: {
-                propertyName: Random.string()
-            },
-            propertyDecorators: [jasmine.createSpy("propertyDecorator")]
-        },
-        {
-            propertyKey: Random.string() + "$",
-            options: {
-                propertyName: Random.string()
-            },
-            propertyDecorators: [jasmine.createSpy("propertyDecorator")]
-        }
-    ];
+    const ConstructionTemplateInput = InputBuilder
+        .fragmentList<ConstructionTemplateInput>({ propertyKey: [Random.string(), Random.string() + "$"] })
+        .fragmentList({ propertyDecorators: [undefined, [jasmine.createSpy("propertyDecorator")]] })
+        .fragment({ options: undefined })
+        .fragmentBuilder<StateEmitter.DecoratorParams>("options", InputBuilder
+            .fragmentList<StateEmitter.DecoratorParams>({ propertyName: [undefined, Random.string()] })
+        );
 
     const ConstructionTemplateKeys: (keyof ConstructionTemplateInput)[] = ["propertyKey", "options", "propertyDecorators"];
 
-    describe("when constructed", Template(ConstructionTemplateKeys, (propertyKey: string, options?: StateEmitter.DecoratorParams, propertyDecorators?: PropertyDecorator[]) => {
+    describe("when constructed", Template(ConstructionTemplateKeys, ConstructionTemplateInput, (propertyKey: string, options?: StateEmitter.DecoratorParams, propertyDecorators?: PropertyDecorator[]) => {
         propertyDecorators = propertyDecorators || [];
         const is$ = propertyKey.endsWith("$");
         const propertyName = (options && options.propertyName) ? options.propertyName : (is$ ? propertyKey.slice(0, -1) : undefined);
@@ -124,5 +87,5 @@ describe("Given a StateEmitter decorator", () => {
                 }));
             });
         }
-    }, ...ConstructionTemplateInput));
+    }));
 });

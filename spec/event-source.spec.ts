@@ -155,6 +155,8 @@ describe("An EventSource decorator", () => {
                         params.targetInstance = new params.bootstrappedClass();
                     }));
 
+                    // TODO - Test copying of inheritted metadata
+
                     spec.it("should create the expected eventType facade function on the instance", (params) => {
                         expect(params.targetInstance[eventType]).toEqual(jasmine.any(Function));
                     });

@@ -128,6 +128,9 @@ export namespace ObservableUtil {
                 return false;
             }
 
+            // Move to the next property
+            target = target[propertyKey];
+
             return true;
         });
 

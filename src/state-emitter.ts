@@ -41,21 +41,21 @@ export namespace StateEmitter {
 
         /** @PropertyDecorator */
         return function (target: any, propertyKey: string) {
-            // If an emitterType wasn't specified...
+            // If a propertyName wasn't specified...
             if (!params.propertyName) {
-                // Try to deduce the emitterType from the propertyKey
+                // Try to deduce the propertyName from the propertyKey
                 if (propertyKey.endsWith("$")) {
                     params.propertyName = propertyKey.substring(0, propertyKey.length - 1);
                 }
                 else {
-                    throw new Error(`@StateEmitter error: emitterType could not be deduced from propertyKey "${propertyKey}" (only keys ending with '$' can be auto-deduced).`);
+                    throw new Error(`@StateEmitter error: propertyName could not be deduced from propertyKey "${propertyKey}" (only keys ending with '$' can be auto-deduced).`);
                 }
             }
 
             // Apply any property decorators to the property
             propertyDecorators.forEach(propertyDecorator => propertyDecorator(target, params.propertyName));
 
-            // Create the event source metadata for the decorated property
+            // Create the state emitter metadata for the decorated property
             StateEmitter.CreateMetadata(target, params.propertyName, Object.assign({ propertyKey, observable: undefined }, params));
 
             // Point any Angular metadata attached to the StateEmitter to the underlying facade property
@@ -75,7 +75,7 @@ export namespace StateEmitter {
     export function Alias(params: ProxyDecoratorParams | string, ...propertyDecorators: PropertyDecorator[]): PropertyDecorator {
         let $params = _ResolveProxyDecoratorParams(params);
 
-        return WithParams({
+        return StateEmitter.WithParams({
             propertyName: $params.propertyName,
             proxyMode: EmitterMetadata.ProxyMode.Alias,
             proxyPath: $params.path,
@@ -87,7 +87,7 @@ export namespace StateEmitter {
     export function From(params: ProxyDecoratorParams | string, ...propertyDecorators: PropertyDecorator[]): PropertyDecorator {
         let $params = _ResolveProxyDecoratorParams(params);
 
-        return WithParams({
+        return StateEmitter.WithParams({
             propertyName: $params.propertyName,
             proxyMode: EmitterMetadata.ProxyMode.From,
             proxyPath: $params.path,
@@ -99,7 +99,7 @@ export namespace StateEmitter {
     export function Merge(params: ProxyDecoratorParams | string, ...propertyDecorators: PropertyDecorator[]): PropertyDecorator {
         let $params = _ResolveProxyDecoratorParams(params);
 
-        return WithParams({
+        return StateEmitter.WithParams({
             propertyName: $params.propertyName,
             proxyMode: EmitterMetadata.ProxyMode.Merge,
             proxyPath: $params.path,
@@ -127,7 +127,7 @@ export namespace StateEmitter {
                         // Update the dynamic proxy value
                         ObservableUtil.UpdateDynamicPropertyPathValue(this, subjectInfo.proxyPath, value, mergeUpdates);
                     }
-                    catch (e) {
+                    catch (_e) {
                         console.error(`Unable to set value for proxy StateEmitter "${this.constructor.name}.${type}" with dynamic property path "${subjectInfo.proxyPath}" - Path does not contain a Subject.`);
                     }
                 }
@@ -139,9 +139,9 @@ export namespace StateEmitter {
             let subscription: any;
 
             return function (): any {
-                // Create a subscription to subject changes if not subscribed
+                // Create a subscription to changes in the subject
                 if (!subscription) {
-                    // Update when a new value is emitted
+                    // Update the lastValue when a new value is emitted from the subject
                     let subjectInfo: EmitterMetadata.SubjectInfo = EmitterMetadata.GetMetadataMap(this).get(type);
                     subscription = subjectInfo.observable.subscribe((value: any) => lastValue = value);
                 }
@@ -185,8 +185,8 @@ export namespace StateEmitter {
                     break;
                 }
 
-                // Merge emitters create a separate subject that subscribes to all emissions from the source
-                // From emitters create a separate subject that sets the initial value from the source
+                // Merge proxies create a new subject that receives all emissions from the source
+                // From proxies create a new subject that takes only its initial value from the source
                 case EmitterMetadata.ProxyMode.Merge:
                 case EmitterMetadata.ProxyMode.From: {
                     // Create a new copy subject

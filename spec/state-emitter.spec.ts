@@ -32,7 +32,7 @@ describe("Given a StateEmitter decorator", () => {
         .fragmentBuilder<StateEmitter.DecoratorParams>("options", InputBuilder
             .fragmentList<StateEmitter.DecoratorParams>({ propertyName: [undefined, Random.string()] })
             .fragmentList({ proxyMode: [undefined, EmitterMetadata.ProxyMode.Alias, EmitterMetadata.ProxyMode.From, EmitterMetadata.ProxyMode.Merge, EmitterMetadata.ProxyMode.None] })
-            .fragmentList({ proxyPath: [STATIC_PROXY_PATH, DYNAMIC_PROXY_PATH] }/*, options => options.proxyMode && options.proxyMode !== EmitterMetadata.ProxyMode.None*/)
+            .fragmentList({ proxyPath: [STATIC_PROXY_PATH, DYNAMIC_PROXY_PATH] }, options => options.proxyMode && options.proxyMode !== EmitterMetadata.ProxyMode.None)
             .fragmentList({ readOnly: [undefined, true, false]})
             .fragment({ initialValue: Random.string() })
         )
@@ -40,6 +40,29 @@ describe("Given a StateEmitter decorator", () => {
         .fragment({ angularPropMetadata: [1, 2, 3]});
 
     const ConstructionTemplateKeys: (keyof ConstructionTemplateInput)[] = ["propertyKey", "options", "propertyDecorators", "angularPropMetadata"];
+
+    beforeAll(() => {
+        StateEmitter.WithParams = jasmine.createSpy("WithParams", StateEmitter.WithParams).and.callThrough();
+    });
+
+    spec.beforeEach((params) => {
+        // Make sure a fresh class is created each time
+        params.targetClass = class TestTargetClass {
+            public readonly static = {
+                proxy: {
+                    path$: new BehaviorSubject(Random.string())
+                }
+            };
+
+            public readonly dynamic = {
+                proxy$: new BehaviorSubject({ path: Random.string() })
+            };
+        };
+        params.targetPrototype = params.targetClass.prototype;
+
+        // Bootstrap the class
+        params.bootstrappedClass = Reactive()(params.targetClass);
+    });
 
     describe("when constructed", Template(ConstructionTemplateKeys, ConstructionTemplateInput, (
         propertyKey: string,
@@ -112,25 +135,6 @@ describe("Given a StateEmitter decorator", () => {
                 });
             }
         }
-
-        spec.beforeEach((params) => {
-            // Make sure a fresh class is created each time
-            params.targetClass = class TestTargetClass {
-                public readonly static = {
-                    proxy: {
-                        path$: new BehaviorSubject(Random.string())
-                    }
-                };
-
-                public readonly dynamic = {
-                    proxy$: new BehaviorSubject({ path: Random.string() })
-                };
-            };
-            params.targetPrototype = params.targetClass.prototype;
-
-            // Bootstrap the class
-            params.bootstrappedClass = Reactive()(params.targetClass);
-        });
 
         if (angularPropMetadata) {
             spec.beforeEach((params) => {
@@ -348,5 +352,47 @@ describe("Given a StateEmitter decorator", () => {
         }
     }));
 
-    // TODO - Test helper decorators
+    type HelperTemplateInput = {
+        proxyMode: EmitterMetadata.ProxyMode,
+        proxyPath?: string;
+        options?: StateEmitter.ProxyDecoratorParams;
+        propertyDecorators?: PropertyDecorator[];
+    };
+
+    const HelperTemplateInput = InputBuilder
+        .fragmentList<HelperTemplateInput>({ proxyMode: [EmitterMetadata.ProxyMode.Alias, EmitterMetadata.ProxyMode.From, EmitterMetadata.ProxyMode.Merge] })
+        .fragment({ proxyPath: undefined }, input => !!input.options)
+        .fragment({ proxyPath: Random.string() })
+        .fragmentBuilder("options", InputBuilder
+            .fragmentList({ propertyName: [undefined, Random.string()] })
+        )
+        .fragmentList({ propertyDecorators: [undefined, [jasmine.createSpy("propertyDecorator")]] });
+
+    const HelperTemplateKeys: (keyof HelperTemplateInput)[] = ["proxyMode", "proxyPath", "options", "propertyDecorators"];
+
+    Template(HelperTemplateKeys, HelperTemplateInput, (
+        proxyMode: "Alias" | "From" | "Merge",
+        proxyPath?: string,
+        options?: StateEmitter.ProxyDecoratorParams,
+        propertyDecorators?: PropertyDecorator[]
+    ) => {
+        propertyDecorators = propertyDecorators || [];
+        const params = options || { path: proxyPath };
+
+        describe(`when the ${proxyMode} helper decorator is called`, () => {
+
+            spec.beforeEach(() => {
+                StateEmitter[proxyMode](params, ...propertyDecorators);
+            });
+
+            spec.it("should call StateEmitter.WithParams with the expected parameters", () => {
+                expect(StateEmitter.WithParams).toHaveBeenCalledWith({
+                    propertyName: params.propertyName,
+                    proxyMode: proxyMode,
+                    proxyPath: params.path,
+                    proxyMergeUpdates: params.mergeUpdates
+                }, ...propertyDecorators);
+            });
+        });
+    })();
 });

@@ -226,9 +226,9 @@ detect-libc@^1.0.2:
   version "1.0.3"
   resolved "https://registry.yarnpkg.com/detect-libc/-/detect-libc-1.0.3.tgz#fa137c4bd698edf55cd5cd02ac559f91a4c4ba9b"
 
-detest-bdd@^1.0.0-rc.4:
-  version "1.0.0-rc.4"
-  resolved "https://registry.npmjs.org/detest-bdd/-/detest-bdd-1.0.0-rc.4.tgz#4d46e4424af3ea74ac949b0ea045e6c55e0def09"
+detest-bdd@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.npmjs.org/detest-bdd/-/detest-bdd-1.0.0.tgz#eedb0c4254f2018447196cd4b86046e0b0b1851e"
 
 ecc-jsbn@~0.1.1:
   version "0.1.1"

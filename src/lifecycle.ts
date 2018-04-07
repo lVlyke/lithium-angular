@@ -52,10 +52,10 @@ export const OnDestroy = AngularLifecycleType.DecoratorFactory(AngularLifecycleT
 /** @PropertyDecoratorFactory */
 export const DoCheck = AngularLifecycleType.DecoratorFactory(AngularLifecycleType.DoCheck);
 /** @PropertyDecoratorFactory */
-export const AfterContentInit = AngularLifecycleType.DecoratorFactory(AngularLifecycleType.DoCheck);
+export const AfterContentInit = AngularLifecycleType.DecoratorFactory(AngularLifecycleType.AfterContentInit);
 /** @PropertyDecoratorFactory */
-export const AfterContentChecked = AngularLifecycleType.DecoratorFactory(AngularLifecycleType.DoCheck);
+export const AfterContentChecked = AngularLifecycleType.DecoratorFactory(AngularLifecycleType.AfterContentChecked);
 /** @PropertyDecoratorFactory */
-export const AfterViewInit = AngularLifecycleType.DecoratorFactory(AngularLifecycleType.DoCheck);
+export const AfterViewInit = AngularLifecycleType.DecoratorFactory(AngularLifecycleType.AfterViewInit);
 /** @PropertyDecoratorFactory */
-export const AfterViewChecked = AngularLifecycleType.DecoratorFactory(AngularLifecycleType.DoCheck);
+export const AfterViewChecked = AngularLifecycleType.DecoratorFactory(AngularLifecycleType.AfterViewChecked);

@@ -39,30 +39,7 @@ describe("Given a StateEmitter decorator", () => {
         .fragment({ angularPropMetadata: undefined})
         .fragment({ angularPropMetadata: [1, 2, 3]});
 
-    const ConstructionTemplateKeys: (keyof ConstructionTemplateInput)[] = ["propertyKey", "options", "propertyDecorators", "angularPropMetadata"];
-
-    beforeAll(() => {
-        StateEmitter.WithParams = jasmine.createSpy("WithParams", StateEmitter.WithParams).and.callThrough();
-    });
-
-    spec.beforeEach((params) => {
-        // Make sure a fresh class is created each time
-        params.targetClass = class TestTargetClass {
-            public readonly static = {
-                proxy: {
-                    path$: new BehaviorSubject(Random.string())
-                }
-            };
-
-            public readonly dynamic = {
-                proxy$: new BehaviorSubject({ path: Random.string() })
-            };
-        };
-        params.targetPrototype = params.targetClass.prototype;
-
-        // Bootstrap the class
-        params.bootstrappedClass = Reactive()(params.targetClass);
-    });
+    const ConstructionTemplateKeys: (keyof ConstructionTemplateInput)[] = ["propertyKey", "options", "propertyDecorators", "angularPropMetadata"];    
 
     describe("when constructed", Template(ConstructionTemplateKeys, ConstructionTemplateInput, (
         propertyKey: string,
@@ -135,6 +112,27 @@ describe("Given a StateEmitter decorator", () => {
                 });
             }
         }
+
+        spec.beforeEach((params) => {
+            spyOn(StateEmitter, "WithParams").and.callThrough();
+
+            // Make sure a fresh class is created each time
+            params.targetClass = class TestTargetClass {
+                public readonly static = {
+                    proxy: {
+                        path$: new BehaviorSubject(Random.string())
+                    }
+                };
+    
+                public readonly dynamic = {
+                    proxy$: new BehaviorSubject({ path: Random.string() })
+                };
+            };
+            params.targetPrototype = params.targetClass.prototype;
+    
+            // Bootstrap the class
+            params.bootstrappedClass = Reactive()(params.targetClass);
+        });
 
         if (angularPropMetadata) {
             spec.beforeEach((params) => {
@@ -382,6 +380,8 @@ describe("Given a StateEmitter decorator", () => {
         describe(`when the ${proxyMode} helper decorator is called`, () => {
 
             spec.beforeEach(() => {
+                spyOn(StateEmitter, "WithParams").and.callThrough();
+
                 StateEmitter[proxyMode](params, ...propertyDecorators);
             });
 

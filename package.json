@@ -21,8 +21,9 @@
     "reactive"
   ],
   "scripts": {
+    "prebuild:js": "yarn test",
     "build:js": "node ./scripts/build.js",
-    "pretest": "./scripts/pretest.js",
+    "pretest": "node ./scripts/pretest.js",
     "test": "jasmine"
   },
   "peerDependencies": {

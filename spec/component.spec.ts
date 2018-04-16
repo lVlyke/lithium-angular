@@ -6,6 +6,7 @@ import { Observable } from "rxjs/Observable";
 import { Subject } from "rxjs/Subject";
 import { Metadata } from "../src/metadata";
 import { AngularMetadata } from "../src/angular-metadata";
+import { Injectable, Injector } from "@angular/core";
 
 const spec = Spec.create<{
     targetClass: any;
@@ -15,6 +16,8 @@ const spec = Spec.create<{
 }>();
 
 class TargetClassBase {
+
+    constructor(_i: Injector) {}
 
     @StateEmitter() public testEmitter$: Subject<any>;
     @EventSource() public testEventSource$: Observable<any>;
@@ -26,6 +29,12 @@ describe("Given a Reactive class decorator", () => {
 
         spec.beforeEach((params) => {
             params.targetClass = class TestTargetClass extends TargetClassBase {};
+            
+            // Add Angular metadata to the target class
+            params.targetClass = Injectable()(params.targetClass);
+            Object.defineProperty(params.targetClass, AngularMetadata.PARAMETERS, { value: [] });
+            Object.defineProperty(params.targetClass, AngularMetadata.PROP_METADATA, { value: [] });
+
             params.bootstrappedClass = Reactive()(params.targetClass);
         });
 
@@ -50,8 +59,8 @@ describe("Given a Reactive class decorator", () => {
         describe("when the bootstrapped class is instantiated", () => {
 
             spec.beforeEach((params) => {
-                params.bootstrappedInstance = new params.bootstrappedClass();
-                params.bootstrappedInstance2 = new params.bootstrappedClass();
+                params.bootstrappedInstance = new params.bootstrappedClass(null);
+                params.bootstrappedInstance2 = new params.bootstrappedClass(null);
             });
 
             spec.it("then it should bootstrap all StateEmitters in the class", (params) => {

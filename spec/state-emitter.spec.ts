@@ -26,18 +26,20 @@ describe("Given a StateEmitter decorator", () => {
     const DYNAMIC_PROXY_PATH = "dynamic.proxy$.path";
 
     const ConstructionTemplateInput = InputBuilder
-        .fragmentList<ConstructionTemplateInput>({ propertyKey: [Random.string(), Random.string() + "$"] })
+        .fragment<ConstructionTemplateInput>({ propertyKey: Random.string() })
+        .fragment({ propertyKey: Random.string() + "$" }, input => !input.options || !input.options.propertyName)
         .fragmentList({ propertyDecorators: [undefined, [jasmine.createSpy("propertyDecorator")]] })
         .fragment({ options: undefined })
         .fragmentBuilder<StateEmitter.DecoratorParams>("options", InputBuilder
             .fragmentList<StateEmitter.DecoratorParams>({ propertyName: [undefined, Random.string()] })
             .fragmentList({ proxyMode: [undefined, EmitterMetadata.ProxyMode.Alias, EmitterMetadata.ProxyMode.From, EmitterMetadata.ProxyMode.Merge, EmitterMetadata.ProxyMode.None] })
             .fragmentList({ proxyPath: [STATIC_PROXY_PATH, DYNAMIC_PROXY_PATH] }, options => options.proxyMode && options.proxyMode !== EmitterMetadata.ProxyMode.None)
+            .fragment({ proxyMergeUpdates: undefined })
+            .fragmentList({ proxyMergeUpdates: [true, false] }, options => options.proxyPath === DYNAMIC_PROXY_PATH)
             .fragmentList({ readOnly: [undefined, true, false]})
             .fragment({ initialValue: Random.string() })
         )
-        .fragment({ angularPropMetadata: undefined})
-        .fragment({ angularPropMetadata: [1, 2, 3]});
+        .fragmentList({ angularPropMetadata: [undefined, [1, 2, 3]] });
 
     const ConstructionTemplateKeys: (keyof ConstructionTemplateInput)[] = ["propertyKey", "options", "propertyDecorators", "angularPropMetadata"];    
 
@@ -63,7 +65,7 @@ describe("Given a StateEmitter decorator", () => {
             // TODO - Tests for when dynamic path doesn't contain a Subject throwing an error
     
             spec.beforeEach((params) => {
-                fn(params, params.setterValue = Random.string());
+                fn(params, params.setterValue = Random.string(10));
             });
     
             spec.it("then it should update the subject with the new value", (params) => {
@@ -129,18 +131,16 @@ describe("Given a StateEmitter decorator", () => {
                 };
             };
             params.targetPrototype = params.targetClass.prototype;
-    
+
+            if (angularPropMetadata) {
+                Object.defineProperty(params.targetClass, AngularMetadata.PROP_METADATA, {
+                    value: { [propertyKey]: angularPropMetadata }
+                });
+            }
+
             // Bootstrap the class
             params.bootstrappedClass = Reactive()(params.targetClass);
         });
-
-        if (angularPropMetadata) {
-            spec.beforeEach((params) => {
-                Object.defineProperty(params.bootstrappedClass, AngularMetadata.PROP_METADATA, {
-                    value: { [propertyName]: angularPropMetadata }
-                });
-            });
-        }
 
         if (!is$ && !(options && options.propertyName)) {
             describe("when the property key does NOT end with '$' and a propertyName is NOT specified", () => {
@@ -361,6 +361,7 @@ describe("Given a StateEmitter decorator", () => {
         .fragmentList<HelperTemplateInput>({ proxyMode: [EmitterMetadata.ProxyMode.Alias, EmitterMetadata.ProxyMode.From, EmitterMetadata.ProxyMode.Merge] })
         .fragment({ proxyPath: undefined }, input => !!input.options)
         .fragment({ proxyPath: Random.string() })
+        .fragment({ options: undefined }, input => !!input.proxyPath)
         .fragmentBuilder("options", InputBuilder
             .fragmentList({ propertyName: [undefined, Random.string()] })
         )
@@ -382,7 +383,7 @@ describe("Given a StateEmitter decorator", () => {
             spec.beforeEach(() => {
                 spyOn(StateEmitter, "WithParams").and.callThrough();
 
-                StateEmitter[proxyMode](params, ...propertyDecorators);
+                StateEmitter[proxyMode](options || proxyPath, ...propertyDecorators);
             });
 
             spec.it("should call StateEmitter.WithParams with the expected parameters", () => {

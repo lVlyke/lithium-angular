@@ -24,7 +24,7 @@
     "prebuild:js": "yarn test",
     "build:js": "node ./scripts/build.js",
     "pretest": "node ./scripts/pretest.js",
-    "test": "jasmine"
+    "test": "istanbul cover --root ./spec/build/src --include-all-sources jasmine"
   },
   "peerDependencies": {
     "@angular/core": "4.x.x - 5.x.x",
@@ -38,6 +38,7 @@
     "@types/reflect-metadata": "^0.0.5",
     "detest-bdd": "^1.0.0",
     "fs-extra": "^5.0.0",
+    "istanbul": "^0.4.5",
     "jasmine": "^3.1.0",
     "rxjs": "5.5.x",
     "source-map-support": "^0.5.3",

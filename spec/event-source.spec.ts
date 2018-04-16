@@ -3,6 +3,7 @@ import { Reactive } from "../src/component";
 import { Spec, Random, Template, InputBuilder } from "detest-bdd";
 import { EventMetadata } from "../src/event-metadata";
 import { Subject, Observable } from 'rxjs';
+import { AngularMetadata } from "../src/angular-metadata";
 
 const spec = Spec.create<{
     targetPrototype: any;
@@ -19,20 +20,28 @@ describe("An EventSource decorator", () => {
         propertyKey: string;
         options?: EventSource.DecoratorOptions;
         methodDecorators?: MethodDecorator[];
+        angularPropMetadata?: any[];
     };
 
     const ConstructionTemplateInput = InputBuilder
-        .fragmentList<ConstructionTemplateInput>({ propertyKey: [Random.string(), Random.string() + "$"] })
+        .fragment<ConstructionTemplateInput>({ propertyKey: Random.string() })
+        .fragment({ propertyKey: Random.string() + "$" }, input => !input.options || !input.options.eventType)
         .fragmentList({ methodDecorators: [undefined, [jasmine.createSpy("methodDecorator")]] })
         .fragment({ options: undefined })
         .fragmentBuilder<EventSource.DecoratorOptions>("options", InputBuilder
             .fragmentList<EventSource.DecoratorOptions>({ eventType: [undefined, Random.string()] })
             .fragmentList({ skipMethodCheck: [true, false, undefined] })
-        );
+        )
+        .fragmentList({ angularPropMetadata: [undefined, [1, 2, 3]] });
 
-    const ConstructionTemplateKeys: (keyof ConstructionTemplateInput)[] = ["propertyKey", "options", "methodDecorators"];
+    const ConstructionTemplateKeys: (keyof ConstructionTemplateInput)[] = ["propertyKey", "options", "methodDecorators", "angularPropMetadata"];
 
-    describe("when constructed", Template(ConstructionTemplateKeys, ConstructionTemplateInput, (propertyKey: string, options?: EventSource.DecoratorOptions, methodDecorators?: MethodDecorator[]) => {
+    describe("when constructed", Template(ConstructionTemplateKeys, ConstructionTemplateInput, (
+        propertyKey: string,
+        options?: EventSource.DecoratorOptions,
+        methodDecorators?: MethodDecorator[],
+        angularPropMetadata?: any[]
+    ) => {
         methodDecorators = methodDecorators || [];
         const is$ = propertyKey.endsWith("$");
         const eventType = (options && options.eventType) ? options.eventType : (is$ ? propertyKey.slice(0, -1) : undefined);
@@ -43,6 +52,12 @@ describe("An EventSource decorator", () => {
         spec.beforeEach((params) => {
             params.targetClass = class TestTargetClass {}; // Make sure a fresh class is created each time
             params.targetPrototype = params.targetClass.prototype;
+
+            if (angularPropMetadata) {
+                Object.defineProperty(params.targetClass, AngularMetadata.PROP_METADATA, {
+                    value: { [propertyKey]: angularPropMetadata }
+                });
+            }
 
             // Bootstrap the class
             params.bootstrappedClass = Reactive()(params.targetClass);
@@ -148,6 +163,16 @@ describe("An EventSource decorator", () => {
 
                     expect(metadata).toEqual(getOptions());
                 });
+
+                if (angularPropMetadata) {
+                    describe("when there's Angular metadata for this property", () => {
+
+                        spec.it("then it should move the metadata from the EventSource property to the facade function property", (params) => {
+                            expect(AngularMetadata.hasPropMetadataEntry(params.bootstrappedClass, propertyKey)).toBeFalsy();
+                            expect(AngularMetadata.getPropMetadata(params.bootstrappedClass)).toEqual({ [eventType]: angularPropMetadata });
+                        });
+                    });
+                }
 
                 describe("when a new instance is created", () => {
 

@@ -45,7 +45,7 @@ describe("Given Angular lifecycle event EventSource decorators", () => {
                 lifecycleDecorator(options, ...methodDecorators)(params.targetClass.prototype, lifecycleDecoratorName);
             });
 
-            spec.it("should call StateEmitter.WithParams with the expected values", () => {
+            spec.it("should call EventSource.WithParams with the expected values", () => {
                 expect(EventSource.WithParams).toHaveBeenCalledWith(Object.assign({ eventType: lifecycleEvent }, options), ...methodDecorators);
             });
         });

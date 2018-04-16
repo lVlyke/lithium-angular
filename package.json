@@ -1,6 +1,6 @@
 {
   "name": "@lithiumjs/angular",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "description": "A decorator-based library for Angular that enables writing highly reactive components using RxJS.",
   "main": "index.js",
   "author": "Mychal Thompson <mychal.r.thompson@gmail.com>",
@@ -24,7 +24,7 @@
     "prebuild:js": "yarn test",
     "build:js": "node ./scripts/build.js",
     "pretest": "node ./scripts/pretest.js",
-    "test": "istanbul cover --root ./spec/build/src --include-all-sources jasmine"
+    "test": "node ./scripts/test.js"
   },
   "peerDependencies": {
     "@angular/core": "4.x.x - 5.x.x",
@@ -39,6 +39,7 @@
     "detest-bdd": "^1.0.0",
     "fs-extra": "^5.0.0",
     "istanbul": "^0.4.5",
+    "istanbul-cobertura-badger": "^1.3.1",
     "jasmine": "^3.1.0",
     "rxjs": "5.5.x",
     "source-map-support": "^0.5.3",

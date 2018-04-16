@@ -2,6 +2,8 @@
 
 # Lithium for Angular
 
+[![Build Status](https://travis-ci.org/lVlyke/lithium-angular.svg?branch=master)](https://travis-ci.org/lVlyke/lithium-angular) [![Coverage](./coverage/coverage.svg)](./coverage/coverage.svg)
+
 A decorator-based library for Angular that enables writing highly reactive components using RxJS.
 
 * [Installation](#installation)

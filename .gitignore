@@ -1,7 +1,8 @@
 build/
 dist/
 node_modules/
-coverage/
+coverage/*
+!coverage/coverage.svg
 
 *.log
 *.ignore

@@ -10,5 +10,5 @@ const BUILD_DIR = "./spec/build";
 (function main() {
     fs.removeSync(BUILD_DIR);
 
-    child_process.execSync("tsc --p ./spec", { stdio: "inherit" });
+    child_process.execSync("ngc --p ./spec", { stdio: "inherit" });
 })();

@@ -31,5 +31,9 @@
     ],
     "atom": {
         "rewriteTsConfig": false
+    },
+    "angularCompilerOptions": {
+        "genDir": "build",
+        "skipTemplateCodegen": true
     }
 }

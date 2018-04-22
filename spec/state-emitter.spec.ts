@@ -1,6 +1,5 @@
 import { Spec, Template, Random, InputBuilder } from "detest-bdd";
 import { StateEmitter } from "../src/state-emitter";
-import { Reactive } from "../src/component";
 import { EmitterMetadata } from "../src/emitter-metadata";
 import { AngularMetadata } from "../src/angular-metadata";
 import { BehaviorSubject } from "rxjs";
@@ -8,7 +7,6 @@ import { BehaviorSubject } from "rxjs";
 const spec = Spec.create<{
     targetPrototype: any;
     targetClass: any;
-    bootstrappedClass: any;
     targetInstance: any;
     setterValue: string;
 }>();
@@ -137,9 +135,6 @@ describe("Given a StateEmitter decorator", () => {
                     value: { [propertyKey]: angularPropMetadata }
                 });
             }
-
-            // Bootstrap the class
-            params.bootstrappedClass = Reactive()(params.targetClass);
         });
 
         if (!is$ && !(options && options.propertyName)) {
@@ -191,8 +186,8 @@ describe("Given a StateEmitter decorator", () => {
                     describe("when there's Angular metadata for this property", () => {
 
                         spec.it("then it should move the metadata from the StateEmitter property to the facade property", (params) => {
-                            expect(AngularMetadata.hasPropMetadataEntry(params.bootstrappedClass, propertyKey)).toBeFalsy();
-                            expect(AngularMetadata.getPropMetadata(params.bootstrappedClass)).toEqual({ [propertyName]: angularPropMetadata });
+                            expect(AngularMetadata.hasPropMetadataEntry(params.targetClass, propertyKey)).toBeFalsy();
+                            expect(AngularMetadata.getPropMetadata(params.targetClass)).toEqual({ [propertyName]: angularPropMetadata });
                         });
                     });
                 }
@@ -200,7 +195,10 @@ describe("Given a StateEmitter decorator", () => {
                 describe("when a new instance is created", () => {
 
                     spec.beforeEach(((params) => {
-                        params.targetInstance = new params.bootstrappedClass();
+                        params.targetInstance = new params.targetClass();
+
+                        // Make sure the property is bootstrapped
+                        params.targetInstance[propertyKey];
                     }));
 
                     // TODO - Test copying of inheritted metadata

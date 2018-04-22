@@ -1,4 +1,4 @@
-import { Subject } from "rxjs";
+import { Subject, Observable } from "rxjs";
 import { EventMetadata, EventType } from "./event-metadata";
 import { AngularMetadata } from "./angular-metadata";
 import { AotAware } from "./aot";
@@ -57,10 +57,11 @@ export namespace EventSource {
         };
     }
 
-    export function Bootstrap(targetInstance: any) {
+    export function Bootstrap(targetInstance: any, returnPropertyKey: string): Observable<any> {
         // Copy all event metadata from the constructor to the target instance
         let metadataMap = EventMetadata.CopyMetadata(EventMetadata.GetOwnMetadataMap(targetInstance), EventMetadata.CopyInherittedMetadata(targetInstance.constructor), true);
-    
+        let returnValue: Observable<any> = null;
+
         // Iterate over each of the target properties for each proxied event type used in this class
         metadataMap.forEach((propertySubjectMap, eventType) => propertySubjectMap.forEach((subjectInfo, propertyKey) => {
             // If the event proxy subject hasn't been created for this property yet...
@@ -68,14 +69,22 @@ export namespace EventSource {
                 // Create a new Subject
                 subjectInfo.subject = new Subject<any>();
             }
-    
+
             // Set the property key to a function that will invoke the facade method when called
             // (This is needed to allow EventSources with attached Angular metadata decorators to work with AoT)
-            targetInstance[propertyKey] = Facade.Create(eventType);
-            
             // Compose the function with the observable
-            Object.setPrototypeOf(targetInstance[propertyKey], subjectInfo.subject.asObservable());
+            let propertyValue: Observable<any> & Function = Object.setPrototypeOf(Facade.Create(eventType), subjectInfo.subject.asObservable());
+
+            Object.defineProperty(targetInstance, propertyKey, {
+                get: () => propertyValue
+            });
+
+            if (propertyKey === returnPropertyKey) {
+                returnValue = propertyValue;
+            }
         }));
+
+        return returnValue;
     }
 
     export namespace Facade {
@@ -110,5 +119,13 @@ export namespace EventSource {
 
         // Add the EventSource options to the class' metadata
         EventMetadata.GetOwnPropertySubjectMap(options.eventType, target.constructor).set(propertyKey, options);
+
+        // Initialize the target property to a self-bootstrapper that will create the EventSource when called
+        Object.defineProperty(target, propertyKey, {
+            configurable: true,
+            get: function () {
+                return Bootstrap(this, propertyKey);
+            }
+        });
     }
 }

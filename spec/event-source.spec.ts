@@ -1,5 +1,4 @@
 import { EventSource } from "../src/event-source";
-import { Reactive } from "../src/component";
 import { Spec, Random, Template, InputBuilder } from "detest-bdd";
 import { EventMetadata } from "../src/event-metadata";
 import { Subject, Observable } from 'rxjs';
@@ -8,7 +7,6 @@ import { AngularMetadata } from "../src/angular-metadata";
 const spec = Spec.create<{
     targetPrototype: any;
     targetClass: any;
-    bootstrappedClass: any;
     targetInstance: any;
     facadeData: string;
     observable: Observable<string>;
@@ -58,9 +56,6 @@ describe("An EventSource decorator", () => {
                     value: { [propertyKey]: angularPropMetadata }
                 });
             }
-
-            // Bootstrap the class
-            params.bootstrappedClass = Reactive()(params.targetClass);
         });
 
         if (is$) {
@@ -168,8 +163,8 @@ describe("An EventSource decorator", () => {
                     describe("when there's Angular metadata for this property", () => {
 
                         spec.it("then it should move the metadata from the EventSource property to the facade function property", (params) => {
-                            expect(AngularMetadata.hasPropMetadataEntry(params.bootstrappedClass, propertyKey)).toBeFalsy();
-                            expect(AngularMetadata.getPropMetadata(params.bootstrappedClass)).toEqual({ [eventType]: angularPropMetadata });
+                            expect(AngularMetadata.hasPropMetadataEntry(params.targetClass, propertyKey)).toBeFalsy();
+                            expect(AngularMetadata.getPropMetadata(params.targetClass)).toEqual({ [eventType]: angularPropMetadata });
                         });
                     });
                 }
@@ -177,7 +172,10 @@ describe("An EventSource decorator", () => {
                 describe("when a new instance is created", () => {
 
                     spec.beforeEach(((params) => {
-                        params.targetInstance = new params.bootstrappedClass();
+                        params.targetInstance = new params.targetClass();
+
+                        // Make sure the property is bootstrapped
+                        params.targetInstance[propertyKey];
                     }));
 
                     // TODO - Test copying of inheritted metadata

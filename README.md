@@ -1,6 +1,6 @@
 <!-- markdownlint-disable MD024 MD031 -->
 
-# Lithium for Angular
+# Lithium for Angular (@lithiumjs/angular)
 
 [![Build Status](https://travis-ci.org/lVlyke/lithium-angular.svg?branch=master)](https://travis-ci.org/lVlyke/lithium-angular) [![Coverage](./coverage/coverage.svg)](./coverage/coverage.svg)
 
@@ -22,7 +22,6 @@ npm install @lithiumjs/angular
 
 ## Quick Intro Guide
 
-* [Bootstrapping](#bootstrapping)
 * [EventSource](#eventsource)
 * [StateEmitter](#stateemitter)
 * [Proxied StateEmitters](#proxied-stateemitters)
@@ -30,28 +29,7 @@ npm install @lithiumjs/angular
 
 (For more information, see the full [**API reference**](#api))
 
-### Bootstrapping
-
-Bootstrapping is required on the target class to enable event sources and state emitters for each instance. This is done via the ```Reactive``` class decorator.
-
-#### Example
-
-```ts
-@Reactive()
-@Component({...})
-class Component {
-
-    @OnInit() private onInit$: Observable<void>;
-
-    constructor () {
-        this.onInit$.subscribe(() =>  console.log("Hello world."));
-    }
-}
-```
-
 **NOTE:** If you are using Angular's AoT compiler, additional considerations are required to write fully AoT-compliant components with Lithium. See the [Angular AoT Compiler](#angular-aot-compiler) section for details.
-
-[**API reference**](#reactive)
 
 ### EventSource
 
@@ -66,7 +44,6 @@ class Component {
 #### Component
 
 ```ts
-@Reactive()
 @Component({...})
 class Component {
 
@@ -85,7 +62,6 @@ Method decorators may be passed to ```EventSource``` and will be applied to the 
 ##### Example
 
 ```ts
-@Reactive()
 @Component({...})
 class Component {
 
@@ -103,7 +79,6 @@ Angular decorators may also be declared on the ```EventSource``` property itself
 ##### Example
 
 ```ts
-@Reactive()
 @Component({...})
 class Component {
 
@@ -133,7 +108,6 @@ class Component {
 #### Component
 
 ```ts
-@Reactive()
 @Component({...})
 class Component {
 
@@ -156,7 +130,6 @@ Property decorators may be passed to ```StateEmitter``` and will be applied to t
 ##### Example
 
 ```ts
-@Reactive()
 @Component({
     selector: "component",
     ...
@@ -181,7 +154,6 @@ Angular decorators may also be declared on the ```StateEmitter``` property itsel
 ```
 
 ```ts
-@Reactive()
 @Component({...})
 class Component {
 
@@ -213,7 +185,6 @@ class FooService {
 ```
 
 ```ts
-@Reactive()
 @Component({...})
 class Component {
 
@@ -254,7 +225,6 @@ class SettingsService {
 ```
 
 ```ts
-@Reactive()
 @Component({...})
 class FormComponent {
 
@@ -283,7 +253,6 @@ If a dynamic property path contains a ```Subject```, it will automatically be no
 ```
 
 ```ts
-@Reactive()
 @Component({...})
 class FormComponent {
 
@@ -321,7 +290,6 @@ class SessionManager {
 ```
 
 ```ts
-@Reactive()
 @Component({...})
 class Component {
 
@@ -338,7 +306,6 @@ class Component {
 ```
 
 ```ts
-@Reactive()
 @Component({...})
 class Component {
 
@@ -362,7 +329,6 @@ The ```From``` proxy type creates a new ```Subject``` that gets its initial valu
 ```
 
 ```ts
-@Reactive()
 @Component({...})
 class FormComponent {
 
@@ -387,7 +353,6 @@ The ```Merge``` proxy type creates a new ```Subject``` that subscribes to all up
 ```
 
 ```ts
-@Reactive()
 @Component({...})
 class FormComponent {
 
@@ -417,7 +382,6 @@ Helper decorators are provided that proxy all of the Angular component lifecycle
 #### Example
 
 ```ts
-@Reactive()
 @Component({...})
 class Component {
 
@@ -446,7 +410,6 @@ When using component lifecycle events (i.e. ```ngOnInit```), Angular's AoT compi
 For example, the following code, while valid without the AoT compiler, will fail to work correctly when compiled with AoT:
 
 ```ts
-@Reactive()
 @Component({...})
 class Component {
 
@@ -463,7 +426,6 @@ class Component {
 To help with this limitation, Lithium for Angular provides an ```AotAware``` class that a component class can extend to resolve this automatically:
 
 ```ts
-@Reactive()
 @Component({...})
 // Extending AotAware takes care of providing the Angular lifecycle event method declarations.
 class Component extends AotAware {
@@ -482,7 +444,6 @@ class Component extends AotAware {
 If you do not wish to use the ```AotAware``` class, you must provide an empty stub declaration of the corresponding Angular event method and set ```skipMethodCheck``` to ```true``` for the ```EventSource``` decorator. Example:
 
 ```ts
-@Reactive()
 @Component({...})
 class Component {
     // EventSource proxy for ngOnInit
@@ -506,7 +467,6 @@ Please note that the method declaration will be overidden by Lithium. Any code i
 The following example will fail to work when compiled with AoT:
 
 ```ts
-@Reactive()
 @Component({...})
 class Component {
 
@@ -523,7 +483,6 @@ class Component {
 In the above example, ```HostListener``` should be declared on the property instead. The following example will work correctly when compiled with AoT:
 
 ```ts
-@Reactive()
 @Component({...})
 class Component {
 
@@ -543,7 +502,6 @@ class Component {
 The following example will fail to work when compiled with AoT:
 
 ```ts
-@Reactive()
 @Component({...})
 class Component {
 
@@ -560,7 +518,6 @@ class Component {
 In the above example, ```Input``` should be declared on the property instead. The following example will work correctly when compiled with AoT:
 
 ```ts
-@Reactive()
 @Component({...})
 class Component {
 
@@ -576,14 +533,6 @@ class Component {
 ```
 
 ## API
-
-### ```Reactive```
-
-```ts
-function Reactive(): ClassDecorator
-```
-
-A decorator that bootstraps the target class, which wires up all own and inherited ```EventSource```s and ```StateEmitter```s to each class instance.
 
 ### ```AotAware```
 

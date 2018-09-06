@@ -258,5 +258,14 @@ export namespace StateEmitter {
                 return Bootstrap(this, type);
             }
         });
+
+        // Initialize the facade property to a self-bootstrapper that will initialize the instance's StateEmitters when called
+        Object.defineProperty(target, type, {
+            configurable: true,
+            get: function () {
+                Bootstrap(this, type);
+                return metadata.initialValue;
+            }
+        });
     }
 }

@@ -3,6 +3,7 @@ import { StateEmitter } from "../src/state-emitter";
 import { EmitterMetadata } from "../src/emitter-metadata";
 import { AngularMetadata } from "../src/angular-metadata";
 import { BehaviorSubject } from "rxjs";
+import { take, map, withLatestFrom, mergeMapTo } from "rxjs/operators";
 
 const spec = Spec.create<{
     targetPrototype: any;
@@ -67,10 +68,10 @@ describe("Given a StateEmitter decorator", () => {
             });
     
             spec.it("then it should update the subject with the new value", (params) => {
-                return params.targetInstance[propertyKey]
-                    .take(1)
-                    .map((value: string) => expect(value).toEqual(params.setterValue))
-                    .toPromise();
+                return params.targetInstance[propertyKey].pipe(
+                    take(1),
+                    map((value: string) => expect(value).toEqual(params.setterValue))
+                ).toPromise();
             });
     
             if (options && options.proxyMode === EmitterMetadata.ProxyMode.Alias) {
@@ -78,16 +79,16 @@ describe("Given a StateEmitter decorator", () => {
     
                     spec.it("then it should update the source subject", (params) => {
                         if (isStaticProxyPath) {
-                            return params.targetInstance.static.proxy.path$
-                                .take(1)
-                                .map((value: string) => expect(value).toEqual(params.setterValue))
-                                .toPromise();
+                            return params.targetInstance.static.proxy.path$.pipe(
+                                take(1),
+                                map((value: string) => expect(value).toEqual(params.setterValue))
+                            ).toPromise();
                         }
                         else {
-                            return params.targetInstance.dynamic.proxy$
-                                .take(1)
-                                .map((value: { path: string }) => expect(value.path).toEqual(params.setterValue))
-                                .toPromise();
+                            return params.targetInstance.dynamic.proxy$.pipe(
+                                take(1),
+                                map((value: { path: string }) => expect(value.path).toEqual(params.setterValue))
+                            ).toPromise();
                         }
                     });
                 });
@@ -97,16 +98,16 @@ describe("Given a StateEmitter decorator", () => {
     
                     spec.it("then it should NOT update the source subject", (params) => {
                         if (isStaticProxyPath) {
-                            return params.targetInstance.static.proxy.path$
-                                .take(1)
-                                .map((value: string) => expect(value).not.toEqual(params.setterValue))
-                                .toPromise();
+                            return params.targetInstance.static.proxy.path$.pipe(
+                                take(1),
+                                map((value: string) => expect(value).not.toEqual(params.setterValue))
+                            ).toPromise();
                         }
                         else {
-                            return params.targetInstance.dynamic.proxy$
-                                .take(1)
-                                .map((value: { path: string }) => expect(value.path).not.toEqual(params.setterValue))
-                                .toPromise();
+                            return params.targetInstance.dynamic.proxy$.pipe(
+                                take(1),
+                                map((value: { path: string }) => expect(value.path).not.toEqual(params.setterValue))
+                            ).toPromise();
                         }
                     });
                 });
@@ -235,16 +236,16 @@ describe("Given a StateEmitter decorator", () => {
                                 expect(params.targetInstance[propertyName]).toEqual(mergedOptions().initialValue);
                             }
                             else if (isStaticProxyPath) {
-                                return params.targetInstance.static.proxy.path$
-                                    .take(1)
-                                    .map((value: string) => expect(params.targetInstance[propertyName]).toEqual(value))
-                                    .toPromise();
+                                return params.targetInstance.static.proxy.path$.pipe(
+                                    take(1),
+                                    map((value: string) => expect(params.targetInstance[propertyName]).toEqual(value))
+                                ).toPromise();
                             }
                             else {
-                                return params.targetInstance.dynamic.proxy$
-                                    .take(1)
-                                    .map((value: { path: string }) => expect(params.targetInstance[propertyName]).toEqual(value.path))
-                                    .toPromise();
+                                return params.targetInstance.dynamic.proxy$.pipe(
+                                    take(1),
+                                    map((value: { path: string }) => expect(params.targetInstance[propertyName]).toEqual(value.path))
+                                ).toPromise();
                             }
                         });
                     });
@@ -275,11 +276,11 @@ describe("Given a StateEmitter decorator", () => {
                                 expect(params.targetInstance[propertyKey]).toEqual(params.targetInstance.static.proxy.path$);
                             }
                             else {
-                                return params.targetInstance[propertyKey]
-                                    .take(1)
-                                    .withLatestFrom(params.targetInstance.dynamic.proxy$)
-                                    .map((args: any[]) => expect(args[0]).toEqual(args[1].path))
-                                    .toPromise();
+                                return params.targetInstance[propertyKey].pipe(
+                                    take(1),
+                                    withLatestFrom(params.targetInstance.dynamic.proxy$),
+                                    map((args: any[]) => expect(args[0]).toEqual(args[1].path))
+                                ).toPromise();
                             }
                         }
                         else if (options.proxyMode === EmitterMetadata.ProxyMode.From) {
@@ -288,28 +289,28 @@ describe("Given a StateEmitter decorator", () => {
 
                                 let firstEmission: string;
 
-                                return params.targetInstance[propertyKey]
-                                    .take(1)
-                                    .withLatestFrom(params.targetInstance.static.proxy.path$)
-                                    .map((args: any[]) => expect(firstEmission = args[0]).toEqual(args[1]))
-                                    .map(() => params.targetInstance.static.proxy.path$.next(Random.string()))
-                                    .flatMapTo(params.targetInstance[propertyKey])
-                                    .take(1)
-                                    .map((latestValue: string) => expect(latestValue).toEqual(firstEmission))
-                                    .toPromise();
+                                return params.targetInstance[propertyKey].pipe(
+                                    take(1),
+                                    withLatestFrom(params.targetInstance.static.proxy.path$),
+                                    map((args: any[]) => expect(firstEmission = args[0]).toEqual(args[1])),
+                                    map(() => params.targetInstance.static.proxy.path$.next(Random.string())),
+                                    mergeMapTo(params.targetInstance[propertyKey]),
+                                    take(1),
+                                    map((latestValue: string) => expect(latestValue).toEqual(firstEmission)),
+                                ).toPromise();
                             }
                             else {
                                 let firstEmission: string;
 
-                                return params.targetInstance[propertyKey]
-                                    .take(1)
-                                    .withLatestFrom(params.targetInstance.dynamic.proxy$)
-                                    .map((args: any[]) => expect(firstEmission = args[0]).toEqual(args[1].path))
-                                    .map(() => params.targetInstance.dynamic.proxy$.next({ path: Random.string() }))
-                                    .flatMapTo(params.targetInstance[propertyKey])
-                                    .take(1)
-                                    .map((latestValue: string) => expect(latestValue).toEqual(firstEmission))
-                                    .toPromise();
+                                return params.targetInstance[propertyKey].pipe(
+                                    take(1),
+                                    withLatestFrom(params.targetInstance.dynamic.proxy$),
+                                    map((args: any[]) => expect(firstEmission = args[0]).toEqual(args[1].path)),
+                                    map(() => params.targetInstance.dynamic.proxy$.next({ path: Random.string() })),
+                                    mergeMapTo(params.targetInstance[propertyKey]),
+                                    take(1),
+                                    map((latestValue: string) => expect(latestValue).toEqual(firstEmission))
+                                ).toPromise();
                             }
                         }
                         else if (options.proxyMode === EmitterMetadata.ProxyMode.Merge) {
@@ -318,28 +319,28 @@ describe("Given a StateEmitter decorator", () => {
 
                                 let nextEmission: string;
 
-                                return params.targetInstance[propertyKey]
-                                    .take(1)
-                                    .withLatestFrom(params.targetInstance.static.proxy.path$)
-                                    .map((args: any[]) => expect(args[0]).toEqual(args[1]))
-                                    .map(() => params.targetInstance.static.proxy.path$.next(nextEmission = Random.string()))
-                                    .flatMapTo(params.targetInstance[propertyKey])
-                                    .take(1)
-                                    .map((latestValue: string) => expect(latestValue).toEqual(nextEmission))
-                                    .toPromise();
+                                return params.targetInstance[propertyKey].pipe(
+                                    take(1),
+                                    withLatestFrom(params.targetInstance.static.proxy.path$),
+                                    map((args: any[]) => expect(args[0]).toEqual(args[1])),
+                                    map(() => params.targetInstance.static.proxy.path$.next(nextEmission = Random.string())),
+                                    mergeMapTo(params.targetInstance[propertyKey]),
+                                    take(1),
+                                    map((latestValue: string) => expect(latestValue).toEqual(nextEmission)),
+                                ).toPromise();
                             }
                             else {
                                 let nextEmission: { path: string };
 
-                                return params.targetInstance[propertyKey]
-                                    .take(1)
-                                    .withLatestFrom(params.targetInstance.dynamic.proxy$)
-                                    .map((args: any[]) => expect(args[0]).toEqual(args[1].path))
-                                    .map(() => params.targetInstance.dynamic.proxy$.next(nextEmission = { path: Random.string() }))
-                                    .flatMapTo(params.targetInstance[propertyKey])
-                                    .take(1)
-                                    .map((latestValue: string) => expect(latestValue).toEqual(nextEmission.path))
-                                    .toPromise();
+                                return params.targetInstance[propertyKey].pipe(
+                                    take(1),
+                                    withLatestFrom(params.targetInstance.dynamic.proxy$),
+                                    map((args: any[]) => expect(args[0]).toEqual(args[1].path)),
+                                    map(() => params.targetInstance.dynamic.proxy$.next(nextEmission = { path: Random.string() })),
+                                    mergeMapTo(params.targetInstance[propertyKey]),
+                                    take(1),
+                                    map((latestValue: string) => expect(latestValue).toEqual(nextEmission.path))
+                                ).toPromise();
                             }
                         }
                     });

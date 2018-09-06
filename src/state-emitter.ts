@@ -2,6 +2,7 @@ import { BehaviorSubject, Observable, Subject } from "rxjs";
 import { EmitterMetadata, EmitterType } from "./emitter-metadata";
 import { ObservableUtil } from "./observable-util";
 import { AngularMetadata } from "./angular-metadata";
+import { take } from "rxjs/operators";
 
 export function StateEmitter(): PropertyDecorator;
 export function StateEmitter(...propertyDecorators: PropertyDecorator[]): PropertyDecorator;
@@ -197,10 +198,10 @@ export namespace StateEmitter {
                     DefineProxyObservableGetter(subjectInfo, false, (proxyObservable: Observable<any>) => {
                         // Only take the first value if this is a From proxy
                         if (subjectInfo.proxyMode === EmitterMetadata.ProxyMode.From) {
-                            proxyObservable = proxyObservable.take(1);
+                            proxyObservable = proxyObservable.pipe(take(1));
                         }
 
-                        proxyObservable.subscribe(value => subject.next(value));
+                        proxyObservable.subscribe((value: any) => subject.next(value));
 
                         return subject;
                     });
@@ -250,7 +251,7 @@ export namespace StateEmitter {
         // Add the propertyKey to the class' metadata
         EmitterMetadata.GetOwnMetadataMap(target.constructor).set(type, metadata);
 
-        // Initialize the target property to a self-bootstrapper that will create the EventSource when called
+        // Initialize the target property to a self-bootstrapper that will initialize the instance's StateEmitters when called
         Object.defineProperty(target, metadata.propertyKey, {
             configurable: true,
             get: function () {

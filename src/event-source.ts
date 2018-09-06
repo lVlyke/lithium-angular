@@ -73,7 +73,7 @@ export namespace EventSource {
             // Set the property key to a function that will invoke the facade method when called
             // (This is needed to allow EventSources with attached Angular metadata decorators to work with AoT)
             // Compose the function with the observable
-            let propertyValue: Observable<any> & Function = Object.setPrototypeOf(Facade.Create(eventType), subjectInfo.subject.asObservable());
+            let propertyValue: Observable<any> & Function = Object.setPrototypeOf(Facade.Create(eventType), subjectInfo.subject);
 
             Object.defineProperty(targetInstance, propertyKey, {
                 get: () => propertyValue
@@ -120,7 +120,7 @@ export namespace EventSource {
         // Add the EventSource options to the class' metadata
         EventMetadata.GetOwnPropertySubjectMap(options.eventType, target.constructor).set(propertyKey, options);
 
-        // Initialize the target property to a self-bootstrapper that will create the EventSource when called
+        // Initialize the target property to a self-bootstrapper that will initialize the instance's EventSources when called
         Object.defineProperty(target, propertyKey, {
             configurable: true,
             get: function () {

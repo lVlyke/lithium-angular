@@ -1,4 +1,5 @@
-import { Observable, Subject } from "rxjs";
+import { Observable, Subject, of } from "rxjs";
+import { take, flatMap } from "rxjs/operators";
 
 export namespace ObservableUtil {
 
@@ -13,7 +14,7 @@ export namespace ObservableUtil {
             return property;
         }
         else {
-            return Observable.of<T>(property);
+            return of<T>(property);
         }
     }
 
@@ -42,17 +43,18 @@ export namespace ObservableUtil {
             let curPropertyKey = lastPropertyKey = propertyKeys[0];
             
             // Create an observable from the properties value
-            return CreateFromProperty(target[curPropertyKey]).flatMap((target) => {
-                // If it's the last property in the path...
-                if (propertyKeys.length === 1) {
-                    // Return the value
-                    return Observable.of(target);
-                }
-                else {
-                    // Otherwise, return the next property in the path
-                    return resolveProperty(target, propertyKeys.slice(1));
-                }
-            });
+            return CreateFromProperty(target[curPropertyKey]).pipe(
+                flatMap((target) => {
+                    // If it's the last property in the path...
+                    if (propertyKeys.length === 1) {
+                        // Return the value
+                        return of(target);
+                    }
+                    else {
+                        // Otherwise, return the next property in the path
+                        return resolveProperty(target, propertyKeys.slice(1));
+                    }
+            }));
         })(target, path.split("."));
     }
 
@@ -148,7 +150,9 @@ export namespace ObservableUtil {
         
         if (mergeValue) {
             // Get the last value from the subject and emit the merged properties
-            subject.take(1).subscribe(lastValue => subject.next(Object.assign(lastValue, updatedSubjectValue)));
+            subject.pipe(
+                take(1)
+            ).subscribe((lastValue: any) => subject.next(Object.assign(lastValue, updatedSubjectValue)));
         }
         else {
             // Emit the new value

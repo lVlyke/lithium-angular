@@ -3,6 +3,7 @@ import { Spec, Random, Template, InputBuilder } from "detest-bdd";
 import { EventMetadata } from "../src/event-metadata";
 import { Subject, Observable } from 'rxjs';
 import { AngularMetadata } from "../src/angular-metadata";
+import { map, take, shareReplay } from "rxjs/operators";
 
 const spec = Spec.create<{
     targetPrototype: any;
@@ -205,7 +206,7 @@ describe("An EventSource decorator", () => {
                     describe("when the facade function is invoked", Template.withInputs(["facadeFnKey"], (facadeFnKey: string) => {
 
                         spec.beforeEach((params) => {
-                            params.observable = params.targetInstance[propertyKey].shareReplay();
+                            params.observable = params.targetInstance[propertyKey].pipe(shareReplay());
 
                             // Subscribe first to capture the facade fn event
                             params.observable.subscribe();
@@ -216,10 +217,10 @@ describe("An EventSource decorator", () => {
                         });
 
                         spec.it("should update the Observable with the data passed to the function", (params) => {
-                            return params.observable
-                                .map(data => { expect(data).toEqual(params.facadeData) })
-                                .take(1)
-                                .toPromise();
+                            return params.observable.pipe(
+                                map(data => { expect(data).toEqual(params.facadeData) }),
+                                take(1)
+                            ).toPromise();
                         });
                     }, { facadeFnKey: eventType }, { facadeFnKey: propertyKey }));
                 });

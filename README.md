@@ -4,7 +4,7 @@
 
 [![Build Status](https://travis-ci.org/lVlyke/lithium-angular.svg?branch=master)](https://travis-ci.org/lVlyke/lithium-angular) [![Coverage](./coverage/coverage.svg)](./coverage/coverage.svg)
 
-A decorator-based library for Angular that enables writing highly reactive components using RxJS.
+A decorator-based library for Angular that enables seamless reactive data binding using RxJS.
 
 * [Installation](#installation)
 * [Quick Intro Guide](#quick-intro-guide)

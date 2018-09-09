@@ -1,7 +1,7 @@
 {
   "name": "@lithiumjs/angular",
-  "version": "2.0.0-rc.0",
-  "description": "A decorator-based library for Angular that enables writing highly reactive components using RxJS.",
+  "version": "2.0.0-rc.1",
+  "description": "A decorator-based library for Angular that enables seamless reactive data binding using RxJS.",
   "main": "index.js",
   "author": "Mychal Thompson <mychal.r.thompson@gmail.com>",
   "repository": "https://github.com/lVlyke/lithium-angular",
@@ -18,7 +18,8 @@
     "decorators",
     "lifecycle",
     "component",
-    "reactive"
+    "reactive",
+    "data-binding"
   ],
   "scripts": {
     "prebuild:js": "yarn test",

@@ -33,7 +33,7 @@ npm install @lithiumjs/angular
 
 ### EventSource
 
-```EventSource``` is the main decorator used for responding to events from a component. ```EventSource``` creates a proxy method for intercepting events (such as UI events or component lifecycle events) executed via callback, and translates them into observables.
+```EventSource``` is the decorator used for reactive [event binding](https://angular.io/guide/template-syntax#event-binding). ```EventSource``` creates an ```Observable``` that can be used to react to component UI and lifecycle events.
 
 #### Template
 
@@ -55,9 +55,11 @@ class Component {
 }
 ```
 
+As you can see in the example above, an ```onButtonPress``` function is automatically created in the component's template that can be used to bind to events.
+
 #### EventSource method decorators
 
-Method decorators may be passed to ```EventSource``` and will be applied to the underlying facade method.
+Method decorators may be passed to ```EventSource``` and will be forwarded to the underlying facade function.
 
 ##### Example
 
@@ -74,7 +76,7 @@ class Component {
 }
 ```
 
-Angular decorators may also be declared on the ```EventSource``` property itself. Lithium will automatically move the associated metadata to the underlying facade method. This is useful for [staying compliant with Angular's AoT compiler](#angular-aot-compiler).
+Angular decorators may also be declared on the ```EventSource``` property itself. Lithium will automatically move the associated metadata to the facade function. This is useful for [staying compliant with Angular's AoT compiler](#angular-aot-compiler).
 
 ##### Example
 
@@ -96,7 +98,7 @@ class Component {
 
 ### StateEmitter
 
-```StateEmitter``` is the decorator used to automatically synchronize state of a component, allowing for reactive communication to and from the UI via subjects.
+```StateEmitter``` is the decorator used for reactive [one-way in binding](https://angular.io/guide/template-syntax#one-way-in) and [two-way binding](https://angular.io/guide/template-syntax#two-way-binding---), allowing for state synchronization to and from the UI via a ```BehaviorSubject```.
 
 #### Template
 
@@ -123,9 +125,11 @@ class Component {
 }
 ```
 
+As you can see in the example above, a ```buttonPressCount``` property is automatically created in the component's template that can be used to bind to properties.
+
 #### StateEmitter property decorators
 
-Property decorators may be passed to ```StateEmitter``` and will be applied to the underlying property.
+Property decorators may be passed to ```StateEmitter``` and will be forwarded to the underlying property.
 
 ##### Example
 

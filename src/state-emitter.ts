@@ -247,28 +247,36 @@ export namespace StateEmitter {
     }
 
     export function CreateMetadata(target: any, type: EmitterType, metadata: EmitterMetadata.SubjectInfo) {
+        const initialPropertyDescriptor = Object.getOwnPropertyDescriptor(target, metadata.propertyKey);
+        let bootstrapResult: Observable<any> | Subject<any> = undefined;
+
+        function doBootstrap(): Observable<any> | Subject<any> {
+            // Get the initial value of the property being decorated
+            const initialPropertyValue: any = initialPropertyDescriptor ? (initialPropertyDescriptor.value || initialPropertyDescriptor.get()) : null;
+
+            // Check if there's a value set for the property
+            if (initialPropertyValue) {
+                // If the value is an Observable, use it for this StateEmitter
+                if (initialPropertyValue instanceof Observable) {
+                    if (metadata.proxyMode === EmitterMetadata.ProxyMode.None) {
+                        metadata.proxyMode = EmitterMetadata.ProxyMode.Alias;
+                        metadata.proxyPath = metadata.propertyKey;
+                    }
+                    else {
+                        throw new Error(`[${target.name}]: Unable to create a StateEmitter on property "${metadata.propertyKey}": property cannot have a pre-defined Subject when declaring a proxying StateEmitter.`);
+                    }
+                }
+                else {
+                    console.warn(`Warning: Definition of StateEmitter for ${target.name}.${metadata.propertyKey} is overriding previous value for '${metadata.propertyKey}'.`);
+                }
+            }
+
+            return Bootstrap(this, type);
+        }
+        
         if (target[type]) {
             // Make sure the target class doesn't have a custom property already defined for this event type
             throw new Error(`@StateEmitter metadata creation failed. Class already has a custom ${type} property.`);
-        }
-
-        const initialPropertyValue: any = target[metadata.propertyKey];
-
-        // Check if there's a value set for the StateEmitter property
-        if (initialPropertyValue) {
-            // If the value is a Observable, use it for this StateEmitter
-            if (initialPropertyValue instanceof Observable) {
-                if (metadata.proxyMode === EmitterMetadata.ProxyMode.None) {
-                    metadata.proxyMode = EmitterMetadata.ProxyMode.Alias;
-                    metadata.proxyPath = metadata.propertyKey;
-                }
-                else {
-                    throw new Error(`[${target.name}]: Unable to create a StateEmitter on property "${metadata.propertyKey}": property cannot have a pre-defined Subject when declaring a proxying StateEmitter.`);
-                }
-            }
-            else {
-                console.warn(`Warning: Definition of StateEmitter for ${target.name}.${metadata.propertyKey} is overriding previous value for '${metadata.propertyKey}'.`);
-            }
         }
 
         // Add the propertyKey to the class' metadata
@@ -278,7 +286,11 @@ export namespace StateEmitter {
         Object.defineProperty(target, metadata.propertyKey, {
             configurable: true,
             get: function () {
-                return Bootstrap(this, type);
+                if (!bootstrapResult) {
+                    bootstrapResult = doBootstrap.bind(this)();
+                }
+
+                return bootstrapResult;
             }
         });
 
@@ -286,7 +298,10 @@ export namespace StateEmitter {
         Object.defineProperty(target, type, {
             configurable: true,
             get: function () {
-                Bootstrap(this, type);
+                if (!bootstrapResult) {
+                    bootstrapResult = doBootstrap.bind(this)();
+                }
+
                 return this[type];
             }
         });

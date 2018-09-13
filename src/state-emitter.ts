@@ -248,22 +248,25 @@ export namespace StateEmitter {
 
     export function CreateMetadata(target: any, type: EmitterType, metadata: EmitterMetadata.SubjectInfo) {
         const initialPropertyDescriptor = Object.getOwnPropertyDescriptor(target, metadata.propertyKey);
+        const resolveInitialPropertyValue = () => initialPropertyDescriptor ? (initialPropertyDescriptor.value || initialPropertyDescriptor.get()) : undefined;
         let bootstrapResult: Observable<any> | Subject<any> = undefined;
+        let isBootstrapping = false;
 
         function doBootstrap(): Observable<any> | Subject<any> {
             // Get the initial value of the property being decorated
-            const initialPropertyValue: any = initialPropertyDescriptor ? (initialPropertyDescriptor.value || initialPropertyDescriptor.get()) : null;
+            const initialPropertyValue: any = resolveInitialPropertyValue();
 
             // Check if there's a value set for the property
             if (initialPropertyValue) {
                 // If the value is an Observable, use it for this StateEmitter
                 if (initialPropertyValue instanceof Observable) {
-                    if (metadata.proxyMode === EmitterMetadata.ProxyMode.None) {
+                    if (!metadata.proxyMode || metadata.proxyMode === EmitterMetadata.ProxyMode.None) {
+                        // Setup a self-proxying alias that will reference the initial value
                         metadata.proxyMode = EmitterMetadata.ProxyMode.Alias;
                         metadata.proxyPath = metadata.propertyKey;
                     }
                     else {
-                        throw new Error(`[${target.name}]: Unable to create a StateEmitter on property "${metadata.propertyKey}": property cannot have a pre-defined Subject when declaring a proxying StateEmitter.`);
+                        throw new Error(`[${target.name}]: Unable to create a StateEmitter on property "${metadata.propertyKey}": property cannot have a pre-defined observable when declaring a proxying StateEmitter.`);
                     }
                 }
                 else {
@@ -271,6 +274,7 @@ export namespace StateEmitter {
                 }
             }
 
+            isBootstrapping = true;
             return Bootstrap(this, type);
         }
         
@@ -286,11 +290,11 @@ export namespace StateEmitter {
         Object.defineProperty(target, metadata.propertyKey, {
             configurable: true,
             get: function () {
-                if (!bootstrapResult) {
+                if (!isBootstrapping) {
                     bootstrapResult = doBootstrap.bind(this)();
                 }
 
-                return bootstrapResult;
+                return bootstrapResult || resolveInitialPropertyValue();
             }
         });
 
@@ -298,7 +302,7 @@ export namespace StateEmitter {
         Object.defineProperty(target, type, {
             configurable: true,
             get: function () {
-                if (!bootstrapResult) {
+                if (!isBootstrapping) {
                     bootstrapResult = doBootstrap.bind(this)();
                 }
 

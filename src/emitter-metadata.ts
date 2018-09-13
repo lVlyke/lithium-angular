@@ -50,6 +50,10 @@ export namespace EmitterMetadata {
         export function IsStaticAlias(subjectInfo: SubjectInfo): subjectInfo is SubjectInfo.WithStaticAlias {
             return (subjectInfo.observable instanceof Subject);
         }
+
+        export function IsSelfProxy(subjectInfo: SubjectInfo): boolean {
+            return subjectInfo.proxyPath === subjectInfo.propertyKey;
+        }
     }
 
     export type MetadataMap = Map<EmitterType, SubjectInfo>;

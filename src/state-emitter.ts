@@ -179,7 +179,7 @@ export namespace StateEmitter {
     
         // Iterate over each of the target properties for each emitter type used in this class
         metadataMap.forEach((subjectInfo, emitterType) => {
-            if (subjectInfo.proxyMode === EmitterMetadata.ProxyMode.Alias && subjectInfo.proxyPath === subjectInfo.propertyKey) {
+            if (EmitterMetadata.SubjectInfo.IsSelfProxy(subjectInfo)) {
                 subjectInfo.observable = targetInstance[subjectInfo.propertyKey];
             }
             else {
@@ -259,7 +259,8 @@ export namespace StateEmitter {
             if (initialPropertyValue) {
                 // If the value is an Observable, use it for this StateEmitter
                 if (initialPropertyValue instanceof Observable) {
-                    if (!metadata.proxyMode || metadata.proxyMode === EmitterMetadata.ProxyMode.None) {
+                    // Only allow no proxying or explicit self-proxying with initial values
+                    if (!metadata.proxyMode || metadata.proxyMode === EmitterMetadata.ProxyMode.None || EmitterMetadata.SubjectInfo.IsSelfProxy(metadata)) {
                         // Setup a self-proxying alias that will reference the initial value
                         metadata.proxyMode = EmitterMetadata.ProxyMode.Alias;
                         metadata.proxyPath = metadata.propertyKey;

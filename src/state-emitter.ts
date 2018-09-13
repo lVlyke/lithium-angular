@@ -249,7 +249,6 @@ export namespace StateEmitter {
     export function CreateMetadata(target: any, type: EmitterType, metadata: EmitterMetadata.SubjectInfo) {
         const initialPropertyDescriptor = Object.getOwnPropertyDescriptor(target, metadata.propertyKey);
         const resolveInitialPropertyValue = () => initialPropertyDescriptor ? (initialPropertyDescriptor.value || initialPropertyDescriptor.get()) : undefined;
-        let bootstrapResult: Observable<any> | Subject<any> = undefined;
         let isBootstrapping = false;
 
         function doBootstrap(): Observable<any> | Subject<any> {
@@ -275,7 +274,9 @@ export namespace StateEmitter {
             }
 
             isBootstrapping = true;
-            return Bootstrap(this, type);
+            const result = Bootstrap(this, type);
+            isBootstrapping = false;
+            return result;
         }
         
         if (target[type]) {
@@ -291,10 +292,10 @@ export namespace StateEmitter {
             configurable: true,
             get: function () {
                 if (!isBootstrapping) {
-                    bootstrapResult = doBootstrap.bind(this)();
+                    return doBootstrap.bind(this)();
                 }
 
-                return bootstrapResult || resolveInitialPropertyValue();
+                return resolveInitialPropertyValue();
             }
         });
 
@@ -303,7 +304,7 @@ export namespace StateEmitter {
             configurable: true,
             get: function () {
                 if (!isBootstrapping) {
-                    bootstrapResult = doBootstrap.bind(this)();
+                    doBootstrap.bind(this)();
                 }
 
                 return this[type];

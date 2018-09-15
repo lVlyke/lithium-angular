@@ -57,7 +57,11 @@ class Component {
 
 As you can see in the example above, an ```onButtonPress``` function is automatically created in the component's template that can be used to bind to events.
 
-#### EventSource method decorators
+#### Using EventSource with Angular lifecycle events
+
+```EventSource``` can also be used to capture all Angular component lifecycles (i.e. ```OnInit```) as observables. Convenience decorators are provided for every lifecycle event. You can see the full list [here](#lifecycle-event-decorators).
+
+#### Forwarding method decorators with EventSource
 
 Method decorators may be passed to ```EventSource``` and will be forwarded to the underlying facade function.
 
@@ -94,6 +98,41 @@ class Component {
 }
 ```
 
+#### EventSource and inheritance
+
+```EventSource``` fully supports class and prototypical inheritance.
+
+##### Example
+
+```ts
+abstract class ComponentBase {
+
+    @OnInit()
+    protected onInit$: Observable<void>;
+
+    constructor() {
+        this.onInit$.subscribe(() => console.log("OnInit event in parent."));
+    }
+}
+
+@Component({...})
+class Component extends ComponentBase {
+
+    constructor() {
+        super();
+
+        this.onInit$.subscribe(() => console.log("OnInit event in child."));
+    }
+}
+
+/*
+Log output:
+==============
+> OnInit event in parent.
+> OnInit event in child.
+*/
+```
+
 [**API reference**](#eventsource-1)
 
 ### StateEmitter
@@ -103,8 +142,10 @@ class Component {
 #### Template
 
 ```html
-<div> You clicked the button {{buttonPressCount}} times.</div>
-<button (click)="onButtonPress()"> </button>
+<form>
+    <input type="text" name="amount" [(ngModel)]="amount">
+    <button (click)="resetAmount()"> </button>
+</form>
 ```
 
 #### Component
@@ -113,21 +154,19 @@ class Component {
 @Component({...})
 class Component {
 
-    @EventSource() private onButtonPress$: Observable<any>;
+    @EventSource() private resetAmount$: Observable<void>;
 
-    @StateEmitter({initialValue: 0}) private buttonPressCount$: Subject<number>;
+    @StateEmitter({initialValue: 0}) private amount$: Subject<number>;
 
     constructor () {
-        this.onButtonPress$
-            .flatMap(() =>  this.buttonPressCount$.take(1))
-            .subscribe(buttonPressCount =>  this.buttonPressCount$.next(buttonPressCount + 1));
+        this.resetAmount$.subscribe(() => this.amount$.next(0));
     }
 }
 ```
 
-As you can see in the example above, a ```buttonPressCount``` property is automatically created in the component's template that can be used to bind to properties.
+As you can see in the example above, an ```amount``` property is automatically created in the component's template that can be used to bind to properties.
 
-#### StateEmitter property decorators
+#### Forwarding property decorators with StateEmitter
 
 Property decorators may be passed to ```StateEmitter``` and will be forwarded to the underlying property.
 
@@ -140,7 +179,7 @@ Property decorators may be passed to ```StateEmitter``` and will be forwarded to
 })
 class Component {
 
-    // Given "NonNull" is a property decorator factory:
+    // Given "NonNull" is a property decorator:
     @StateEmitter(NonNull()) private name$: Subject<string>;
 
     constructor () {
@@ -162,13 +201,67 @@ Angular decorators may also be declared on the ```StateEmitter``` property itsel
 class Component {
 
     @StateEmitter()
-    @Input("disabled")
+    @Input("disabled") // Input metdata will be forwarded to the underlying property.
     private disabled$: Subject<boolean>;
 
     constructor () {
         this.disabled$.subscribe(disabled =>  console.log(`Disabled: ${disabled}`)); // Output: Disabled: true
     }
 }
+```
+
+#### Combining StateEmitter with other reactive decorators
+
+```StateEmitter``` can be combined with other reactive decorators, **making sure that ```StateEmitter``` is declared as the first decorator**. The following example shows ```StateEmitter``` being used with ```Select``` from [NGXS](https://github.com/ngxs/store):
+
+```ts
+@Component({...})
+class Component {
+
+    @StateEmitter({ readOnly: true }) // StateEmitter must be declared first
+    @Select(AppState.getUsername)
+    private username$: Observable<boolean>;
+}
+```
+
+```username$``` will now function as both a ```StateEmitter``` and an NGXS ```Selector```.
+
+#### StateEmitter and inheritance
+
+```StateEmitter``` fully supports class and prototypical inheritance.
+
+##### Example
+
+```ts
+abstract class ComponentBase {
+
+    @StateEmitter({initialValue: "Default"})
+    protected username$: Subject<string>;
+
+    constructor() {
+        this.username$.subscribe(username => console.log(`Parent got ${username}.`));
+    }
+}
+
+@Component({...})
+class Component extends ComponentBase {
+
+    constructor() {
+        super();
+
+        this.username$.next("Changed");
+
+        this.username$.subscribe(username => console.log(`Child got ${username}.`));
+    }
+}
+
+/*
+Log output:
+==============
+> Parent got Default.
+> Parent got Changed.
+> Child got Changed.
+*/
 ```
 
 ### Proxied StateEmitters
@@ -207,6 +300,7 @@ class Component {
 Proxy paths are considered either dynamic or static depending on the type of the properties within it. If a proxy path is dynamic, the resulting reference to the property will be an ```Observable```. If a path is static, the reference will be a ```Subject```.
 
 A proxy path is considered static only if all of the following conditions are met:
+
 * The last property in the path is a ```Subject```.
 * All other properties in the path are not of type ```Subject``` or ```Observable```.
 
@@ -403,9 +497,28 @@ class Component {
 
 Lithium for Angular is compatible with Angular's AoT compiler. However, due to current limitations of the compiler there are a few rules that need to be adhered to in order to write fully AoT-compliant code with Lithium:
 
-**1. ```skipTemplateCodegen``` must be set to ```true```.**
+**1. ```skipTemplateCodegen``` must be set to ```true``` or dummy properties must be declared for StateEmitters.**
 
-Because Lithium's ```StateEmitter``` takes care of managing the properties that a component's view template will access, it is incompatible with how the current Angular AoT compiler generates template metadata. To remedy this issue, you must set the ```skipTemplateCodegen``` flag to ```true``` under ```angularCompilerOptions``` in your project's ```tsconfig.json```. For more info, see the [official Angular AoT compiler documentation](https://angular.io/guide/aot-compiler#skiptemplatecodegen).
+Because Lithium's ```StateEmitter``` takes care of managing the properties that a component's view template will access, it is incompatible with how the current Angular AoT compiler generates template metadata. To remedy this issue, you must set the ```skipTemplateCodegen``` flag to ```true``` under ```angularCompilerOptions``` in your project's ```tsconfig.json```. However, if this is not possible in your build configuration, you must instead declare dummy properties, illustrated in the example below:
+
+```ts
+@Component({...})
+class Component {
+
+    @StateEmitter()
+    @Input("disabled")
+    private disabled$: Subject<boolean>;
+
+    // Dummy property must be declared for each StateEmitter if "skipTemplateCodegen" is false.
+    public disabled: boolean;
+
+    constructor () {
+        this.disabled$.subscribe(disabled =>  console.log(`Disabled: ${disabled}`));
+    }
+}
+```
+
+For more information, see the [official Angular AoT compiler documentation](https://angular.io/guide/aot-compiler#skiptemplatecodegen).
 
 **2. Angular component lifecycle ```EventSource``` decorators will not work in AoT mode unless a corresponding method declaration is created for the event.**
 

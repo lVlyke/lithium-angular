@@ -2,7 +2,7 @@ import { Spec, Template, Random, InputBuilder } from "detest-bdd";
 import { StateEmitter } from "../src/state-emitter";
 import { EmitterMetadata } from "../src/emitter-metadata";
 import { AngularMetadata } from "../src/angular-metadata";
-import { BehaviorSubject } from "rxjs";
+import { BehaviorSubject, Observable, Subject, of } from "rxjs";
 import { take, map, withLatestFrom, mergeMapTo } from "rxjs/operators";
 
 const spec = Spec.create<{
@@ -58,6 +58,10 @@ describe("Given a StateEmitter decorator", () => {
 
         function getMetadata(targetClass: any): EmitterMetadata.SubjectInfo {
             return EmitterMetadata.GetOwnMetadataMap(targetClass).get(propertyName);
+        }
+
+        function bootstrap(instance: any) {
+            (options && options.propertyName) ? instance[options.propertyName] : instance[propertyKey];
         }
 
         function testFacadeSetterFunction(fn: (params: any, value: string) => void) {
@@ -199,7 +203,7 @@ describe("Given a StateEmitter decorator", () => {
                         params.targetInstance = new params.targetClass();
 
                         // Make sure the property is bootstrapped
-                        params.targetInstance[propertyKey];
+                        bootstrap(params.targetInstance);
                     }));
 
                     // TODO - Test copying of inheritted metadata
@@ -348,6 +352,144 @@ describe("Given a StateEmitter decorator", () => {
             });
         }
     }));
+
+
+    type InitialPropertyValueTemplateInput = ConstructionTemplateInput & {
+        initialPropertyValue: Observable<any> | Subject<any> | any;
+    };
+
+    const _propertyKey = Random.string();
+
+    const InitialPropertyValueTemplateInput = InputBuilder
+        .fragment<InitialPropertyValueTemplateInput>({ propertyKey: _propertyKey })
+        .fragmentList({ initialPropertyValue: [undefined, of(true), new BehaviorSubject<boolean>(true), "Not an Observable"] })
+        .fragmentBuilder<StateEmitter.DecoratorParams>("options", InputBuilder
+            .fragment<StateEmitter.DecoratorParams>({ propertyName: Random.string() })
+            .fragmentList({ proxyMode: [undefined, EmitterMetadata.ProxyMode.Alias, EmitterMetadata.ProxyMode.From, EmitterMetadata.ProxyMode.Merge, EmitterMetadata.ProxyMode.None] })
+            .fragment({ proxyPath: undefined }, options => !options.proxyMode || options.proxyMode === EmitterMetadata.ProxyMode.None)
+            .fragmentList({ proxyPath: [_propertyKey, STATIC_PROXY_PATH, DYNAMIC_PROXY_PATH] }, options => options.proxyMode && options.proxyMode !== EmitterMetadata.ProxyMode.None)
+        );
+
+    const InitialPropertyValueTemplateKeys: (keyof InitialPropertyValueTemplateInput)[] = ["propertyKey", "initialPropertyValue", "options"];
+
+    describe("when constructed with an initial property value", Template(InitialPropertyValueTemplateKeys, InitialPropertyValueTemplateInput, (
+        propertyKey: string,
+        initialPropertyValue: Observable<any> | Subject<any> | any,
+        options: StateEmitter.DecoratorParams
+    ) => {
+        const createStateEmitter = () => StateEmitter(options);
+        const subjectInfo = Object.assign({ propertyKey, observable: undefined }, options);
+
+        function getMetadata(targetClass: any): EmitterMetadata.SubjectInfo {
+            return EmitterMetadata.GetOwnMetadataMap(targetClass).get(options.propertyName);
+        }
+
+        function bootstrap(instance: any) {
+            Random.boolean() ? instance[propertyKey] : instance[options.propertyName];
+        }
+
+        spec.beforeEach((params) => {
+            spyOn(StateEmitter, "WithParams").and.callThrough();
+
+            // Make sure a fresh class is created each time
+            params.targetClass = class TestTargetClass {
+                public readonly static = {
+                    proxy: {
+                        path$: new BehaviorSubject(Random.string())
+                    }
+                };
+    
+                public readonly dynamic = {
+                    proxy$: new BehaviorSubject({ path: Random.string() })
+                };
+            };
+            params.targetPrototype = params.targetClass.prototype;
+
+            if (initialPropertyValue) {
+                params.targetPrototype[propertyKey] = initialPropertyValue;
+            }
+
+            createStateEmitter()(params.targetPrototype, propertyKey);
+        });
+
+        describe("when a new class instance is created", () => {
+
+            spec.beforeEach(((params) => {
+                params.targetInstance = new params.targetClass();
+            }));
+
+            describe("when the StateEmitter is bootstrapped on the instance", () => {
+
+                if (initialPropertyValue instanceof Observable) {
+                    
+                    describe("when the initial property value is Observable-derived", () => {
+
+                        if (!options.proxyMode || options.proxyMode === EmitterMetadata.ProxyMode.None) {
+                            describe("when no proxy mode is set", () => {
+
+                                spec.beforeEach((params) => {
+                                    bootstrap(params.targetInstance);
+                                });
+
+                                spec.it("it should set the proxy mode to Alias and the proxy path to propertyKey (self-proxy)", (params) => {
+                                    const metadata: EmitterMetadata.SubjectInfo = getMetadata(params.targetClass);
+
+                                    expect(metadata.proxyMode).toEqual(EmitterMetadata.ProxyMode.Alias);
+                                    expect(metadata.proxyPath).toEqual(propertyKey);
+                                });
+
+                                spec.it("it should resolve the initial property value", (params) => {
+                                    expect(params.targetInstance[propertyKey]).toEqual(initialPropertyValue);
+                                });
+                            });
+                        } else if (EmitterMetadata.SubjectInfo.IsSelfProxy(subjectInfo)) {
+                            describe("when a proxy mode is set that is self-proxying", () => {
+
+                                spec.it("it should NOT throw an error", (params) => {
+                                    expect(() => bootstrap(params.targetInstance)).not.toThrowError();
+                                });
+
+                                spec.it("it should resolve the initial property value", (params) => {
+                                    expect(params.targetInstance[propertyKey]).toEqual(initialPropertyValue);
+                                });
+                            });
+                        } else {
+                            describe("when a proxy mode is set that is NOT self-proxying", () => {
+
+                                spec.it("it should throw an error", (params) => {
+                                    expect(() => bootstrap(params.targetInstance)).toThrowError();
+                                });
+                            });
+                        }
+                    });
+                } else {
+                    describe("when the initial property value is NOT Observable-derived", () => {
+
+                        if (EmitterMetadata.SubjectInfo.IsSelfProxy(subjectInfo)) {
+                            describe("when the StateEmitter is self-proxying", () => {
+
+                                spec.it("it should throw an error", (params) => {
+                                    expect(() => bootstrap(params.targetInstance)).toThrowError();
+                                });
+                            });
+                        } else if (initialPropertyValue) {
+                            describe("when the StateEmitter is NOT self-proxying", () => {
+
+                                spec.it("should log a warning", (params) => {
+                                    spyOn(console, "warn");
+        
+                                    bootstrap(params.targetInstance);
+        
+                                    expect(console.warn).toHaveBeenCalled();
+                                });
+                            });
+                        }
+                    });
+                }
+            });
+        });
+    }));
+
 
     type HelperTemplateInput = {
         proxyMode: EmitterMetadata.ProxyMode,

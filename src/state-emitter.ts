@@ -255,23 +255,21 @@ export namespace StateEmitter {
             // Get the initial value of the property being decorated
             const initialPropertyValue: any = resolveInitialPropertyValue();
 
-            // Check if there's a value set for the property
-            if (initialPropertyValue) {
-                // If the value is an Observable, use it for this StateEmitter
-                if (initialPropertyValue instanceof Observable) {
-                    // Only allow no proxying or explicit self-proxying with initial values
-                    if (!metadata.proxyMode || metadata.proxyMode === EmitterMetadata.ProxyMode.None || EmitterMetadata.SubjectInfo.IsSelfProxy(metadata)) {
-                        // Setup a self-proxying alias that will reference the initial value
-                        metadata.proxyMode = EmitterMetadata.ProxyMode.Alias;
-                        metadata.proxyPath = metadata.propertyKey;
-                    }
-                    else {
-                        throw new Error(`[${target.name}]: Unable to create a StateEmitter on property "${metadata.propertyKey}": property cannot have a pre-defined observable when declaring a proxying StateEmitter.`);
-                    }
+            // Check if there's a value set for the property and it's an Observable
+            if (initialPropertyValue && initialPropertyValue instanceof Observable) {
+                // Only allow no proxying or explicit self-proxying with initial values
+                if (!metadata.proxyMode || metadata.proxyMode === EmitterMetadata.ProxyMode.None) {
+                    // Setup a self-proxying alias that will reference the initial value
+                    metadata.proxyMode = EmitterMetadata.ProxyMode.Alias;
+                    metadata.proxyPath = metadata.propertyKey;
                 }
-                else {
-                    console.warn(`Warning: Definition of StateEmitter for ${target.name}.${metadata.propertyKey} is overriding previous value for '${metadata.propertyKey}'.`);
+                else if (!EmitterMetadata.SubjectInfo.IsSelfProxy(metadata)) {
+                    throw new Error(`[${target.name}]: Unable to create a StateEmitter on property "${metadata.propertyKey}": property cannot have a pre-defined observable when declaring a proxying StateEmitter.`);
                 }
+            } else if (EmitterMetadata.SubjectInfo.IsSelfProxy(metadata)) {
+                throw new Error(`[${target.name}]: Unable to create a StateEmitter on property "${metadata.propertyKey}": StateEmitter is self-proxying, but lacks a valid target.`);
+            } else if (initialPropertyValue) {
+                console.warn(`Warning: Definition of StateEmitter for ${target.name}.${metadata.propertyKey} is overriding previous value for '${metadata.propertyKey}'.`);
             }
 
             isBootstrapping = true;

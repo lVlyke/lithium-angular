@@ -176,7 +176,7 @@ export namespace StateEmitter {
         // Copy all emitter metadata from the constructor to the target instance
         let metadataMap = EmitterMetadata.CopyMetadata(EmitterMetadata.GetOwnMetadataMap(targetInstance), EmitterMetadata.CopyInherittedMetadata(targetInstance.constructor), true);
         let returnValue: Observable<any> | Subject<any> = null;
-    
+
         // Iterate over each of the target properties for each emitter type used in this class
         metadataMap.forEach((subjectInfo, emitterType) => {
             if (EmitterMetadata.SubjectInfo.IsSelfProxy(subjectInfo)) {
@@ -295,6 +295,14 @@ export namespace StateEmitter {
                 }
 
                 return resolveInitialPropertyValue();
+            },
+            // Allow updates to the subject via the setter of the StateEmitter property
+            // (This is needed to allow StateEmitters with attached Angular metadata decorators to work with AoT)
+            set: function(value: any) {
+                if (!isBootstrapping) {
+                    doBootstrap.bind(this)();
+                    this[type] = value;
+                }
             }
         });
 
@@ -307,6 +315,13 @@ export namespace StateEmitter {
                 }
 
                 return this[type];
+            },
+            set: function(value: any) {
+                if (!isBootstrapping) {
+                    doBootstrap.bind(this)();
+                }
+
+                this[type] = value;
             }
         });
     }

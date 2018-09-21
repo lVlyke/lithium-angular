@@ -12,6 +12,10 @@ A decorator-based library for Angular that enables seamless reactive data bindin
 * [API](#api)
 * [Other Information](#other-information)
 
+## [Example app](https://github.com/lVlyke/lithium-angular-example-app)
+
+### [[Live demo]](https://lvlyke.github.io/lithium-angular-example-app)
+
 ## Installation
 
 The project can be installed [via **npm**](https://www.npmjs.com/package/@lithiumjs/angular) using the following command:
@@ -212,19 +216,33 @@ class Component {
 
 #### Combining StateEmitter with other reactive decorators
 
-```StateEmitter``` can be combined with other reactive decorators, **making sure that ```StateEmitter``` is declared as the first decorator**. The following example shows ```StateEmitter``` being used with ```Select``` from [NGXS](https://github.com/ngxs/store):
+```StateEmitter``` can be combined with other reactive decorators. The following example shows ```StateEmitter``` being used with ```Select``` from [NGXS](https://github.com/ngxs/store):
 
 ```ts
 @Component({...})
 class Component {
 
-    @StateEmitter({ readOnly: true }) // StateEmitter must be declared first
+    @StateEmitter({ readOnly: true })
     @Select(AppState.getUsername)
     private username$: Observable<boolean>;
 }
 ```
 
 ```username$``` will now function as both a ```StateEmitter``` and an NGXS ```Selector```.
+
+**@lithiumjs/angular v2.0.0 note:** Due to a limitation with bootstrapping, it is necessary to explictly alias the property when using multiple StateEmitters in a single component. The code above would become the following:
+
+```ts
+@Component({...})
+class Component {
+
+    @StateEmitter.Alias("username$") // v2.0.0 limitation
+    @Select(AppState.getUsername)
+    private username$: Observable<boolean>;
+}
+```
+
+This will be changed in v2.1.0.
 
 #### StateEmitter and inheritance
 

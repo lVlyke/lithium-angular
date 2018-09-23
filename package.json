@@ -1,6 +1,6 @@
 {
   "name": "@lithiumjs/angular",
-  "version": "2.1.0-beta.0",
+  "version": "2.1.0-beta.1",
   "description": "A decorator-based library for Angular that enables seamless reactive data binding using RxJS.",
   "main": "index.js",
   "author": "Mychal Thompson <mychal.r.thompson@gmail.com>",

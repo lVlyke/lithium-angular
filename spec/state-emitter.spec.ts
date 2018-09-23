@@ -3,7 +3,7 @@ import { StateEmitter } from "../src/state-emitter";
 import { EmitterMetadata } from "../src/emitter-metadata";
 import { AngularMetadata } from "../src/angular-metadata";
 import { BehaviorSubject, Observable, Subject, of } from "rxjs";
-import { take, map, withLatestFrom, mergeMapTo } from "rxjs/operators";
+import { take, map, withLatestFrom, mergeMapTo, filter } from "rxjs/operators";
 
 const spec = Spec.create<{
     targetPrototype: any;
@@ -439,7 +439,7 @@ describe("Given a StateEmitter decorator", () => {
                                 });
 
                                 spec.it("it should resolve the initial property value", (params) => {
-                                    expect(params.targetInstance[propertyKey]).toEqual(initialPropertyValue);
+                                    expect(params.targetInstance[propertyKey]).toBe(initialPropertyValue);
                                 });
                             });
                         } else if (EmitterMetadata.SubjectInfo.IsSelfProxy(subjectInfo)) {
@@ -449,9 +449,55 @@ describe("Given a StateEmitter decorator", () => {
                                     expect(() => bootstrap(params.targetInstance)).not.toThrowError();
                                 });
 
-                                spec.it("it should resolve the initial property value", (params) => {
-                                    expect(params.targetInstance[propertyKey]).toEqual(initialPropertyValue);
-                                });
+                                if (subjectInfo.proxyMode === EmitterMetadata.ProxyMode.Alias) {
+                                    describe("when the proxy mode is set to 'Alias'", () => {
+
+                                        spec.it("it should resolve the initial property value", (params) => {
+                                            expect(params.targetInstance[propertyKey]).toBe(initialPropertyValue);
+                                        });
+                                    });
+
+                                } else if (subjectInfo.proxyMode === EmitterMetadata.ProxyMode.From) {
+                                    describe("when the proxy mode is set to 'From'", () => {
+
+                                        spec.it("it should create a proxy BehaviorSubject with the expected behavior", (params) => {
+                                            expect(params.targetInstance[propertyKey]).not.toBe(initialPropertyValue);
+
+                                            let firstEmission: string;
+
+                                            return params.targetInstance[propertyKey].pipe(
+                                                take(1),
+                                                withLatestFrom(initialPropertyValue),
+                                                map((args: any[]) => expect(firstEmission = args[0]).toEqual(args[1])),
+                                                filter(() => initialPropertyValue instanceof Subject),
+                                                map(() => (<Subject<any>>initialPropertyValue).next(Random.string())),
+                                                mergeMapTo(params.targetInstance[propertyKey]),
+                                                take(1),
+                                                map((latestValue: string) => expect(latestValue).toEqual(firstEmission)),
+                                            ).toPromise();
+                                        });
+                                    });
+                                } else if (subjectInfo.proxyMode === EmitterMetadata.ProxyMode.Merge) {
+                                    describe("when the proxy mode is set to 'Merge'", () => {
+
+                                        spec.it("it should create a proxy BehaviorSubject with the expected behavior", (params) => {
+                                            expect(params.targetInstance[propertyKey]).not.toBe(initialPropertyValue);
+
+                                            let nextEmission: string;
+
+                                            return params.targetInstance[propertyKey].pipe(
+                                                take(1),
+                                                withLatestFrom(initialPropertyValue),
+                                                map((args: any[]) => expect(args[0]).toEqual(args[1])),
+                                                filter(() => initialPropertyValue instanceof Subject),
+                                                map(() => (<Subject<any>>initialPropertyValue).next(nextEmission = Random.string())),
+                                                mergeMapTo(params.targetInstance[propertyKey]),
+                                                take(1),
+                                                map((latestValue: string) => expect(latestValue).toEqual(nextEmission)),
+                                            ).toPromise();
+                                        });
+                                    });
+                                }
                             });
                         } else {
                             describe("when a proxy mode is set that is NOT self-proxying", () => {

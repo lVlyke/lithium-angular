@@ -1,8 +1,9 @@
-import { Subject, Observable } from "rxjs";
+import { Observable, Subject } from "rxjs";
 import { EventMetadata, EventType } from "./event-metadata";
 import { AngularMetadata } from "./angular-metadata";
 import { AotAware } from "./aot";
 import { Metadata } from "./metadata";
+import { ManagedSubject } from "./managed-observable";
 
 export function EventSource(): PropertyDecorator;
 export function EventSource(...methodDecorators: MethodDecorator[]): PropertyDecorator;
@@ -36,6 +37,11 @@ export namespace EventSource {
 
         /** @PropertyDecorator */
         return function(target: any, propertyKey: string) {
+            if (propertyKey !== "$$managed_onDestroy") {
+                // TODO
+                WithParams({ eventType: "ngOnDestroy" })(target, "$$managed_onDestroy");
+            }
+
             // If an eventType wasn't specified...
             if (!options.eventType) {
                 // Try to deduce the eventType from the propertyKey
@@ -92,7 +98,11 @@ export namespace EventSource {
             // If the event proxy subject hasn't been created for this property yet...
             if (!subjectInfo.subject) {
                 // Create a new Subject
-                subjectInfo.subject = new Subject<any>();
+                if (propertyKey === "$$managed_onDestroy") {
+                    subjectInfo.subject = new Subject<any>();
+                } else {
+                    subjectInfo.subject = new ManagedSubject<any>(targetInstance);
+                }
             }
 
             // Set the property key to a function that will invoke the facade method when called

@@ -1,9 +1,11 @@
-import { BehaviorSubject, Observable } from "rxjs";
+import { Observable } from "rxjs";
 import { EmitterMetadata, EmitterType } from "./emitter-metadata";
 import { ObservableUtil } from "./observable-util";
 import { AngularMetadata } from "./angular-metadata";
 import { take } from "rxjs/operators";
 import { Metadata } from "./metadata";
+import { ManagedBehaviorSubject } from "./managed-observable";
+import { EventSource } from "./event-source";
 
 export function StateEmitter(): PropertyDecorator;
 export function StateEmitter(...propertyDecorators: PropertyDecorator[]): PropertyDecorator;
@@ -51,6 +53,9 @@ export namespace StateEmitter {
 
         /** @PropertyDecorator */
         return function (target: any, propertyKey: string) {
+            // TODO
+            EventSource.WithParams({ eventType: "ngOnDestroy" })(target, "$$managed_onDestroy");
+
             // If a propertyName wasn't specified...
             if (!params.propertyName) {
                 // Try to deduce the propertyName from the propertyKey
@@ -267,7 +272,7 @@ export namespace StateEmitter {
             case EmitterMetadata.ProxyMode.Merge:
             case EmitterMetadata.ProxyMode.From: {
                 // Create a new copy subject
-                let subject = new BehaviorSubject<any>(subjectInfo.initialValue);
+                let subject = new ManagedBehaviorSubject<any>(targetInstance, subjectInfo.initialValue);
 
                 // Create a getter that returns the new subject
                 DefineProxyObservableGetter(subjectInfo, false, (proxyObservable: Observable<any>) => {
@@ -286,7 +291,7 @@ export namespace StateEmitter {
             case EmitterMetadata.ProxyMode.None:
             default: {
                 // Create a new BehaviorSubject with the default value
-                subjectInfo.observable = new BehaviorSubject<any>(subjectInfo.initialValue);
+                subjectInfo.observable = new ManagedBehaviorSubject<any>(targetInstance, subjectInfo.initialValue);
                 break;
             }
         }

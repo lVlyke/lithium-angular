@@ -367,7 +367,7 @@ describe("Given a StateEmitter decorator", () => {
             .fragment<StateEmitter.DecoratorParams>({ propertyName: Random.string() })
             .fragmentList({ proxyMode: [undefined, EmitterMetadata.ProxyMode.Alias, EmitterMetadata.ProxyMode.From, EmitterMetadata.ProxyMode.Merge, EmitterMetadata.ProxyMode.None] })
             .fragment({ proxyPath: undefined }, options => !options.proxyMode || options.proxyMode === EmitterMetadata.ProxyMode.None)
-            .fragmentList({ proxyPath: [_propertyKey, STATIC_PROXY_PATH, DYNAMIC_PROXY_PATH] }, options => options.proxyMode && options.proxyMode !== EmitterMetadata.ProxyMode.None)
+            .fragmentList({ proxyPath: ["", _propertyKey, STATIC_PROXY_PATH, DYNAMIC_PROXY_PATH] }, options => options.proxyMode && options.proxyMode !== EmitterMetadata.ProxyMode.None)
         );
 
     const InitialPropertyValueTemplateKeys: (keyof InitialPropertyValueTemplateInput)[] = ["propertyKey", "initialPropertyValue", "options"];
@@ -379,6 +379,7 @@ describe("Given a StateEmitter decorator", () => {
     ) => {
         const createStateEmitter = () => StateEmitter(options);
         const subjectInfo = Object.assign({ propertyKey, observable: undefined }, options);
+        const isSelfProxy = EmitterMetadata.SubjectInfo.IsSelfProxy(subjectInfo) || options.proxyPath === "";
 
         function getMetadata(targetClass: any): EmitterMetadata.SubjectInfo {
             return EmitterMetadata.GetOwnMetadataMap(targetClass).get(options.propertyName);
@@ -412,6 +413,17 @@ describe("Given a StateEmitter decorator", () => {
             createStateEmitter()(params.targetPrototype, propertyKey);
         });
 
+        if (options.proxyPath === "") {
+            describe("when an empty proxy path is specified", () => {
+
+                spec.it("should set the proxy path to the property key (self-proxy)", (params) => {
+                    const metadata: EmitterMetadata.SubjectInfo = getMetadata(params.targetClass);
+
+                    expect(metadata.proxyPath).toEqual(propertyKey);
+                });
+            });
+        }
+
         describe("when a new class instance is created", () => {
 
             spec.beforeEach(((params) => {
@@ -442,7 +454,7 @@ describe("Given a StateEmitter decorator", () => {
                                     expect(params.targetInstance[propertyKey]).toBe(initialPropertyValue);
                                 });
                             });
-                        } else if (EmitterMetadata.SubjectInfo.IsSelfProxy(subjectInfo)) {
+                        } else if (isSelfProxy) {
                             describe("when a proxy mode is set that is self-proxying", () => {
 
                                 spec.it("it should NOT throw an error", (params) => {
@@ -511,7 +523,7 @@ describe("Given a StateEmitter decorator", () => {
                 } else {
                     describe("when the initial property value is NOT Observable-derived", () => {
 
-                        if (EmitterMetadata.SubjectInfo.IsSelfProxy(subjectInfo)) {
+                        if (isSelfProxy) {
                             describe("when the StateEmitter is self-proxying", () => {
 
                                 spec.it("it should throw an error", (params) => {
@@ -550,7 +562,10 @@ describe("Given a StateEmitter decorator", () => {
         .fragment({ proxyPath: Random.string() })
         .fragment({ options: undefined }, input => !!input.proxyPath)
         .fragmentBuilder("options", InputBuilder
+            .fragment<StateEmitter.ProxyDecoratorParams>({ path: Random.string() })
             .fragmentList({ propertyName: [undefined, Random.string()] })
+            .fragmentList({ mergeUpdates: [undefined, true, false] })
+            .fragmentList({ readOnly: [undefined, true, false] })
         )
         .fragmentList({ propertyDecorators: [undefined, [jasmine.createSpy("propertyDecorator")]] });
 
@@ -578,8 +593,57 @@ describe("Given a StateEmitter decorator", () => {
                     propertyName: params.propertyName,
                     proxyMode: proxyMode,
                     proxyPath: params.path,
-                    proxyMergeUpdates: params.mergeUpdates
+                    proxyMergeUpdates: params.mergeUpdates,
+                    readOnly: params.readOnly
                 }, ...propertyDecorators);
+            });
+        });
+    })();
+
+
+
+    type SelfHelperTemplateInput = {
+        helperName: "AliasSelf" | "FromSelf" | "MergeSelf",
+        options?: StateEmitter.SelfProxyDecoratorParams;
+        propertyDecorators?: PropertyDecorator[];
+    };
+
+    const SelfHelperTemplateInput = InputBuilder
+        .fragmentList<SelfHelperTemplateInput>({ helperName: ["AliasSelf", "FromSelf", "MergeSelf"] })
+        .fragment({ options: undefined })
+        .fragmentBuilder("options", InputBuilder
+            .fragmentList<StateEmitter.SelfProxyDecoratorParams>({ propertyName: [undefined, Random.string()] })
+            .fragmentList({ readOnly: [undefined, true, false] })
+        )
+        .fragmentList({ propertyDecorators: [undefined, [jasmine.createSpy("propertyDecorator")]] });
+
+    const SelfHelperTemplateKeys: (keyof SelfHelperTemplateInput)[] = ["helperName", "options", "propertyDecorators"];
+
+    Template(SelfHelperTemplateKeys, SelfHelperTemplateInput, (
+        helperName: "AliasSelf" | "FromSelf" | "MergeSelf",
+        options?: StateEmitter.SelfProxyDecoratorParams,
+        propertyDecorators?: PropertyDecorator[]
+    ) => {
+        const $params = Object.assign(options || {}, { path: "" });
+        let delegateHelperFnName: "Alias" | "From" | "Merge";
+        propertyDecorators = propertyDecorators || [];
+
+        switch (helperName) {
+            case "AliasSelf": delegateHelperFnName = "Alias"; break;
+            case "FromSelf": delegateHelperFnName = "From"; break;
+            case "MergeSelf": delegateHelperFnName = "Merge"; break;
+        }
+
+        describe(`when the ${helperName} self-proxy helper decorator is called`, () => {
+
+            beforeEach(() => {
+                spyOn(StateEmitter, delegateHelperFnName).and.callThrough();
+
+                StateEmitter[helperName](options, ...propertyDecorators);
+            });
+
+            it(`should call StateEmitter.${delegateHelperFnName} with the expected parameters`, () => {
+                expect(StateEmitter[delegateHelperFnName]).toHaveBeenCalledWith($params, ...propertyDecorators);
             });
         });
     })();

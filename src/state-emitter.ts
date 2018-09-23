@@ -37,6 +37,12 @@ export namespace StateEmitter {
         path: string;
         propertyName?: EmitterType;
         mergeUpdates?: boolean;
+        readOnly?: boolean;
+    }
+
+    export interface SelfProxyDecoratorParams {
+        propertyName?: EmitterType;
+        readOnly?: boolean;
     }
 
     /** @PropertyDecoratorFactory */
@@ -88,7 +94,8 @@ export namespace StateEmitter {
             propertyName: $params.propertyName,
             proxyMode: EmitterMetadata.ProxyMode.Alias,
             proxyPath: $params.path,
-            proxyMergeUpdates: $params.mergeUpdates
+            proxyMergeUpdates: $params.mergeUpdates,
+            readOnly: $params.readOnly
         }, ...propertyDecorators);
     }
 
@@ -100,7 +107,8 @@ export namespace StateEmitter {
             propertyName: $params.propertyName,
             proxyMode: EmitterMetadata.ProxyMode.From,
             proxyPath: $params.path,
-            proxyMergeUpdates: $params.mergeUpdates
+            proxyMergeUpdates: $params.mergeUpdates,
+            readOnly: $params.readOnly
         }, ...propertyDecorators);
     }
 
@@ -112,23 +120,30 @@ export namespace StateEmitter {
             propertyName: $params.propertyName,
             proxyMode: EmitterMetadata.ProxyMode.Merge,
             proxyPath: $params.path,
-            proxyMergeUpdates: $params.mergeUpdates
+            proxyMergeUpdates: $params.mergeUpdates,
+            readOnly: $params.readOnly
         }, ...propertyDecorators);
     }
 
     /** @PropertyDecoratorFactory */
-    export function AliasSelf(...propertyDecorators: PropertyDecorator[]): PropertyDecorator {
-        return Alias("", ...propertyDecorators);
+    export function AliasSelf(params?: SelfProxyDecoratorParams, ...propertyDecorators: PropertyDecorator[]): PropertyDecorator {
+        const $params = Object.assign(params || {}, { path: "" });
+
+        return StateEmitter.Alias($params, ...propertyDecorators);
     }
 
     /** @PropertyDecoratorFactory */
-    export function FromSelf(...propertyDecorators: PropertyDecorator[]): PropertyDecorator {
-        return From("", ...propertyDecorators);
+    export function FromSelf(params?: SelfProxyDecoratorParams, ...propertyDecorators: PropertyDecorator[]): PropertyDecorator {
+        const $params = Object.assign(params || {}, { path: "" });
+
+        return StateEmitter.From($params, ...propertyDecorators);
     }
 
     /** @PropertyDecoratorFactory */
-    export function MergeSelf(...propertyDecorators: PropertyDecorator[]): PropertyDecorator {
-        return Merge("", ...propertyDecorators);
+    export function MergeSelf(params?: SelfProxyDecoratorParams, ...propertyDecorators: PropertyDecorator[]): PropertyDecorator {
+        const $params = Object.assign(params || {}, { path: "" });
+
+        return StateEmitter.Merge($params, ...propertyDecorators);
     }
 
     export namespace Facade {

@@ -2,6 +2,7 @@ import { Subject, Observable } from "rxjs";
 import { EventMetadata, EventType } from "./event-metadata";
 import { AngularMetadata } from "./angular-metadata";
 import { AotAware } from "./aot";
+import { Metadata } from "./metadata";
 
 export function EventSource(): PropertyDecorator;
 export function EventSource(...methodDecorators: MethodDecorator[]): PropertyDecorator;
@@ -24,6 +25,8 @@ export function EventSource(...args: any[]): PropertyDecorator {
 }
 
 export namespace EventSource {
+
+    export const BOOTSTRAPPED_KEY = "$$EVENTSOURCE_BOOTSTRAPPED";
 
     export type DecoratorOptions = Partial<EventMetadata.ConfigOptions>;
 
@@ -57,13 +60,35 @@ export namespace EventSource {
         };
     }
 
-    export function Bootstrap(targetInstance: any, returnPropertyKey: string): Observable<any> {
-        // Copy all event metadata from the constructor to the target instance
-        let metadataMap = EventMetadata.CopyMetadata(EventMetadata.GetOwnMetadataMap(targetInstance), EventMetadata.CopyInherittedMetadata(targetInstance.constructor), true);
-        let returnValue: Observable<any> = null;
+    export function BootstrapInstance(eventType: EventType) {
+        const targetInstance: any = this;
+        // Assign the facade function for the given event type to the appropriate target class method
+        Object.defineProperty(targetInstance, eventType, {
+            enumerable: true,
+            value: Facade.Create(eventType)
+        });
+
+        function classMetadataMerged(merged?: boolean): boolean | undefined {
+            if (merged === undefined) {
+                return Metadata.GetMetadata(BOOTSTRAPPED_KEY, targetInstance, false);
+            } else {
+                Metadata.SetMetadata(BOOTSTRAPPED_KEY, targetInstance, merged);
+            }
+            return undefined;
+        }
+
+        const metadataMap = EventMetadata.GetOwnMetadataMap(targetInstance);
+
+        if (!classMetadataMerged()) {
+            // Copy all event metadata from the class constructor to the target instance
+            EventMetadata.CopyMetadata(metadataMap, EventMetadata.CopyInherittedMetadata(targetInstance.constructor), true);
+            classMetadataMerged(true);
+        }
+
+        const propertySubjectMap = metadataMap.get(eventType);
 
         // Iterate over each of the target properties for each proxied event type used in this class
-        metadataMap.forEach((propertySubjectMap, eventType) => propertySubjectMap.forEach((subjectInfo, propertyKey) => {
+        propertySubjectMap.forEach((subjectInfo, propertyKey) => {
             // If the event proxy subject hasn't been created for this property yet...
             if (!subjectInfo.subject) {
                 // Create a new Subject
@@ -78,13 +103,7 @@ export namespace EventSource {
             Object.defineProperty(targetInstance, propertyKey, {
                 get: () => propertyValue
             });
-
-            if (propertyKey === returnPropertyKey) {
-                returnValue = propertyValue;
-            }
-        }));
-
-        return returnValue;
+        });
     }
 
     export namespace Facade {
@@ -102,30 +121,38 @@ export namespace EventSource {
 
     export function CreateMetadata(options: EventMetadata.SubjectInfo, target: any, propertyKey: string) {
         const ContainsCustomMethod = ($class = target): boolean => {
-            let method = Object.getOwnPropertyDescriptor($class, options.eventType);
-            let isCustomMethod = method && (!method.value || method.value.eventType !== options.eventType);
-            let isExcludedClass = $class.name === AotAware.name;
-            return (isCustomMethod && !isExcludedClass) || (target.prototype && ContainsCustomMethod(target.prototype));
+            const methodDescriptor = Object.getOwnPropertyDescriptor($class, options.eventType);
+            const method = methodDescriptor ? (methodDescriptor.value || methodDescriptor.get) : undefined; 
+            const isCustomMethod = method && method.eventType !== options.eventType;
+            const isExcludedClass = $class.name === AotAware.name;
+            return (isCustomMethod && !isExcludedClass) || (!method && target.prototype && ContainsCustomMethod(target.prototype));
         };
 
         if (!options.skipMethodCheck && ContainsCustomMethod()) {
             // Make sure the target class doesn't have a custom method already defined for this event type
             throw new Error(`@EventSource metadata creation failed. Class already has a custom ${options.eventType} method.`);
         }
-        else {
-            // Assign the facade function for the given event type to the appropriate target class method
-            target[options.eventType] = Facade.Create(options.eventType);
-        }
 
         // Add the EventSource options to the class' metadata
         EventMetadata.GetOwnPropertySubjectMap(options.eventType, target.constructor).set(propertyKey, options);
 
-        // Initialize the target property to a self-bootstrapper that will initialize the instance's EventSources when called
+        // Initialize the target property to a self-bootstrapper that will initialize the instance's EventSource when called
         Object.defineProperty(target, propertyKey, {
             configurable: true,
             get: function () {
-                return Bootstrap(this, propertyKey);
+                BootstrapInstance.bind(this)(options.eventType);
+                return this[propertyKey];
             }
+        });
+
+        // Initialize the facade function to a self-bootstrapper that will initialize the instance's EventSource when called
+        Object.defineProperty(target, options.eventType, {
+            configurable: true,
+            writable: true,
+            value: Object.assign(function () {
+                BootstrapInstance.bind(this)(options.eventType);
+                return this[options.eventType];
+            }, { eventType: options.eventType })
         });
     }
 }

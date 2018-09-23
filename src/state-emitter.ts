@@ -1,8 +1,9 @@
-import { BehaviorSubject, Observable, Subject } from "rxjs";
+import { BehaviorSubject, Observable } from "rxjs";
 import { EmitterMetadata, EmitterType } from "./emitter-metadata";
 import { ObservableUtil } from "./observable-util";
 import { AngularMetadata } from "./angular-metadata";
 import { take } from "rxjs/operators";
+import { Metadata } from "./metadata";
 
 export function StateEmitter(): PropertyDecorator;
 export function StateEmitter(...propertyDecorators: PropertyDecorator[]): PropertyDecorator;
@@ -25,6 +26,8 @@ export function StateEmitter(...args: any[]): PropertyDecorator {
 }
 
 export namespace StateEmitter {
+
+    export const BOOTSTRAPPED_KEY = "$$STATEEMITTER_BOOTSTRAPPED";
 
     export interface DecoratorParams extends EmitterMetadata.SubjectInfo.CoreDetails {
         propertyName?: EmitterType;
@@ -153,131 +156,128 @@ export namespace StateEmitter {
         }
     }
 
-    export function Bootstrap(targetInstance: any, returnType: EmitterType) {
+    export function BootstrapInstance(initialPropertyDescriptor: PropertyDescriptor, emitterType: EmitterType) {
+        const targetInstance: any = this;
+
+        function classMetadataMerged(merged?: boolean): boolean | undefined {
+            if (merged === undefined) {
+                return Metadata.GetMetadata(BOOTSTRAPPED_KEY, targetInstance, false);
+            } else {
+                Metadata.SetMetadata(BOOTSTRAPPED_KEY, targetInstance, merged);
+            }
+            return undefined;
+        }
 
         function DefineProxyObservableGetter(subjectInfo: EmitterMetadata.SubjectInfo, alwaysResolvePath?: boolean, onResolve?: (proxySubscribable: Observable<any>) => Observable<any> | void) {
             let observable: Observable<any>;
 
             // Create a getter that resolves the observable from the target proxy path
             Object.defineProperty(subjectInfo, "observable", { get: (): Observable<any> => {
-                    if (alwaysResolvePath || !observable) {
-                        // Get the proxy observable
-                        observable = ObservableUtil.ResolvePropertyPath(targetInstance, subjectInfo.proxyPath);
+                if (alwaysResolvePath || !observable) {
+                    // Get the proxy observable
+                    observable = ObservableUtil.ResolvePropertyPath(targetInstance, subjectInfo.proxyPath);
 
-                        if (onResolve) {
-                            observable = onResolve(observable) || observable;
-                        }
-                    }
-
-                    return observable;
-                }});
-            }
-
-        // Copy all emitter metadata from the constructor to the target instance
-        let metadataMap = EmitterMetadata.CopyMetadata(EmitterMetadata.GetOwnMetadataMap(targetInstance), EmitterMetadata.CopyInherittedMetadata(targetInstance.constructor), true);
-        let returnValue: Observable<any> | Subject<any> = null;
-
-        // Iterate over each of the target properties for each emitter type used in this class
-        metadataMap.forEach((subjectInfo, emitterType) => {
-            if (EmitterMetadata.SubjectInfo.IsSelfProxy(subjectInfo)) {
-                subjectInfo.observable = targetInstance[subjectInfo.propertyKey];
-            }
-            else {
-                // Check the proxy mode for this subject
-                switch (subjectInfo.proxyMode) {
-                    // Aliased emitters simply pass directly through to their source value
-                    case EmitterMetadata.ProxyMode.Alias: {
-                        DefineProxyObservableGetter(subjectInfo, true);
-                        break;
-                    }
-
-                    // Merge proxies create a new subject that receives all emissions from the source
-                    // From proxies create a new subject that takes only its initial value from the source
-                    case EmitterMetadata.ProxyMode.Merge:
-                    case EmitterMetadata.ProxyMode.From: {
-                        // Create a new copy subject
-                        let subject = new BehaviorSubject<any>(subjectInfo.initialValue);
-
-                        // Create a getter that returns the new subject
-                        DefineProxyObservableGetter(subjectInfo, false, (proxyObservable: Observable<any>) => {
-                            // Only take the first value if this is a From proxy
-                            if (subjectInfo.proxyMode === EmitterMetadata.ProxyMode.From) {
-                                proxyObservable = proxyObservable.pipe(take(1));
-                            }
-
-                            proxyObservable.subscribe((value: any) => subject.next(value));
-
-                            return subject;
-                        });
-                        break;
-                    }
-
-                    case EmitterMetadata.ProxyMode.None:
-                    default: {
-                        // Create a new BehaviorSubject with the default value
-                        subjectInfo.observable = new BehaviorSubject<any>(subjectInfo.initialValue);
-                        break;
+                    if (onResolve) {
+                        observable = onResolve(observable) || observable;
                     }
                 }
-            }
 
-            const facadeSetter = subjectInfo.readOnly ? undefined : Facade.CreateSetter(emitterType);
-            // Assign the facade getter and setter to the target instance for this EmitterType
-            Object.defineProperty(targetInstance, emitterType, {
-                enumerable: true,
-                get: Facade.CreateGetter(emitterType, subjectInfo.initialValue),
-                set: facadeSetter
-            });
-    
-            // Define the StateEmitter reference
-            Object.defineProperty(targetInstance, subjectInfo.propertyKey, {
-                // Create a getter that lazily retreives the observable
-                get: () => subjectInfo.observable,
-                // Allow updates to the subject via the setter of the StateEmitter property
-                // (This is needed to allow StateEmitters with attached Angular metadata decorators to work with AoT)
-                set: facadeSetter
-            });
+                return observable;
+            }});
+        }
 
-            if (emitterType === returnType) {
-                returnValue = subjectInfo.observable;
+        const metadataMap = EmitterMetadata.GetOwnMetadataMap(targetInstance);
+
+        if (!classMetadataMerged()) {
+            // Copy all emitter metadata from the class constructor to the target instance
+            EmitterMetadata.CopyMetadata(metadataMap, EmitterMetadata.CopyInherittedMetadata(targetInstance.constructor), true);
+            classMetadataMerged(true);
+        }
+
+        const subjectInfo = metadataMap.get(emitterType);
+        // Get the initial value of the property being decorated
+        const initialPropertyValue: any = initialPropertyDescriptor ? (initialPropertyDescriptor.value || initialPropertyDescriptor.get()) : undefined;
+
+        // Check if there's a value set for the property and it's an Observable
+        if (initialPropertyValue && initialPropertyValue instanceof Observable) {
+            // Only allow no proxying or explicit self-proxying with initial values
+            if (!subjectInfo.proxyMode || subjectInfo.proxyMode === EmitterMetadata.ProxyMode.None) {
+                // Setup a self-proxying alias that will reference the initial value
+                subjectInfo.proxyMode = EmitterMetadata.ProxyMode.Alias;
+                subjectInfo.proxyPath = subjectInfo.propertyKey;
             }
+            else if (!EmitterMetadata.SubjectInfo.IsSelfProxy(subjectInfo)) {
+                throw new Error(`[${targetInstance.constructor.name}]: Unable to create a StateEmitter on property "${subjectInfo.propertyKey}": property cannot have a pre-defined observable when declaring a proxying StateEmitter.`);
+            }
+        } else if (EmitterMetadata.SubjectInfo.IsSelfProxy(subjectInfo)) {
+            throw new Error(`[${targetInstance.constructor.name}]: Unable to create a StateEmitter on property "${subjectInfo.propertyKey}": StateEmitter is self-proxying, but lacks a valid target.`);
+        } else if (initialPropertyValue) {
+            console.warn(`Warning: Definition of StateEmitter for ${targetInstance.constructor.name}.${subjectInfo.propertyKey} is overriding previous value for '${subjectInfo.propertyKey}'.`);
+        }
+        
+        if (EmitterMetadata.SubjectInfo.IsSelfProxy(subjectInfo)) {
+            subjectInfo.observable = initialPropertyValue;
+        }
+        else {
+            // Check the proxy mode for targetInstance subject
+            switch (subjectInfo.proxyMode) {
+                // Aliased emitters simply pass directly through to their source value
+                case EmitterMetadata.ProxyMode.Alias: {
+                    DefineProxyObservableGetter(subjectInfo, true);
+                    break;
+                }
+
+                // Merge proxies create a new subject that receives all emissions from the source
+                // From proxies create a new subject that takes only its initial value from the source
+                case EmitterMetadata.ProxyMode.Merge:
+                case EmitterMetadata.ProxyMode.From: {
+                    // Create a new copy subject
+                    let subject = new BehaviorSubject<any>(subjectInfo.initialValue);
+
+                    // Create a getter that returns the new subject
+                    DefineProxyObservableGetter(subjectInfo, false, (proxyObservable: Observable<any>) => {
+                        // Only take the first value if targetInstance is a From proxy
+                        if (subjectInfo.proxyMode === EmitterMetadata.ProxyMode.From) {
+                            proxyObservable = proxyObservable.pipe(take(1));
+                        }
+
+                        proxyObservable.subscribe((value: any) => subject.next(value));
+
+                        return subject;
+                    });
+                    break;
+                }
+
+                case EmitterMetadata.ProxyMode.None:
+                default: {
+                    // Create a new BehaviorSubject with the default value
+                    subjectInfo.observable = new BehaviorSubject<any>(subjectInfo.initialValue);
+                    break;
+                }
+            }
+        }
+
+        const facadeSetter = subjectInfo.readOnly ? undefined : Facade.CreateSetter(emitterType);
+        // Assign the facade getter and setter to the target instance for targetInstance EmitterType
+        Object.defineProperty(targetInstance, emitterType, {
+            enumerable: true,
+            get: Facade.CreateGetter(emitterType, subjectInfo.initialValue),
+            set: facadeSetter
         });
 
-        return returnValue;
+        // Define the StateEmitter reference
+        Object.defineProperty(targetInstance, subjectInfo.propertyKey, {
+            // Create a getter that lazily retreives the observable
+            get: () => subjectInfo.observable,
+            // Allow updates to the subject via the setter of the StateEmitter property
+            // (This is needed to allow StateEmitters with attached Angular metadata decorators to work with AoT)
+            set: facadeSetter
+        });
     }
 
     export function CreateMetadata(target: any, type: EmitterType, metadata: EmitterMetadata.SubjectInfo) {
         const initialPropertyDescriptor = Object.getOwnPropertyDescriptor(target, metadata.propertyKey);
-        const resolveInitialPropertyValue = () => initialPropertyDescriptor ? (initialPropertyDescriptor.value || initialPropertyDescriptor.get()) : undefined;
-        let isBootstrapping = false;
 
-        function doBootstrap(): Observable<any> | Subject<any> {
-            // Get the initial value of the property being decorated
-            const initialPropertyValue: any = resolveInitialPropertyValue();
-
-            // Check if there's a value set for the property and it's an Observable
-            if (initialPropertyValue && initialPropertyValue instanceof Observable) {
-                // Only allow no proxying or explicit self-proxying with initial values
-                if (!metadata.proxyMode || metadata.proxyMode === EmitterMetadata.ProxyMode.None) {
-                    // Setup a self-proxying alias that will reference the initial value
-                    metadata.proxyMode = EmitterMetadata.ProxyMode.Alias;
-                    metadata.proxyPath = metadata.propertyKey;
-                }
-                else if (!EmitterMetadata.SubjectInfo.IsSelfProxy(metadata)) {
-                    throw new Error(`[${target.name}]: Unable to create a StateEmitter on property "${metadata.propertyKey}": property cannot have a pre-defined observable when declaring a proxying StateEmitter.`);
-                }
-            } else if (EmitterMetadata.SubjectInfo.IsSelfProxy(metadata)) {
-                throw new Error(`[${target.name}]: Unable to create a StateEmitter on property "${metadata.propertyKey}": StateEmitter is self-proxying, but lacks a valid target.`);
-            } else if (initialPropertyValue) {
-                console.warn(`Warning: Definition of StateEmitter for ${target.name}.${metadata.propertyKey} is overriding previous value for '${metadata.propertyKey}'.`);
-            }
-
-            isBootstrapping = true;
-            const result = Bootstrap(this, type);
-            isBootstrapping = false;
-            return result;
-        }
-        
         if (target[type]) {
             // Make sure the target class doesn't have a custom property already defined for this event type
             throw new Error(`@StateEmitter metadata creation failed. Class already has a custom ${type} property.`);
@@ -286,41 +286,30 @@ export namespace StateEmitter {
         // Add the propertyKey to the class' metadata
         EmitterMetadata.GetOwnMetadataMap(target.constructor).set(type, metadata);
 
-        // Initialize the target property to a self-bootstrapper that will initialize the instance's StateEmitters when called
+        // Initialize the target property to a self-bootstrapper that will initialize the instance's StateEmitter when called
         Object.defineProperty(target, metadata.propertyKey, {
             configurable: true,
             get: function () {
-                if (!isBootstrapping) {
-                    return doBootstrap.bind(this)();
-                }
-
-                return resolveInitialPropertyValue();
+                BootstrapInstance.bind(this)(initialPropertyDescriptor, type);
+                return this[metadata.propertyKey];
             },
             // Allow updates to the subject via the setter of the StateEmitter property
             // (This is needed to allow StateEmitters with attached Angular metadata decorators to work with AoT)
             set: function(value: any) {
-                if (!isBootstrapping) {
-                    doBootstrap.bind(this)();
-                    this[type] = value;
-                }
+                BootstrapInstance.bind(this)(initialPropertyDescriptor, type);
+                this[type] = value;
             }
         });
 
-        // Initialize the facade property to a self-bootstrapper that will initialize the instance's StateEmitters when called
+        // Initialize the facade property to a self-bootstrapper that will initialize the instance's StateEmitter when called
         Object.defineProperty(target, type, {
             configurable: true,
             get: function () {
-                if (!isBootstrapping) {
-                    doBootstrap.bind(this)();
-                }
-
+                BootstrapInstance.bind(this)(initialPropertyDescriptor, type);
                 return this[type];
             },
             set: function(value: any) {
-                if (!isBootstrapping) {
-                    doBootstrap.bind(this)();
-                }
-
+                BootstrapInstance.bind(this)(initialPropertyDescriptor, type);
                 this[type] = value;
             }
         });

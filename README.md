@@ -230,20 +230,6 @@ class Component {
 
 ```username$``` will now function as both a ```StateEmitter``` and an NGXS ```Selector```.
 
-**@lithiumjs/angular v2.0.0 note:** Due to a limitation with bootstrapping, it is necessary to explictly alias the property when using multiple StateEmitters in a single component. The code above would become the following:
-
-```ts
-@Component({...})
-class Component {
-
-    @StateEmitter.Alias("username$") // v2.0.0 limitation
-    @Select(AppState.getUsername)
-    private username$: Observable<boolean>;
-}
-```
-
-This will be changed in v2.1.0.
-
 #### StateEmitter and inheritance
 
 ```StateEmitter``` fully supports class and prototypical inheritance.

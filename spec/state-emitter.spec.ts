@@ -432,7 +432,7 @@ describe("Given a StateEmitter decorator", () => {
                                 });
 
                                 spec.it("it should set the proxy mode to Alias and the proxy path to propertyKey (self-proxy)", (params) => {
-                                    const metadata: EmitterMetadata.SubjectInfo = getMetadata(params.targetClass);
+                                    const metadata: EmitterMetadata.SubjectInfo = getMetadata(params.targetInstance);
 
                                     expect(metadata.proxyMode).toEqual(EmitterMetadata.ProxyMode.Alias);
                                     expect(metadata.proxyPath).toEqual(propertyKey);

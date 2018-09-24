@@ -216,7 +216,7 @@ class Component {
 
 #### Combining StateEmitter with other reactive decorators
 
-```StateEmitter``` can be combined with other reactive decorators. The following example shows ```StateEmitter``` being used with ```Select``` from [NGXS](https://github.com/ngxs/store):
+```StateEmitter``` can be combined with other reactive decorators. The following example shows ```StateEmitter``` being used with the ```Select``` decorator from [NGXS](https://github.com/ngxs/store):
 
 ```ts
 @Component({...})
@@ -227,6 +227,8 @@ class Component {
     private username$: Observable<boolean>;
 }
 ```
+
+For more information, see [self-proxying StateEmitters](#self-proxying-stateemitters).
 
 ```username$``` will now function as both a ```StateEmitter``` and an NGXS ```Selector```.
 
@@ -465,6 +467,46 @@ class FormComponent {
 ```
 
 In the above example, any form updates to ```date``` will only be reflected on ```FormComponent.date$```. ```fooService.date$``` will not receive any updates.
+
+### Self-proxying StateEmitters
+
+A self-proxying ```StateEmitter``` is simply a proxied ```StateEmitter``` with a proxy path to itself. This is useful for combining ```StateEmitter``` with other reactive decorators.
+
+```ts
+@Component({...})
+class Component {
+
+    @StateEmitter.Alias("username$")
+    @Select(AppState.getUsername)
+    private username$: Observable<boolean>;
+}
+```
+
+In the above example, the ```@Select()``` decorator creates an ```Observable``` instance on ```username$```. Using ```@StateEmitter.Alias("username$")``` will allow us to capture that ```Observable``` and then use it for binding in the view template. Lithium also provides several convenience decorators for creating self-proxying StateEmitters.
+
+```ts
+@Component({...})
+class Component {
+
+    @StateEmitter.AliasSelf() // Equivalent to `@StateEmitter.Alias("username$")`
+    @Select(AppState.getUsername)
+    private username$: Observable<boolean>;
+}
+```
+
+Lithium will automatically detect if a ```StateEmitter``` decorator is being use with another decorator. If another reactive decorator is being used, it will change to an aliasing self-proxied ```StateEmitter``` by default.
+
+```ts
+@Component({...})
+class Component {
+
+    @StateEmitter() // Equivalent to `@StateEmitter.AliasSelf()`
+    @Select(AppState.getUsername)
+    private username$: Observable<boolean>;
+}
+```
+
+For more information, see the [API reference]().
 
 [**API reference**](#stateemitter-1)
 

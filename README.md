@@ -494,7 +494,7 @@ class Component {
 }
 ```
 
-Lithium will automatically detect if a ```StateEmitter``` decorator is being use with another decorator. If another reactive decorator is being used, it will change to an aliasing self-proxied ```StateEmitter``` by default.
+Lithium will automatically detect if a ```StateEmitter``` decorator is being used with another decorator. If another reactive decorator is being used, it will change to an aliasing self-proxied ```StateEmitter``` by default.
 
 ```ts
 @Component({...})
@@ -506,7 +506,7 @@ class Component {
 }
 ```
 
-For more information, see the [API reference]().
+For more information, see the [API reference](#stateemitteraliasself).
 
 [**API reference**](#stateemitter-1)
 
@@ -767,6 +767,48 @@ Creates a state emitter, which is a ```Subject``` that automatically emits when 
 
 Note: If the target property's name is of the format "```<emitterType>$```", ```params.propertyName``` can be omitted and automatically deduced from the property name.
 
+#### ```StateEmitter.DecoratorParams```
+
+```ts
+interface DecoratorParams {
+    propertyName?: EmitterType;
+    initialValue?: any;
+    readOnly?: boolean;
+    proxyMode?: ProxyMode;
+    proxyPath?: string;
+    proxyMergeUpdates?: boolean;
+}
+```
+
+**```propertyName```** - (Optional) The name of the underlying property that should be created for use by the component's template. If not specified, the name will try to be deduced from the name of the ```StateEmitter``` property.
+
+**```initialValue```** - (Optional) The initial value to be emitted. Defaults to ```undefined```.
+
+**```readOnly```** - (Optional) Whether or not the underlying property being created should be read-only. Defaults to ```false```.
+
+**```proxyMode```** - (Optional) The proxy mode to use for the ```StateEmitter```. Defaults to ```None```. For all possible values, see [**```StateEmitter.ProxyMode```**](#stateemitterproxymode).
+
+**```proxyPath```** - (Conditional) The path of the property to be proxied. Required if ```proxyMode``` is not set to ```None```.
+
+**```proxyMergeUpdates```** - (Optional) Whether or not newly emitted values via dynamic proxy property paths should be merged with the previously emitted value. Defaults to ```true``` if the emitted value is an instance of ```Object```, otherwise defaults to ```false```.
+
+#### ```StateEmitter.EmitterType```
+
+```ts
+type EmitterType = string;
+```
+
+#### ```StateEmitter.ProxyMode```
+
+```ts
+type ProxyMode = keyof {
+    None,
+    From,
+    Alias,
+    Merge
+}
+```
+
 #### ```StateEmitter.Alias```
 
 Helper decorator that creates a ```StateEmitter``` with ```proxyMode``` set to ```Alias```.
@@ -818,31 +860,6 @@ Note: This is functionally equivalent to:
 StateEmitter({proxyMode: EmitterMetadata.ProxyMode.Merge});
 ```
 
-#### ```StateEmitter.DecoratorParams```
-
-```ts
-interface DecoratorParams {
-    propertyName?: EmitterType;
-    initialValue?: any;
-    readOnly?: boolean;
-    proxyMode?: ProxyMode;
-    proxyPath?: string;
-    proxyMergeUpdates?: boolean;
-}
-```
-
-**```propertyName```** - (Optional) The name of the underlying property that should be created for use by the component's template. If not specified, the name will try to be deduced from the name of the ```StateEmitter``` property.
-
-**```initialValue```** - (Optional) The initial value to be emitted. Defaults to ```undefined```.
-
-**```readOnly```** - (Optional) Whether or not the underlying property being created should be read-only. Defaults to ```false```.
-
-**```proxyMode```** - (Optional) The proxy mode to use for the ```StateEmitter```. Defaults to ```None```. For all possible values, see [**```StateEmitter.ProxyMode```**](#stateemitterproxymode).
-
-**```proxyPath```** - (Conditional) The path of the property to be proxied. Required if ```proxyMode``` is not set to ```None```.
-
-**```proxyMergeUpdates```** - (Optional) Whether or not newly emitted values via dynamic proxy property paths should be merged with the previously emitted value. Defaults to ```true``` if the emitted value is an instance of ```Object```, otherwise defaults to ```false```.
-
 #### ```StateEmitter.ProxyDecoratorParams```
 
 ```ts
@@ -850,6 +867,7 @@ interface ProxyDecoratorParams {
     path: string;
     propertyName?: EmitterType;
     mergeUpdates?: boolean;
+    readOnly?: boolean;
 }
 ```
 
@@ -859,22 +877,83 @@ interface ProxyDecoratorParams {
 
 **```mergeUpdates```** - (Optional) See [**```StateEmitter.DecoratorParams.proxyMergeUpdates```**](#stateemitterdecoratorparams).
 
-#### ```StateEmitter.EmitterType```
+**```readOnly```** - (Optional) See [**```StateEmitter.DecoratorParams.readOnly```**](#stateemitterdecoratorparams).
+
+#### ```StateEmitter.AliasSelf```
+
+Helper decorator that creates a self-proxying ```StateEmitter``` with ```proxyMode``` set to ```Alias```.
 
 ```ts
-type EmitterType = string;
+function AliasSelf(params?: SelfProxyDecoratorParams, ...propertyDecorators: PropertyDecorator[]): PropertyDecorator
 ```
 
-#### ```StateEmitter.ProxyMode```
+**```params```** - (Optional) The parameters to use for this state emitter. See [**```StateEmitter.SelfProxyDecoratorParams```**](#stateemitterselfproxydecoratorparams).
+
+**```propertyDecorators```** - A list of ```PropertyDecorator```s that should be applied to the underlying property.
+
+Note: This is functionally equivalent to:
+```ts
+StateEmitter({
+    proxyMode: EmitterMetadata.ProxyMode.Alias,
+    proxyPath: "foo$"
+})
+public foo$: Subject<any>;
+```
+
+#### ```StateEmitter.FromSelf```
+
+Helper decorator that creates a self-proxying ```StateEmitter``` with ```proxyMode``` set to ```From```.
 
 ```ts
-type ProxyMode = keyof {
-    None,
-    From,
-    Alias,
-    Merge
+function FromSelf(params?: SelfProxyDecoratorParams, ...propertyDecorators: PropertyDecorator[]): PropertyDecorator
+```
+
+**```params```** - (Optional) The parameters to use for this state emitter. See [**```StateEmitter.SelfProxyDecoratorParams```**](#stateemitterselfproxydecoratorparams).
+
+**```propertyDecorators```** - A list of ```PropertyDecorator```s that should be applied to the underlying property.
+
+Note: This is functionally equivalent to:
+```ts
+StateEmitter({
+    proxyMode: EmitterMetadata.ProxyMode.From,
+    proxyPath: "foo$"
+})
+public foo$: Subject<any>;
+```
+
+#### ```StateEmitter.MergeSelf```
+
+Helper decorator that creates a self-proxying ```StateEmitter``` with ```proxyMode``` set to ```Merge```.
+
+```ts
+function MergeSelf(params?: SelfProxyDecoratorParams, ...propertyDecorators: PropertyDecorator[]): PropertyDecorator
+```
+
+**```params```** - (Optional) The parameters to use for this state emitter. See [**```StateEmitter.SelfProxyDecoratorParams```**](#stateemitterselfproxydecoratorparams).
+
+**```propertyDecorators```** - A list of ```PropertyDecorator```s that should be applied to the underlying property.
+
+Note: This is functionally equivalent to:
+```ts
+StateEmitter({
+    proxyMode: EmitterMetadata.ProxyMode.Merge,
+    proxyPath: "foo$"
+})
+public foo$: Subject<any>;
+```
+
+#### ```StateEmitter.SelfProxyDecoratorParams```
+
+```ts
+interface SelfProxyDecoratorParams {
+    propertyName?: EmitterType;
+    readOnly?: boolean;
 }
 ```
+
+**```propertyName```** - (Optional) See [**```StateEmitter.DecoratorParams.propertyName```**](#stateemitterdecoratorparams).
+
+**```readOnly```** - (Optional) See [**```StateEmitter.DecoratorParams.readOnly```**](#stateemitterdecoratorparams).
 
 ### Angular Lifecycle ```EventSource``` decorators
 

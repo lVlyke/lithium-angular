@@ -1,4 +1,5 @@
 import { Subscription, Observable, Subject, BehaviorSubject, Subscriber, TeardownLogic } from "rxjs";
+import { CommonMetadata } from "./metadata";
 
 export type Constructor<T> = new (...args: any[]) => T;
 export type GenericConstructor<BaseT> = new<T extends BaseT> (...args: any[]) => T;
@@ -15,7 +16,7 @@ export function ManagedObservableWrapper/*<T, BaseObservable extends Observable<
             super(...args);
 
             // Automatically handle unsubscribing on component's ngOnDestroy event
-            this.subscriptions.push(componentInstance["$$managed_onDestroy"].subscribe(() => {
+            this.subscriptions.push(componentInstance[CommonMetadata.MANAGED_ONDESTROY_KEY].subscribe(() => {
                 this.subscriptions
                     .filter(subscription => !subscription.closed)
                     .forEach(subscription => subscription.unsubscribe());

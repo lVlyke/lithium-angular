@@ -1,8 +1,7 @@
 import { EventSource } from "../src/event-source";
 import { Spec, Random, Template, InputBuilder } from "detest-bdd";
-import { EventMetadata } from "../src/event-metadata";
+import { EventMetadata, AngularMetadata } from "../src/metadata";
 import { Subject, Observable } from 'rxjs';
-import { AngularMetadata } from "../src/angular-metadata";
 import { map, take, shareReplay } from "rxjs/operators";
 
 const spec = Spec.create<{
@@ -30,6 +29,7 @@ describe("An EventSource decorator", () => {
         .fragmentBuilder<EventSource.DecoratorOptions>("options", InputBuilder
             .fragmentList<EventSource.DecoratorOptions>({ eventType: [undefined, Random.string()] })
             .fragmentList({ skipMethodCheck: [true, false, undefined] })
+            .fragmentList({ unmanaged: [true, false, undefined] })
         )
         .fragmentList({ angularPropMetadata: [undefined, [1, 2, 3]] });
 

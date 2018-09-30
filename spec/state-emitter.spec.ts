@@ -1,7 +1,6 @@
 import { Spec, Template, Random, InputBuilder } from "detest-bdd";
 import { StateEmitter } from "../src/state-emitter";
-import { EmitterMetadata } from "../src/emitter-metadata";
-import { AngularMetadata } from "../src/angular-metadata";
+import { EmitterMetadata, AngularMetadata } from "../src/metadata";
 import { BehaviorSubject, Observable, Subject, of } from "rxjs";
 import { take, map, withLatestFrom, mergeMapTo, filter } from "rxjs/operators";
 
@@ -566,6 +565,7 @@ describe("Given a StateEmitter decorator", () => {
             .fragmentList({ propertyName: [undefined, Random.string()] })
             .fragmentList({ mergeUpdates: [undefined, true, false] })
             .fragmentList({ readOnly: [undefined, true, false] })
+            .fragmentList({ unmanaged: [true, false, undefined]})
         )
         .fragmentList({ propertyDecorators: [undefined, [jasmine.createSpy("propertyDecorator")]] });
 
@@ -594,7 +594,8 @@ describe("Given a StateEmitter decorator", () => {
                     proxyMode: proxyMode,
                     proxyPath: params.path,
                     proxyMergeUpdates: params.mergeUpdates,
-                    readOnly: params.readOnly
+                    readOnly: params.readOnly,
+                    unmanaged: params.unmanaged
                 }, ...propertyDecorators);
             });
         });
@@ -614,6 +615,7 @@ describe("Given a StateEmitter decorator", () => {
         .fragmentBuilder("options", InputBuilder
             .fragmentList<StateEmitter.SelfProxyDecoratorParams>({ propertyName: [undefined, Random.string()] })
             .fragmentList({ readOnly: [undefined, true, false] })
+            .fragmentList({ unmanaged: [true, false, undefined]})
         )
         .fragmentList({ propertyDecorators: [undefined, [jasmine.createSpy("propertyDecorator")]] });
 

@@ -1,8 +1,6 @@
 import { Observable, Subject } from "rxjs";
-import { EventMetadata, EventType } from "./event-metadata";
-import { AngularMetadata } from "./angular-metadata";
+import { EventMetadata, EventType, AngularMetadata, Metadata, CommonMetadata } from "./metadata";
 import { AotAware } from "./aot";
-import { Metadata } from "./metadata";
 import { ManagedSubject } from "./managed-observable";
 
 export function EventSource(): PropertyDecorator;
@@ -27,8 +25,6 @@ export function EventSource(...args: any[]): PropertyDecorator {
 
 export namespace EventSource {
 
-    export const BOOTSTRAPPED_KEY = "$$EVENTSOURCE_BOOTSTRAPPED";
-
     export type DecoratorOptions = Partial<EventMetadata.ConfigOptions>;
 
     /** @PropertyDecoratorFactory */
@@ -37,9 +33,9 @@ export namespace EventSource {
 
         /** @PropertyDecorator */
         return function(target: any, propertyKey: string) {
-            if (propertyKey !== "$$managed_onDestroy") {
-                // TODO
-                WithParams({ eventType: "ngOnDestroy" })(target, "$$managed_onDestroy");
+            if (propertyKey !== CommonMetadata.MANAGED_ONDESTROY_KEY) {
+                // Ensure that we create a ngOnDestroy EventSource on the target for managing subscriptions
+                WithParams({ eventType: "ngOnDestroy" })(target, CommonMetadata.MANAGED_ONDESTROY_KEY);
             }
 
             // If an eventType wasn't specified...
@@ -76,9 +72,9 @@ export namespace EventSource {
 
         function classMetadataMerged(merged?: boolean): boolean | undefined {
             if (merged === undefined) {
-                return Metadata.GetMetadata(BOOTSTRAPPED_KEY, targetInstance, false);
+                return Metadata.GetMetadata(EventMetadata.BOOTSTRAPPED_KEY, targetInstance, false);
             } else {
-                Metadata.SetMetadata(BOOTSTRAPPED_KEY, targetInstance, merged);
+                Metadata.SetMetadata(EventMetadata.BOOTSTRAPPED_KEY, targetInstance, merged);
             }
             return undefined;
         }
@@ -98,7 +94,7 @@ export namespace EventSource {
             // If the event proxy subject hasn't been created for this property yet...
             if (!subjectInfo.subject) {
                 // Create a new Subject
-                if (propertyKey === "$$managed_onDestroy") {
+                if (subjectInfo.unmanaged || propertyKey === CommonMetadata.MANAGED_ONDESTROY_KEY) {
                     subjectInfo.subject = new Subject<any>();
                 } else {
                     subjectInfo.subject = new ManagedSubject<any>(targetInstance);

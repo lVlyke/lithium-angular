@@ -736,12 +736,15 @@ Note: If the target property's name is of the format "```<eventType>$```", ```op
 interface DecoratorOptions {
     eventType?: EventType;
     skipMethodCheck?: boolean;
+    unmanaged?: boolean;
 }
 ```
 
-**```eventType```** - (Optional) The name of the function that represents the event or action. If not specified, the name will try to be deduced from the name of the ```EventSource``` property.
+**```eventType```** - (Optional) The name of the function that represents the event or action. If not specified, the name will try to be deduced from the name of the property being decorated instead.
 
 **```skipMethodCheck```** - (Optional) Whether or not to ignore existing method declarations in the class when defining the ```EventSource```. If set to ```false```, an error will be thrown if a method is defined with the same name as the ```eventType```. Defaults to ```false```.
+
+**```unmanaged```** - (Optional) Whether or not the EventSource should be excluded from automatic subscription cleanup when component is destroyed. Defaults to ```false```.
 
 #### ```EventType```
 
@@ -774,17 +777,20 @@ interface DecoratorParams {
     propertyName?: EmitterType;
     initialValue?: any;
     readOnly?: boolean;
+    unmanaged?: boolean;
     proxyMode?: ProxyMode;
     proxyPath?: string;
     proxyMergeUpdates?: boolean;
 }
 ```
 
-**```propertyName```** - (Optional) The name of the underlying property that should be created for use by the component's template. If not specified, the name will try to be deduced from the name of the ```StateEmitter``` property.
+**```propertyName```** - (Optional) The name of the underlying property that should be created for use by the component's template. If not specified, the name will try to be deduced from the name of the property being decorated instead.
 
 **```initialValue```** - (Optional) The initial value to be emitted. Defaults to ```undefined```.
 
 **```readOnly```** - (Optional) Whether or not the underlying property being created should be read-only. Defaults to ```false```.
+
+**```unmanaged```** - (Optional) Whether or not the StateEmitter should be excluded from automatic subscription cleanup when component is destroyed. Defaults to ```false```. **Note**: This property has no effect when ```proxyMode``` is set to ```Alias```.
 
 **```proxyMode```** - (Optional) The proxy mode to use for the ```StateEmitter```. Defaults to ```None```. For all possible values, see [**```StateEmitter.ProxyMode```**](#stateemitterproxymode).
 
@@ -868,6 +874,7 @@ interface ProxyDecoratorParams {
     propertyName?: EmitterType;
     mergeUpdates?: boolean;
     readOnly?: boolean;
+    unmanaged?: boolean;
 }
 ```
 
@@ -878,6 +885,8 @@ interface ProxyDecoratorParams {
 **```mergeUpdates```** - (Optional) See [**```StateEmitter.DecoratorParams.proxyMergeUpdates```**](#stateemitterdecoratorparams).
 
 **```readOnly```** - (Optional) See [**```StateEmitter.DecoratorParams.readOnly```**](#stateemitterdecoratorparams).
+
+**```unmanaged```** - (Optional) See [**```StateEmitter.DecoratorParams.unmanaged```**](#stateemitterdecoratorparams).
 
 #### ```StateEmitter.AliasSelf```
 
@@ -948,12 +957,15 @@ public foo$: Subject<any>;
 interface SelfProxyDecoratorParams {
     propertyName?: EmitterType;
     readOnly?: boolean;
+    unmanaged?: boolean;
 }
 ```
 
 **```propertyName```** - (Optional) See [**```StateEmitter.DecoratorParams.propertyName```**](#stateemitterdecoratorparams).
 
 **```readOnly```** - (Optional) See [**```StateEmitter.DecoratorParams.readOnly```**](#stateemitterdecoratorparams).
+
+**```unmanaged```** - (Optional) See [**```StateEmitter.DecoratorParams.unmanaged```**](#stateemitterdecoratorparams).
 
 ### Angular Lifecycle ```EventSource``` decorators
 

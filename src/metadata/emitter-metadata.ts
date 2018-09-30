@@ -5,6 +5,8 @@ export type EmitterType = string;
 
 export namespace EmitterMetadata {
 
+    export const BOOTSTRAPPED_KEY = "$$STATEEMITTER_BOOTSTRAPPED";
+
     export type ProxyMode = keyof {
         None: any,
         From: any,
@@ -33,6 +35,7 @@ export namespace EmitterMetadata {
             proxyMode?: ProxyMode;
             proxyPath?: string;
             proxyMergeUpdates?: boolean;
+            unmanaged?: boolean;
         }
 
         export interface WithDynamicAlias extends SubjectInfo {

@@ -1,9 +1,7 @@
-import { Observable } from "rxjs";
-import { EmitterMetadata, EmitterType } from "./emitter-metadata";
+import { Observable, BehaviorSubject } from "rxjs";
+import { EmitterMetadata, EmitterType, AngularMetadata, Metadata, CommonMetadata } from "./metadata";
 import { ObservableUtil } from "./observable-util";
-import { AngularMetadata } from "./angular-metadata";
 import { take } from "rxjs/operators";
-import { Metadata } from "./metadata";
 import { ManagedBehaviorSubject } from "./managed-observable";
 import { EventSource } from "./event-source";
 
@@ -29,8 +27,6 @@ export function StateEmitter(...args: any[]): PropertyDecorator {
 
 export namespace StateEmitter {
 
-    export const BOOTSTRAPPED_KEY = "$$STATEEMITTER_BOOTSTRAPPED";
-
     export interface DecoratorParams extends EmitterMetadata.SubjectInfo.CoreDetails {
         propertyName?: EmitterType;
     }
@@ -40,11 +36,13 @@ export namespace StateEmitter {
         propertyName?: EmitterType;
         mergeUpdates?: boolean;
         readOnly?: boolean;
+        unmanaged?: boolean;
     }
 
     export interface SelfProxyDecoratorParams {
         propertyName?: EmitterType;
         readOnly?: boolean;
+        unmanaged?: boolean;
     }
 
     /** @PropertyDecoratorFactory */
@@ -53,8 +51,8 @@ export namespace StateEmitter {
 
         /** @PropertyDecorator */
         return function (target: any, propertyKey: string) {
-            // TODO
-            EventSource.WithParams({ eventType: "ngOnDestroy" })(target, "$$managed_onDestroy");
+            // Ensure that we create a ngOnDestroy EventSource on the target for managing subscriptions
+            EventSource.WithParams({ eventType: "ngOnDestroy" })(target, CommonMetadata.MANAGED_ONDESTROY_KEY);
 
             // If a propertyName wasn't specified...
             if (!params.propertyName) {
@@ -100,7 +98,8 @@ export namespace StateEmitter {
             proxyMode: EmitterMetadata.ProxyMode.Alias,
             proxyPath: $params.path,
             proxyMergeUpdates: $params.mergeUpdates,
-            readOnly: $params.readOnly
+            readOnly: $params.readOnly,
+            unmanaged: $params.unmanaged
         }, ...propertyDecorators);
     }
 
@@ -113,7 +112,8 @@ export namespace StateEmitter {
             proxyMode: EmitterMetadata.ProxyMode.From,
             proxyPath: $params.path,
             proxyMergeUpdates: $params.mergeUpdates,
-            readOnly: $params.readOnly
+            readOnly: $params.readOnly,
+            unmanaged: $params.unmanaged
         }, ...propertyDecorators);
     }
 
@@ -126,7 +126,8 @@ export namespace StateEmitter {
             proxyMode: EmitterMetadata.ProxyMode.Merge,
             proxyPath: $params.path,
             proxyMergeUpdates: $params.mergeUpdates,
-            readOnly: $params.readOnly
+            readOnly: $params.readOnly,
+            unmanaged: $params.unmanaged
         }, ...propertyDecorators);
     }
 
@@ -201,9 +202,9 @@ export namespace StateEmitter {
 
         function classMetadataMerged(merged?: boolean): boolean | undefined {
             if (merged === undefined) {
-                return Metadata.GetMetadata(BOOTSTRAPPED_KEY, targetInstance, false);
+                return Metadata.GetMetadata(EmitterMetadata.BOOTSTRAPPED_KEY, targetInstance, false);
             } else {
-                Metadata.SetMetadata(BOOTSTRAPPED_KEY, targetInstance, merged);
+                Metadata.SetMetadata(EmitterMetadata.BOOTSTRAPPED_KEY, targetInstance, merged);
             }
             return undefined;
         }
@@ -228,6 +229,12 @@ export namespace StateEmitter {
 
                 return observable;
             }});
+        }
+
+        function makeEmitterSubject(): BehaviorSubject<any> {
+            return subjectInfo.unmanaged
+                ? new BehaviorSubject<any>(subjectInfo.initialValue)
+                : new ManagedBehaviorSubject<any>(targetInstance, subjectInfo.initialValue);
         }
 
         const metadataMap = EmitterMetadata.GetOwnMetadataMap(targetInstance);
@@ -271,8 +278,8 @@ export namespace StateEmitter {
             // From proxies create a new subject that takes only its initial value from the source
             case EmitterMetadata.ProxyMode.Merge:
             case EmitterMetadata.ProxyMode.From: {
-                // Create a new copy subject
-                let subject = new ManagedBehaviorSubject<any>(targetInstance, subjectInfo.initialValue);
+                // Create a new subject to proxy the source
+                const subject = makeEmitterSubject();
 
                 // Create a getter that returns the new subject
                 DefineProxyObservableGetter(subjectInfo, false, (proxyObservable: Observable<any>) => {
@@ -291,7 +298,7 @@ export namespace StateEmitter {
             case EmitterMetadata.ProxyMode.None:
             default: {
                 // Create a new BehaviorSubject with the default value
-                subjectInfo.observable = new ManagedBehaviorSubject<any>(targetInstance, subjectInfo.initialValue);
+                subjectInfo.observable = makeEmitterSubject();
                 break;
             }
         }

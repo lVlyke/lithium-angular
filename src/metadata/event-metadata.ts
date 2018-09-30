@@ -5,9 +5,12 @@ export type EventType = string;
 
 export namespace EventMetadata {
 
+    export const BOOTSTRAPPED_KEY = "$$EVENTSOURCE_BOOTSTRAPPED";
+
     export interface ConfigOptions {
         eventType: EventType;
         skipMethodCheck?: boolean;
+        unmanaged?: boolean;
     }
 
     export interface SubjectInfo extends ConfigOptions {

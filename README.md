@@ -33,7 +33,7 @@ npm install @lithiumjs/angular
 
 (For more information, see the full [**API reference**](#api))
 
-**NOTE:** If you are using Angular's AoT compiler, additional considerations are required to write fully AoT-compliant components with Lithium. See the [Angular AoT Compiler](#angular-aot-compiler) section for details.
+**NOTE:** If you are using Angular's AoT compiler, some additional considerations are required to write fully AoT-compliant components with Lithium. See the [Angular AoT Compiler](#angular-aot-compiler) section for details.
 
 ### EventSource
 
@@ -543,11 +543,36 @@ class Component {
 
 Lithium for Angular is compatible with Angular's AoT compiler. However, due to current limitations of the compiler there are a few rules that need to be adhered to in order to write fully AoT-compliant code with Lithium:
 
-**1. ```skipTemplateCodegen``` must be set to ```true``` or dummy properties must be declared for StateEmitters.**
+**1. Components using Lithium must extend the ```AotAware``` class.**
 
-Because Lithium's ```StateEmitter``` takes care of managing the properties that a component's view template will access, it is incompatible with how the current Angular AoT compiler generates template metadata. To remedy this issue, you must set the ```skipTemplateCodegen``` flag to ```true``` under ```angularCompilerOptions``` in your project's ```tsconfig.json```. However, if this is not possible in your build configuration, you must instead declare dummy properties, illustrated in the example below:
+Because Lithium's ```StateEmitter``` and ```EventSource``` dynamically create and manage the properties that a component's view template will access, it is incompatible with how the current Angular AoT compiler handles template validation. To easily remedy this issue, your components can extend the [```AotAware```](#aotaware) base class to enable less strict validation and full AoT compliance:
 
 ```ts
+import { AotAware } from "@lithiumjs/angular";
+
+// With AotAware:
+@Component({...})
+class Component extends AotAware {
+
+    @StateEmitter()
+    @Input("disabled")
+    private disabled$: Subject<boolean>;
+
+    @OnInit() private onInit$: Observable<void>;
+
+    constructor () {
+        this.onInit$.subscribe(() =>  console.log("Component is initialized."));
+
+        this.disabled$.subscribe(disabled =>  console.log(`Disabled: ${disabled}`));
+    }
+}
+```
+
+
+However, if using ```AotAware``` is not possible in your configuration, you **must** instead declare dummy properties, illustrated in the example below:
+
+```ts
+// Without AotAware:
 @Component({...})
 class Component {
 
@@ -555,77 +580,43 @@ class Component {
     @Input("disabled")
     private disabled$: Subject<boolean>;
 
-    // Dummy property must be declared for each StateEmitter if "skipTemplateCodegen" is false.
+    // EventSource proxy for ngOnInit
+    // Disable EventSource method usage checks with "skipMethodCheck"
+    @OnInit({ skipMethodCheck: true }) private onInit$: Observable<void>;
+
+    // Dummy property must be declared for each StateEmitter in the component if not extending `AotAware`.
     public disabled: boolean;
 
+    // This stub declaration must be provided in the component to allow onInit$ to fire in AoT mode if not extending `AotAware`.
+    // NOTE: Any stub method declarations will be overidden. Any code inside this declaration will not be executed.
+    public ngOnInit() {}
+
     constructor () {
+        this.onInit$.subscribe(() =>  console.log("Component is initialized."));
+
         this.disabled$.subscribe(disabled =>  console.log(`Disabled: ${disabled}`));
     }
 }
 ```
 
-For more information, see the [official Angular AoT compiler documentation](https://angular.io/guide/aot-compiler#skiptemplatecodegen).
+**2. When applying an Angular decorator to an ```EventSource```, the decorator should be applied to the property directly instead of being passed into ```EventSource```.**
 
-**2. Angular component lifecycle ```EventSource``` decorators will not work in AoT mode unless a corresponding method declaration is created for the event.**
-
-When using component lifecycle events (i.e. ```ngOnInit```), Angular's AoT compiler requires that a method for that event be explicitly declared in the class or a parent class for it to be invoked. However, Lithium adds these methods dynamically through a class decorator, and since the AoT compiler does not evaluate expressions, the corresponding lifecycle ```EventSource``` decorator will never emit.
-
-For example, the following code, while valid without the AoT compiler, will fail to work correctly when compiled with AoT:
+In the following example, ```HostListener``` should be declared on the property directly. This will work correctly when compiled with AoT:
 
 ```ts
 @Component({...})
 class Component {
 
-    // EventSource proxy for ngOnInit
-    @OnInit() private onInit$: Observable<void>;
+    @EventSource()
+    @HostListener("click")
+    private onClick$: Observable<any>;
 
     constructor () {
-        // ngOnInit will *never* fire in AoT mode for this class, because we did not explicitly declare an ngOnInit method (note that the AoT compiler cannot resolve mixins/anonymous classes).
-        this.onInit$.subscribe(() =>  console.log("Component is initialized."));
+        // This will emit as expected
+        this.onClick$.subscribe(() =>  console.log("The component was clicked."));
     }
 }
 ```
-
-To help with this limitation, Lithium for Angular provides an ```AotAware``` class that a component class can extend to resolve this automatically:
-
-```ts
-@Component({...})
-// Extending AotAware takes care of providing the Angular lifecycle event method declarations.
-class Component extends AotAware {
-    // EventSource proxy for ngOnInit
-    @OnInit() private onInit$: Observable<void>;
-
-    constructor () {
-        super();
-
-        // This will fire as expected.
-        this.onInit$.subscribe(() =>  console.log("Component is initialized."));
-    }
-}
-```
-
-If you do not wish to use the ```AotAware``` class, you must provide an empty stub declaration of the corresponding Angular event method and set ```skipMethodCheck``` to ```true``` for the ```EventSource``` decorator. Example:
-
-```ts
-@Component({...})
-class Component {
-    // EventSource proxy for ngOnInit
-    // Disable EventSource method usage checks
-    @OnInit({ skipMethodCheck: true }) private onInit$: Observable<void>;
-
-    // This stub declaration must be provided to allow onInit$ to fire in AoT mode.
-    public ngOnInit() {}
-
-    constructor () {
-        // This will fire as expected.
-        this.onInit$.subscribe(() =>  console.log("Component is initialized."));
-    }
-}
-```
-
-Please note that the method declaration will be overidden by Lithium. Any code inside the declaration will be ignored.
-
-**3. When applying an Angular decorator to an ```EventSource```, the decorator should be applied to the property directly instead of being passed into ```EventSource```.**
 
 The following example will fail to work when compiled with AoT:
 
@@ -643,24 +634,24 @@ class Component {
 }
 ```
 
-In the above example, ```HostListener``` should be declared on the property instead. The following example will work correctly when compiled with AoT:
+**3. When applying an Angular decorator to a ```StateEmitter```, the decorator should be applied to the property directly instead of being passed into ```StateEmitter```.**
+
+In the following example, ```Input``` should be declared on the property directly. The following example will work correctly when compiled with AoT:
 
 ```ts
 @Component({...})
 class Component {
 
-    @EventSource()
-    @HostListener("click")
-    private onClick$: Observable<any>;
+    // This will allow "disabled" to be bound in a template without generating a compiler error
+    @StateEmitter()
+    @Input("disabled")
+    private disabled$: Subject<boolean>;
 
     constructor () {
-        // This will emit as expected
-        this.onClick$.subscribe(() =>  console.log("The component was clicked."));
+        this.disabled$.subscribe(disabled =>  console.log(`Disabled: ${disabled}`));
     }
 }
 ```
-
-**4. When applying an Angular decorator to a ```StateEmitter```, the decorator should be applied to the property directly instead of being passed into ```StateEmitter```.**
 
 The following example will fail to work when compiled with AoT:
 
@@ -678,29 +669,12 @@ class Component {
 }
 ```
 
-In the above example, ```Input``` should be declared on the property instead. The following example will work correctly when compiled with AoT:
-
-```ts
-@Component({...})
-class Component {
-
-    // This will allow "disabled" to be bound in a template without generating a compiler error
-    @StateEmitter()
-    @Input("disabled")
-    private disabled$: Subject<boolean>;
-
-    constructor () {
-        this.disabled$.subscribe(disabled =>  console.log(`Disabled: ${disabled}`));
-    }
-}
-```
-
 ## API
 
 ### ```AotAware```
 
 ```ts
-abstract class AotAware {
+abstract class AotAware extends AotDynamic() {
     public ngOnChanges();
     public ngOnInit();
     public ngOnDestroy();
@@ -712,7 +686,7 @@ abstract class AotAware {
 }
 ```
 
-An abstract class that an Angular component class can extend to automatically handle defining lifecycle event methods for the AoT compiler.
+An abstract class that an Angular component class can extend to automatically handle defining lifecycle event methods for the AoT compiler, as well as allowing dynamic template checking with AoT.
 
 ### ```EventSource```
 

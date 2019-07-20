@@ -5,18 +5,14 @@
 		"noImplicitAny": true,
         "noImplicitReturns": true,
         "allowSyntheticDefaultImports": true,
-        "declaration": true,
         "stripInternal": true,
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
-        "module": "commonjs",
+        "module": "es2015",
         "moduleResolution": "node",
-        "target": "es5",
-        "outDir": "./dist",
-        "rootDir": "./src",
         "sourceMap": true,
         "lib": [
-            "es2015",
+            "esnext",
             "dom"
         ]
     },

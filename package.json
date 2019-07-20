@@ -1,8 +1,7 @@
 {
   "name": "@lithiumjs/angular",
-  "version": "3.0.0-beta.1",
+  "version": "3.0.0-beta.6",
   "description": "A decorator-based library for Angular that enables seamless reactive data binding using RxJS.",
-  "main": "index.js",
   "author": "Mychal Thompson <mychal.r.thompson@gmail.com>",
   "repository": "https://github.com/lVlyke/lithium-angular",
   "license": "MIT",
@@ -47,5 +46,9 @@
     "typescript": "~3.4.5",
     "zone.js": "^0.9.1"
   },
-  "dependencies": {}
+  "dependencies": {},
+  "typings": "./index.d.ts",
+  "main": "./bundles/lithium.umd.js",
+  "module": "./esm5/index.js",
+  "es2015": "./esm2015/index.js"
 }

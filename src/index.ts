@@ -1,4 +1,5 @@
 export * from "./aot";
+export * from "./autopush";
 export * from "./component";
 export * from "./event-source";
 export * from "./lifecycle";

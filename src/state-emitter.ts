@@ -4,6 +4,7 @@ import { ObservableUtil } from "./observable-util";
 import { take } from "rxjs/operators";
 import { ManagedBehaviorSubject } from "./managed-observable";
 import { EventSource } from "./event-source";
+import { AutoPush } from "./autopush";
 
 export function StateEmitter(): PropertyDecorator;
 export function StateEmitter(...propertyDecorators: PropertyDecorator[]): PropertyDecorator;
@@ -176,6 +177,9 @@ export namespace StateEmitter {
                         console.error(`Unable to set value for proxy StateEmitter "${this.constructor.name}.${type}" with dynamic property path "${subjectInfo.proxyPath}" - Path does not contain a Subject.`);
                     }
                 }
+
+                // Notify the component of changes if AutoPush is enabled
+                AutoPush.tryDetectChanges(this);
             };
         }
 
@@ -186,9 +190,17 @@ export namespace StateEmitter {
             return function (): any {
                 // Create a subscription to changes in the subject
                 if (!subscription) {
-                    // Update the lastValue when a new value is emitted from the subject
+                    subscription = true;
+
+                    // When a new value is emitted from the StateEmitter...
                     let subjectInfo: EmitterMetadata.SubjectInfo = EmitterMetadata.GetMetadataMap(this).get(type);
-                    subscription = subjectInfo.observable.subscribe((value: any) => lastValue = value);
+                    subscription = subjectInfo.observable.subscribe((value: any) => {
+                        // Update the cached value
+                        lastValue = value;
+
+                        // Notify the component of changes if AutoPush is enabled
+                        AutoPush.tryDetectChanges(this);
+                    });
                 }
 
                 // Return the last value that was emitted

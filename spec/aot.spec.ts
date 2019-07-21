@@ -19,5 +19,5 @@ describe("Given an AotAware class", () => {
 
             expect(params.targetClass[methodName]).toEqual(jasmine.any(Function));
         });
-    }, ...Lifecycle.AngularLifecycleType.values.map(methodName => ({ methodName })))();
+    }, ...Lifecycle.AngularLifecycleDecorator.lifecycleValues.map(methodName => ({ methodName })))();
 });

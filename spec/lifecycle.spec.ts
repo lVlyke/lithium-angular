@@ -15,7 +15,7 @@ describe("Given Angular lifecycle event EventSource decorators", () => {
     };
 
     const LifecycleTemplateInput = InputBuilder
-        .fragmentList<LifecycleTemplateInput>({ lifecycleEvent: Lifecycle.AngularLifecycleType.values })
+        .fragmentList<LifecycleTemplateInput>({ lifecycleEvent: Lifecycle.AngularLifecycleDecorator.lifecycleValues })
         .fragmentList({ methodDecorators: [undefined, [jasmine.createSpy("methodDecorator")]] })
         .fragment({ options: undefined })
         .fragmentBuilder("options", InputBuilder
@@ -37,7 +37,7 @@ describe("Given Angular lifecycle event EventSource decorators", () => {
             spec.beforeEach((params) => {
                 spyOn(EventSource, "WithParams").and.callThrough();
 
-                const lifecycleDecorator: Lifecycle.AngularLifecycleType.DecoratorFactory = (<any>Lifecycle)[lifecycleDecoratorName];
+                const lifecycleDecorator: Lifecycle.AngularLifecycleDecorator.Factory = (<any>Lifecycle)[lifecycleDecoratorName];
 
                 params.targetClass = class {};
 

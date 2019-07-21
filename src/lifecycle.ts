@@ -1,61 +1,83 @@
 import { EventSource } from "./event-source";
 
-export type AngularLifecycleType = keyof {
-    ngOnChanges: any,
-    ngOnInit: any,
-    ngOnDestroy: any
-    ngDoCheck: any,
-    ngAfterContentInit: any,
-    ngAfterContentChecked: any,
-    ngAfterViewInit: any,
-    ngAfterViewChecked: any
+export const enum AngularLifecycleType {
+    OnChanges = "ngOnChanges",
+    OnInit = "ngOnInit",
+    OnDestroy = "ngOnDestroy",
+    DoCheck = "ngDoCheck",
+    AfterContentInit = "ngAfterContentInit",
+    AfterContentChecked = "ngAfterContentChecked",
+    AfterViewInit = "ngAfterViewInit",
+    AfterViewChecked = "ngAfterViewChecked"
 };
 
-export namespace AngularLifecycleType {
+export namespace AngularLifecycleDecorator {
 
-    export type DecoratorFactory = (options?: EventSource.DecoratorOptions, ...methodDecorators: MethodDecorator[]) => PropertyDecorator;
+    export type Factory = (options?: EventSource.DecoratorOptions, ...methodDecorators: MethodDecorator[]) => PropertyDecorator;
 
-    export const OnChanges: AngularLifecycleType = "ngOnChanges";
-    export const OnInit: AngularLifecycleType = "ngOnInit";
-    export const OnDestroy: AngularLifecycleType = "ngOnDestroy";
-    export const DoCheck: AngularLifecycleType = "ngDoCheck";
-    export const AfterContentInit: AngularLifecycleType = "ngAfterContentInit";
-    export const AfterContentChecked: AngularLifecycleType = "ngAfterContentChecked";
-    export const AfterViewInit: AngularLifecycleType = "ngAfterViewInit";
-    export const AfterViewChecked: AngularLifecycleType = "ngAfterViewChecked";
-
-    export const values: AngularLifecycleType[] = [
-        OnChanges,
-        OnInit,
-        OnDestroy,
-        DoCheck,
-        AfterContentInit,
-        AfterContentChecked,
-        AfterViewInit,
-        AfterViewChecked
+    export const lifecycleValues: AngularLifecycleType[] = [
+        AngularLifecycleType.OnChanges,
+        AngularLifecycleType.OnInit,
+        AngularLifecycleType.OnDestroy,
+        AngularLifecycleType.DoCheck,
+        AngularLifecycleType.AfterContentInit,
+        AngularLifecycleType.AfterContentChecked,
+        AngularLifecycleType.AfterViewInit,
+        AngularLifecycleType.AfterViewChecked
     ];
 
     /** @PropertyDecoratorMetaFactory */
-    export function DecoratorFactory(eventType: AngularLifecycleType): DecoratorFactory {
+    export function Factory(eventType: AngularLifecycleType): Factory {
         return function (options?: EventSource.DecoratorOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator {
             return EventSource(Object.assign({ eventType }, options), ...methodDecorators);
         };
     }
 }
 
+export function OnChanges(options?: EventSource.DecoratorOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator;
 /** @PropertyDecoratorFactory */
-export const OnChanges = AngularLifecycleType.DecoratorFactory(AngularLifecycleType.OnChanges);
+export function OnChanges(...args: any[]): PropertyDecorator {
+    return AngularLifecycleDecorator.Factory(AngularLifecycleType.OnChanges)(...args);
+};
+
+export function OnInit(options?: EventSource.DecoratorOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator;
 /** @PropertyDecoratorFactory */
-export const OnInit = AngularLifecycleType.DecoratorFactory(AngularLifecycleType.OnInit);
+export function OnInit(...args: any[]): PropertyDecorator {
+    return AngularLifecycleDecorator.Factory(AngularLifecycleType.OnInit)(...args);
+};
+
+export function OnDestroy(options?: EventSource.DecoratorOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator;
 /** @PropertyDecoratorFactory */
-export const OnDestroy = AngularLifecycleType.DecoratorFactory(AngularLifecycleType.OnDestroy);
+export function OnDestroy(...args: any[]): PropertyDecorator {
+    return AngularLifecycleDecorator.Factory(AngularLifecycleType.OnDestroy)(...args);
+};
+
+export function DoCheck(options?: EventSource.DecoratorOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator;
 /** @PropertyDecoratorFactory */
-export const DoCheck = AngularLifecycleType.DecoratorFactory(AngularLifecycleType.DoCheck);
+export function DoCheck(...args: any[]): PropertyDecorator {
+    return AngularLifecycleDecorator.Factory(AngularLifecycleType.DoCheck)(...args);
+};
+
+export function AfterContentInit(options?: EventSource.DecoratorOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator;
 /** @PropertyDecoratorFactory */
-export const AfterContentInit = AngularLifecycleType.DecoratorFactory(AngularLifecycleType.AfterContentInit);
+export function AfterContentInit(...args: any[]): PropertyDecorator {
+    return AngularLifecycleDecorator.Factory(AngularLifecycleType.AfterContentInit)(...args);
+};
+
+export function AfterContentChecked(options?: EventSource.DecoratorOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator;
 /** @PropertyDecoratorFactory */
-export const AfterContentChecked = AngularLifecycleType.DecoratorFactory(AngularLifecycleType.AfterContentChecked);
+export function AfterContentChecked(...args: any[]): PropertyDecorator {
+    return AngularLifecycleDecorator.Factory(AngularLifecycleType.AfterContentChecked)(...args);
+};
+
+export function AfterViewInit(options?: EventSource.DecoratorOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator;
 /** @PropertyDecoratorFactory */
-export const AfterViewInit = AngularLifecycleType.DecoratorFactory(AngularLifecycleType.AfterViewInit);
+export function AfterViewInit(...args: any[]): PropertyDecorator {
+    return AngularLifecycleDecorator.Factory(AngularLifecycleType.AfterViewInit)(...args);
+};
+
+export function AfterViewChecked(options?: EventSource.DecoratorOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator;
 /** @PropertyDecoratorFactory */
-export const AfterViewChecked = AngularLifecycleType.DecoratorFactory(AngularLifecycleType.AfterViewChecked);
+export function AfterViewChecked(...args: any[]): PropertyDecorator {
+    return AngularLifecycleDecorator.Factory(AngularLifecycleType.AfterViewChecked)(...args);
+};

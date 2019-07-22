@@ -1,30 +1,9 @@
 import { EventSource } from "./event-source";
-
-export const enum AngularLifecycleType {
-    OnChanges = "ngOnChanges",
-    OnInit = "ngOnInit",
-    OnDestroy = "ngOnDestroy",
-    DoCheck = "ngDoCheck",
-    AfterContentInit = "ngAfterContentInit",
-    AfterContentChecked = "ngAfterContentChecked",
-    AfterViewInit = "ngAfterViewInit",
-    AfterViewChecked = "ngAfterViewChecked"
-};
+import { AngularLifecycleType } from "./lifecycle-event";
 
 export namespace AngularLifecycleDecorator {
 
     export type Factory = (options?: EventSource.DecoratorOptions, ...methodDecorators: MethodDecorator[]) => PropertyDecorator;
-
-    export const lifecycleValues: AngularLifecycleType[] = [
-        AngularLifecycleType.OnChanges,
-        AngularLifecycleType.OnInit,
-        AngularLifecycleType.OnDestroy,
-        AngularLifecycleType.DoCheck,
-        AngularLifecycleType.AfterContentInit,
-        AngularLifecycleType.AfterContentChecked,
-        AngularLifecycleType.AfterViewInit,
-        AngularLifecycleType.AfterViewChecked
-    ];
 
     /** @PropertyDecoratorMetaFactory */
     export function Factory(eventType: AngularLifecycleType): Factory {

@@ -1,6 +1,6 @@
 import { Template, Spec } from "detest-bdd";
-import * as Lifecycle from "../src/lifecycle";
 import { AotAware } from "../src/aot";
+import { AngularLifecycleType } from "../src/lifecycle-event";
 
 const spec = Spec.create<{
     targetClass: AotAware
@@ -8,7 +8,7 @@ const spec = Spec.create<{
 
 describe("Given an AotAware class", () => {
 
-    Template.withInputs<{ methodName: Lifecycle.AngularLifecycleType }>(["methodName"], (methodName: Lifecycle.AngularLifecycleType) => {
+    Template.withInputs<{ methodName: AngularLifecycleType }>(["methodName"], (methodName: AngularLifecycleType) => {
 
         spec.beforeEach(params => { params.targetClass = new class extends AotAware {} });
 
@@ -19,5 +19,5 @@ describe("Given an AotAware class", () => {
 
             expect(params.targetClass[methodName]).toEqual(jasmine.any(Function));
         });
-    }, ...Lifecycle.AngularLifecycleDecorator.lifecycleValues.map(methodName => ({ methodName })))();
+    }, ...AngularLifecycleType.values.map(methodName => ({ methodName })))();
 });

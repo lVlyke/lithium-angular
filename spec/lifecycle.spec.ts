@@ -1,6 +1,7 @@
 import { Spec, InputBuilder, Template } from "detest-bdd";
 import { EventSource } from "../src/event-source";
 import * as Lifecycle from "../src/lifecycle";
+import { AngularLifecycleType } from "../src/lifecycle-event";
 
 const spec = Spec.create<{
     targetClass: any
@@ -9,13 +10,13 @@ const spec = Spec.create<{
 describe("Given Angular lifecycle event EventSource decorators", () => {
 
     type LifecycleTemplateInput = {
-        lifecycleEvent: Lifecycle.AngularLifecycleType;
+        lifecycleEvent: AngularLifecycleType;
         options?: EventSource.DecoratorOptions;
         methodDecorators?: MethodDecorator[];
     };
 
     const LifecycleTemplateInput = InputBuilder
-        .fragmentList<LifecycleTemplateInput>({ lifecycleEvent: Lifecycle.AngularLifecycleDecorator.lifecycleValues })
+        .fragmentList<LifecycleTemplateInput>({ lifecycleEvent: AngularLifecycleType.values })
         .fragmentList({ methodDecorators: [undefined, [jasmine.createSpy("methodDecorator")]] })
         .fragment({ options: undefined })
         .fragmentBuilder("options", InputBuilder
@@ -25,7 +26,7 @@ describe("Given Angular lifecycle event EventSource decorators", () => {
     const LifecycleTemplateInputKeys: (keyof LifecycleTemplateInput)[] = ["lifecycleEvent", "options", "methodDecorators"];
 
     Template(LifecycleTemplateInputKeys, LifecycleTemplateInput, (
-        lifecycleEvent: Lifecycle.AngularLifecycleType,
+        lifecycleEvent: AngularLifecycleType,
         options?: EventSource.DecoratorOptions,
         methodDecorators?: MethodDecorator[]
     ) => {

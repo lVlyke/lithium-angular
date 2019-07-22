@@ -2,6 +2,7 @@ import { Observable, Subject } from "rxjs";
 import { EventMetadata, EventType, AngularMetadata, Metadata, CommonMetadata } from "./metadata";
 import { AotAware } from "./aot";
 import { ManagedSubject } from "./managed-observable";
+import { AngularLifecycleType } from "./lifecycle-event";
 
 export function EventSource(): PropertyDecorator;
 export function EventSource(...methodDecorators: MethodDecorator[]): PropertyDecorator;
@@ -35,7 +36,7 @@ export namespace EventSource {
         return function(target: any, propertyKey: string) {
             if (propertyKey !== CommonMetadata.MANAGED_ONDESTROY_KEY) {
                 // Ensure that we create a ngOnDestroy EventSource on the target for managing subscriptions
-                WithParams({ eventType: "ngOnDestroy" })(target, CommonMetadata.MANAGED_ONDESTROY_KEY);
+                WithParams({ eventType: AngularLifecycleType.OnDestroy })(target, CommonMetadata.MANAGED_ONDESTROY_KEY);
             }
 
             // If an eventType wasn't specified...

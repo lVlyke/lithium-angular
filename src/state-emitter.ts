@@ -5,6 +5,7 @@ import { take } from "rxjs/operators";
 import { ManagedBehaviorSubject } from "./managed-observable";
 import { EventSource } from "./event-source";
 import { AutoPush } from "./autopush";
+import { AngularLifecycleType } from "./lifecycle-event";
 
 export function StateEmitter(): PropertyDecorator;
 export function StateEmitter(...propertyDecorators: PropertyDecorator[]): PropertyDecorator;
@@ -52,8 +53,8 @@ export namespace StateEmitter {
 
         /** @PropertyDecorator */
         return function (target: any, propertyKey: string) {
-            // Ensure that we create a ngOnDestroy EventSource on the target for managing subscriptions
-            EventSource.WithParams({ eventType: "ngOnDestroy" })(target, CommonMetadata.MANAGED_ONDESTROY_KEY);
+            // Ensure that we create a OnDestroy EventSource on the target for managing subscriptions
+            EventSource({ eventType: AngularLifecycleType.OnDestroy })(target, CommonMetadata.MANAGED_ONDESTROY_KEY);
 
             // If a propertyName wasn't specified...
             if (!params.propertyName) {

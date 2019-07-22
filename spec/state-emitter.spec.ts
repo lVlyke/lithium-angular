@@ -1,8 +1,11 @@
 import { Spec, Template, Random, InputBuilder } from "detest-bdd";
 import { StateEmitter } from "../src/state-emitter";
-import { EmitterMetadata, AngularMetadata } from "../src/metadata";
+import { EmitterMetadata, AngularMetadata, CommonMetadata } from "../src/metadata";
 import { BehaviorSubject, Observable, Subject, of } from "rxjs";
 import { take, map, withLatestFrom, mergeMapTo, filter } from "rxjs/operators";
+import { ManagedBehaviorSubject } from "../src/managed-observable";
+import { EventMetadata } from "../src/metadata";
+import { AngularLifecycleType } from "../src/lifecycle-event";
 
 const spec = Spec.create<{
     targetPrototype: any;
@@ -23,6 +26,7 @@ describe("Given a StateEmitter decorator", () => {
     const STATIC_PROXY_PATH = "static.proxy.path$";
     const DYNAMIC_PROXY_PATH = "dynamic.proxy$.path";
 
+    // TODO - Separate these tests into smaller templates
     const ConstructionTemplateInput = InputBuilder
         .fragment<ConstructionTemplateInput>({ propertyKey: Random.string() })
         .fragment({ propertyKey: Random.string() + "$" }, input => !input.options || !input.options.propertyName)
@@ -36,6 +40,7 @@ describe("Given a StateEmitter decorator", () => {
             .fragmentList({ proxyMergeUpdates: [true, false] }, options => options.proxyPath === DYNAMIC_PROXY_PATH)
             .fragmentList({ readOnly: [undefined, true, false]})
             .fragment({ initialValue: Random.string() })
+            .fragmentList({ unmanaged: [true, false, undefined] })
         )
         .fragmentList({ angularPropMetadata: [undefined, [1, 2, 3]] });
 
@@ -186,6 +191,22 @@ describe("Given a StateEmitter decorator", () => {
                     expect(metadata).toEqual(jasmine.objectContaining(mergedOptions()));
                 });
 
+                if (options && options.unmanaged) {
+                    spec.it("should ensure an OnDestroy EventSource is NOT linked to the component's MANAGED_ONDESTROY_KEY property", (params) => {
+                        expect(EventMetadata.GetPropertySubjectMap(
+                            AngularLifecycleType.OnDestroy,
+                            params.targetClass
+                        ).has(CommonMetadata.MANAGED_ONDESTROY_KEY)).toBeFalsy();
+                    });
+                } else {
+                    spec.it("should ensure an OnDestroy EventSource is linked to the component's MANAGED_ONDESTROY_KEY property", (params) => {
+                        expect(EventMetadata.GetPropertySubjectMap(
+                            AngularLifecycleType.OnDestroy,
+                            params.targetClass
+                        ).has(CommonMetadata.MANAGED_ONDESTROY_KEY)).toBeTruthy();
+                    });
+                }
+
                 if (angularPropMetadata) {
                     describe("when there's Angular metadata for this property", () => {
 
@@ -272,7 +293,10 @@ describe("Given a StateEmitter decorator", () => {
                         expect(stateEmitterProperty.get).toEqual(jasmine.any(Function));
 
                         if (!options || !options.proxyMode || options.proxyMode === EmitterMetadata.ProxyMode.None) {
+                            let expectedClass = (options && options.unmanaged) ? BehaviorSubject : ManagedBehaviorSubject;
+
                             expect(params.targetInstance[propertyKey]).toEqual(metadata.observable);
+                            expect(params.targetInstance[propertyKey].constructor).toEqual(expectedClass);
                         }
                         else if (options.proxyMode === EmitterMetadata.ProxyMode.Alias) {
                             if (isStaticProxyPath) {
@@ -288,7 +312,9 @@ describe("Given a StateEmitter decorator", () => {
                         }
                         else if (options.proxyMode === EmitterMetadata.ProxyMode.From) {
                             if (isStaticProxyPath) {
+                                let expectedClass = (options && options.unmanaged) ? BehaviorSubject : ManagedBehaviorSubject;
                                 expect(params.targetInstance[propertyKey]).not.toBe(params.targetInstance.static.proxy.path$);
+                                expect(params.targetInstance[propertyKey].constructor).toEqual(expectedClass);
 
                                 let firstEmission: string;
 
@@ -318,7 +344,9 @@ describe("Given a StateEmitter decorator", () => {
                         }
                         else if (options.proxyMode === EmitterMetadata.ProxyMode.Merge) {
                             if (isStaticProxyPath) {
+                                let expectedClass = (options && options.unmanaged) ? BehaviorSubject : ManagedBehaviorSubject;
                                 expect(params.targetInstance[propertyKey]).not.toBe(params.targetInstance.static.proxy.path$);
+                                expect(params.targetInstance[propertyKey].constructor).toEqual(expectedClass);
 
                                 let nextEmission: string;
 

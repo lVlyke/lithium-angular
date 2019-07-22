@@ -5,7 +5,7 @@ export type Constructor<T> = new (...args: any[]) => T;
 export type GenericConstructor<BaseT> = new<T extends BaseT> (...args: any[]) => T;
 export type BaseObservable = Observable<{}>;
 
-// TODO fix generics when TypeScript 2.6 regression is fixed: https://github.com/Microsoft/TypeScript/issues/24122
+// TODO fix generics when TypeScript mixin issue is fixed: https://github.com/Microsoft/TypeScript/issues/24122
 export function ManagedObservableWrapper/*<T, BaseObservable extends Observable<T>>*/($class: Constructor<BaseObservable>): GenericConstructor<BaseObservable> {
 
     class _Managed extends $class {

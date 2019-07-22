@@ -1,8 +1,10 @@
 import { EventSource } from "../src/event-source";
 import { Spec, Random, Template, InputBuilder } from "detest-bdd";
-import { EventMetadata, AngularMetadata } from "../src/metadata";
+import { EventMetadata, AngularMetadata, CommonMetadata } from "../src/metadata";
 import { Subject, Observable } from 'rxjs';
 import { map, take, shareReplay } from "rxjs/operators";
+import { AngularLifecycleType } from "../src/lifecycle-event";
+import { ManagedSubject } from "../src/managed-observable";
 
 const spec = Spec.create<{
     targetPrototype: any;
@@ -24,6 +26,7 @@ describe("An EventSource decorator", () => {
     const ConstructionTemplateInput = InputBuilder
         .fragment<ConstructionTemplateInput>({ propertyKey: Random.string() })
         .fragment({ propertyKey: Random.string() + "$" }, input => !input.options || !input.options.eventType)
+        .fragment({ propertyKey: CommonMetadata.MANAGED_ONDESTROY_KEY })
         .fragmentList({ methodDecorators: [undefined, [jasmine.createSpy("methodDecorator")]] })
         .fragment({ options: undefined })
         .fragmentBuilder<EventSource.DecoratorOptions>("options", InputBuilder
@@ -139,6 +142,22 @@ describe("An EventSource decorator", () => {
                     createEventSource()(params.targetPrototype, propertyKey);
                 }));
 
+                if (propertyKey === CommonMetadata.MANAGED_ONDESTROY_KEY || (options && options.unmanaged)) {
+                    spec.it("should ensure an OnDestroy EventSource is NOT linked to the component's MANAGED_ONDESTROY_KEY property", (params) => {
+                        expect(EventMetadata.GetPropertySubjectMap(
+                            AngularLifecycleType.OnDestroy,
+                            params.targetClass
+                        ).has(CommonMetadata.MANAGED_ONDESTROY_KEY)).toBeFalsy();
+                    });
+                } else {
+                    spec.it("should ensure an OnDestroy EventSource is linked to the component's MANAGED_ONDESTROY_KEY property", (params) => {
+                        expect(EventMetadata.GetPropertySubjectMap(
+                            AngularLifecycleType.OnDestroy,
+                            params.targetClass
+                        ).has(CommonMetadata.MANAGED_ONDESTROY_KEY)).toBeTruthy();
+                    });
+                }
+
                 if (methodDecorators.length > 0) {
                     describe("when there are method decorators", () => {
 
@@ -190,7 +209,16 @@ describe("An EventSource decorator", () => {
                     });
 
                     spec.it("should create the expected propertyKey Observable on the instance", (params) => {
-                        expect(params.targetInstance[propertyKey]).toEqual(jasmine.any(Observable));
+                        let expectedClass;
+                        if (propertyKey === CommonMetadata.MANAGED_ONDESTROY_KEY) {
+                            expectedClass = Subject;
+                        } else if (options && options.unmanaged) {
+                            expectedClass = Subject;
+                        } else {
+                            expectedClass = ManagedSubject;
+                        }
+
+                        expect(params.targetInstance[propertyKey]).toEqual(jasmine.any(expectedClass));
                     });
 
                     spec.it("should set the expected metadata for the instance", (params) => {

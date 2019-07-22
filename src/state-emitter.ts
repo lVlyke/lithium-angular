@@ -53,9 +53,6 @@ export namespace StateEmitter {
 
         /** @PropertyDecorator */
         return function (target: any, propertyKey: string) {
-            // Ensure that we create a OnDestroy EventSource on the target for managing subscriptions
-            EventSource({ eventType: AngularLifecycleType.OnDestroy })(target, CommonMetadata.MANAGED_ONDESTROY_KEY);
-
             // If a propertyName wasn't specified...
             if (!params.propertyName) {
                 // Try to deduce the propertyName from the propertyKey
@@ -81,6 +78,11 @@ export namespace StateEmitter {
             // Point any Angular metadata attached to the StateEmitter to the underlying facade property
             if (AngularMetadata.hasPropMetadataEntry(target.constructor, propertyKey)) {
                 AngularMetadata.renamePropMetadataEntry(target.constructor, propertyKey, params.propertyName);
+            }
+
+            if (!params.unmanaged) {
+                // Ensure that we create a OnDestroy EventSource on the target for managing subscriptions
+                EventSource({ eventType: AngularLifecycleType.OnDestroy })(target, CommonMetadata.MANAGED_ONDESTROY_KEY);
             }
         };
     }

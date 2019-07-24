@@ -1,5 +1,5 @@
-import { Subscription, Observable, Subject, BehaviorSubject, Subscriber, TeardownLogic } from "rxjs";
-import { CommonMetadata } from "./metadata";
+import { Subscription, Observable, Subject, BehaviorSubject, Subscriber, TeardownLogic, empty } from "rxjs";
+import { CommonMetadata, Metadata } from "./metadata";
 
 export type Constructor<T> = new (...args: any[]) => T;
 export type GenericConstructor<BaseT> = new<T extends BaseT> (...args: any[]) => T;
@@ -12,24 +12,32 @@ export function ManagedObservableWrapper/*<T, BaseObservable extends Observable<
 
         private subscriptions: Subscription[] = [];
 
-        constructor(componentInstance: any, ...args: any[]) {
+        constructor(private readonly componentInstance: any, ...args: any[]) {
             super(...args);
 
             // Automatically handle unsubscribing on component's ngOnDestroy event
             this.subscriptions.push(componentInstance[CommonMetadata.MANAGED_ONDESTROY_KEY].subscribe(() => {
+                // Mark the component instance as destroyed
+                Metadata.SetMetadata(CommonMetadata.MANAGED_INSTANCE_DESTROYED_KEY, this.componentInstance, true);
+
                 this.subscriptions
                     .filter(subscription => !subscription.closed)
                     .forEach(subscription => subscription.unsubscribe());
+
+                this.subscriptions = [];
             }));
         }
 
         public subscribe(...args: any[]): Subscription {
-            const subscription = super.subscribe(...args);
-    
-            // Manage new subscription
-            this.subscriptions.push(subscription);
-    
-            return subscription;
+            if (!CommonMetadata.instanceIsDestroyed(this.componentInstance)) {
+                const subscription = super.subscribe(...args);
+
+                // Manage new subscription
+                this.subscriptions.push(subscription);
+                return subscription;
+            } else {
+                return empty().subscribe();
+            }
         }
     };
 

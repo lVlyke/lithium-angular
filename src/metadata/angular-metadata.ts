@@ -1,10 +1,20 @@
 export namespace AngularMetadata {
 
+    export const ANNOTATIONS = "__annotations__";
+    export const PARAMETERS = "__parameters__";
     export const PROP_METADATA = "__prop__metadata__";
+
+    export function getAnnotationsMetadata(constructor: any): any[] {
+        return getMetadata(constructor, ANNOTATIONS);
+    }
 
     export function getMetadata<T>(constructor: any, propertyKey: string): T {
         let metadata = Object.getOwnPropertyDescriptor(constructor, propertyKey);
         return metadata ? metadata.value : undefined;
+    }
+
+    export function getParametersMetadata(constructor: any): any[] {
+        return getMetadata(constructor, PARAMETERS);
     }
 
     export function getPropMetadata(constructor: any): { [propName: string]: any[] } {

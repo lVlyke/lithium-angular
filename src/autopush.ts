@@ -1,5 +1,5 @@
 import { ChangeDetectorRef } from "@angular/core";
-import { Metadata } from "./metadata";
+import { Metadata, AngularMetadata } from "./metadata";
 import { Constructor } from "./managed-observable";
 
 const DI_METADATA = "design:paramtypes";
@@ -14,7 +14,7 @@ export function AutoPush(): ClassDecorator {
         // Create the wrapper class to inject the ChangeDetector
         const wrapper = AutoPush.createInjectorWrapper<T>(constructor);
 
-        // Copy the DI metadata from the original class, augmented with the Change Detector, to the wrapper class
+        // Copy the DI metadata from the original class, augmented with the Change Detector, to the wrapper class (JIT only)
         Metadata.SetMetadata(
             DI_METADATA,
             wrapper,
@@ -33,7 +33,8 @@ export namespace AutoPush {
     type ChangeDetectorLike = Pick<ChangeDetectorRef, "detectChanges">;
 
     export function createInjectorWrapper<T extends Constructor<any>>(constructor: T): T {
-        return class extends constructor {
+        // Create the wrapper class
+        const result = class extends constructor {
 
             constructor(...args: any[]) {
                 // Invoke the target class' constructor
@@ -52,7 +53,11 @@ export namespace AutoPush {
                     }
                 }
             }
-        }
+        };
+
+        // Ensure all metadata is preserved from the original class
+        copyMetadata(result, constructor);
+        return result;
     }
 
     export function changeDetector(component: any): ChangeDetectorLike {
@@ -75,5 +80,32 @@ export namespace AutoPush {
 
     function isChangeDetectorLike(object: any): object is ChangeDetectorLike {
         return object && typeof object.detectChanges === "function";
+    }
+
+    function copyAngularMetadata(dest: any, src: any) {
+        // Copy all metadata used by Angular to the new constructor
+        let annotationsMetadata = AngularMetadata.getAnnotationsMetadata(src);
+        let parametersMetadata = AngularMetadata.getParametersMetadata(src);
+        let propMetadata = AngularMetadata.getPropMetadata(src);
+
+        if (annotationsMetadata) {
+            Object.defineProperty(dest, AngularMetadata.ANNOTATIONS, { value: annotationsMetadata });
+        }
+        if (parametersMetadata) {
+            Object.defineProperty(dest, AngularMetadata.PARAMETERS, { value: parametersMetadata });
+        }
+        if (propMetadata) {
+            Object.defineProperty(dest, AngularMetadata.PROP_METADATA, { value: propMetadata });
+        }
+    }
+
+    function copyClassMetadata(dest: any, src: any) {
+        // Copy all existing metadata from the target class constructor to the new constructor
+        Metadata.GetAllMetadata(src).forEach((value, key) => Metadata.SetMetadata(key, dest, value));
+    }
+
+    function copyMetadata(dest: any, src: any) {
+        copyAngularMetadata(dest, src);
+        copyClassMetadata(dest, src);
     }
 }

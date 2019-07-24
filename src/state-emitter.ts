@@ -1,7 +1,7 @@
-import { Observable, BehaviorSubject } from "rxjs";
+import { Observable, BehaviorSubject, Subscription } from "rxjs";
 import { EmitterMetadata, EmitterType, AngularMetadata, Metadata, CommonMetadata } from "./metadata";
 import { ObservableUtil } from "./observable-util";
-import { take } from "rxjs/operators";
+import { take, tap, filter } from "rxjs/operators";
 import { ManagedBehaviorSubject } from "./managed-observable";
 import { EventSource } from "./event-source";
 import { AutoPush } from "./autopush";
@@ -53,6 +53,11 @@ export namespace StateEmitter {
 
         /** @PropertyDecorator */
         return function (target: any, propertyKey: string) {
+            if (!params.unmanaged) {
+                // Ensure that we create a OnDestroy EventSource on the target for managing subscriptions
+                EventSource({ eventType: AngularLifecycleType.OnDestroy })(target, CommonMetadata.MANAGED_ONDESTROY_KEY);
+            }
+
             // If a propertyName wasn't specified...
             if (!params.propertyName) {
                 // Try to deduce the propertyName from the propertyKey
@@ -78,11 +83,6 @@ export namespace StateEmitter {
             // Point any Angular metadata attached to the StateEmitter to the underlying facade property
             if (AngularMetadata.hasPropMetadataEntry(target.constructor, propertyKey)) {
                 AngularMetadata.renamePropMetadataEntry(target.constructor, propertyKey, params.propertyName);
-            }
-
-            if (!params.unmanaged) {
-                // Ensure that we create a OnDestroy EventSource on the target for managing subscriptions
-                EventSource({ eventType: AngularLifecycleType.OnDestroy })(target, CommonMetadata.MANAGED_ONDESTROY_KEY);
             }
         };
     }
@@ -169,9 +169,9 @@ export namespace StateEmitter {
                 }
                 else {
                     try {
-                        // If value merging wasn't explicitly enabled or disabled then only enable it if the incoming value is an Object
+                        // If value merging wasn't explicitly enabled or disabled then only enable it if the incoming value is an object
                         let mergeUpdates = subjectInfo.proxyMergeUpdates;
-                        mergeUpdates = (mergeUpdates !== null && mergeUpdates !== undefined) ? mergeUpdates : value instanceof Object;
+                        mergeUpdates = (mergeUpdates !== null && mergeUpdates !== undefined) ? mergeUpdates : typeof value === "object";
 
                         // Update the dynamic proxy value
                         ObservableUtil.UpdateDynamicPropertyPathValue(this, subjectInfo.proxyPath, value, mergeUpdates);
@@ -181,29 +181,42 @@ export namespace StateEmitter {
                     }
                 }
 
-                // Notify the component of changes if AutoPush is enabled
-                AutoPush.tryDetectChanges(this);
+                // Let the getter caching mechanism detect changes for us
             };
         }
 
         export function CreateGetter(type: EmitterType, initialValue?: any): () => any {
             let lastValue: any = initialValue;
-            let subscription: any;
+            let subscription: Subscription;
+            let lastObservable: Observable<any>;
 
             return function (): any {
-                // Create a subscription to changes in the subject
-                if (!subscription) {
-                    subscription = true;
+                let subjectInfo = EmitterMetadata.GetMetadataMap(this).get(type);
+                let curObservable = subjectInfo.observable;
+
+                // If the resolved observable has changed since last time the getter was called (or this is the first getter call)...
+                if (lastObservable !== curObservable) {
+
+                    // Remove the previos subscription
+                    if (subscription) {
+                        subscription.unsubscribe();
+                    }
 
                     // When a new value is emitted from the StateEmitter...
-                    let subjectInfo: EmitterMetadata.SubjectInfo = EmitterMetadata.GetMetadataMap(this).get(type);
-                    subscription = subjectInfo.observable.subscribe((value: any) => {
+                    subscription = curObservable.pipe(
+                        // Look for unique changes
+                        filter(value => value !== lastValue),
                         // Update the cached value
-                        lastValue = value;
-
-                        // Notify the component of changes if AutoPush is enabled
-                        AutoPush.tryDetectChanges(this);
+                        tap((value: any) => lastValue = value)
+                    ).subscribe(() => {
+                        // If the getter wasn't just called (in case of a Behavior/Replay subject)...
+                        if (lastObservable === curObservable && !CommonMetadata.instanceIsDestroyed(this)) {
+                            // Notify the component of changes if AutoPush is enabled
+                            AutoPush.tryDetectChanges(this);
+                        }
                     });
+
+                    lastObservable = curObservable;
                 }
 
                 // Return the last value that was emitted

@@ -34,6 +34,11 @@ export namespace EventSource {
 
         /** @PropertyDecorator */
         return function(target: any, propertyKey: string) {
+            if (propertyKey !== CommonMetadata.MANAGED_ONDESTROY_KEY && !options.unmanaged) {
+                // Ensure that we create a ngOnDestroy EventSource on the target for managing subscriptions
+                WithParams({ eventType: AngularLifecycleType.OnDestroy })(target, CommonMetadata.MANAGED_ONDESTROY_KEY);
+            }
+            
             // If an eventType wasn't specified...
             if (!options.eventType) {
                 // Try to deduce the eventType from the propertyKey
@@ -54,11 +59,6 @@ export namespace EventSource {
             // Point any Angular metadata attached to the EventSource to the underlying facade method
             if (AngularMetadata.hasPropMetadataEntry(target.constructor, propertyKey)) {
                 AngularMetadata.renamePropMetadataEntry(target.constructor, propertyKey, options.eventType);
-            }
-
-            if (propertyKey !== CommonMetadata.MANAGED_ONDESTROY_KEY && !options.unmanaged) {
-                // Ensure that we create a ngOnDestroy EventSource on the target for managing subscriptions
-                WithParams({ eventType: AngularLifecycleType.OnDestroy })(target, CommonMetadata.MANAGED_ONDESTROY_KEY);
             }
         };
     }

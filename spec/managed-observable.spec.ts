@@ -11,6 +11,8 @@ const spec = Spec.create<{
     component: ComponentFixture;
     observable: ManagedObservable<void>;
     subscriptions: Subscription[];
+    called: Function;
+    neverCalled: Function;
 }>();
 
 describe("Given a ManagedObservableWrapper mixin", () => {
@@ -30,9 +32,21 @@ describe("Given a ManagedObservableWrapper mixin", () => {
             describe("when there are subscribers to it", () => {
 
                 spec.beforeEach((params) => {
+                    params.called = jasmine.createSpy("called");
+
                     for (let i = 0; i < 30; ++i) {
-                        params.subscriptions.push(params.observable.subscribe());
+                        params.subscriptions.push(params.observable.subscribe(params.called as any));
                     }
+                });
+
+                if (ManagedWrapper === ManagedBehaviorSubject) { // TODO
+                    spec.it("should invoke the onNext callback",  (params) => {
+                        expect(params.called).toHaveBeenCalledTimes(30);
+                    });
+                }
+
+                spec.it("should not mark the component as destroyed", (params) => {
+                    expect(CommonMetadata.instanceIsDestroyed(params.component)).toBeFalsy();
                 });
 
                 spec.it("should not unsubscribe any subscribers", (params) => {
@@ -47,10 +61,28 @@ describe("Given a ManagedObservableWrapper mixin", () => {
                         params.component[CommonMetadata.MANAGED_ONDESTROY_KEY].next();
                     });
 
+                    spec.it("should mark the component as destroyed", (params) => {
+                        expect(CommonMetadata.instanceIsDestroyed(params.component)).toBeTruthy();
+                    });
+
                     spec.it("should unsubscribe all subscribers", (params) => {
                         params.subscriptions.forEach(subscription => {
                             expect(subscription.closed).toBeTruthy();
                         });
+                    });
+
+                    describe("when there are new subscriptions", () => {
+
+                        spec.beforeEach((params) => {
+                            params.neverCalled = jasmine.createSpy("neverCalled");
+                            params.observable.subscribe(params.neverCalled as any);
+                        });
+
+                        if (ManagedWrapper === ManagedBehaviorSubject) { // TODO
+                            spec.it("should not invoke the onNext callback",  (params) => {
+                                expect(params.neverCalled).not.toHaveBeenCalled();
+                            });
+                        }
                     });
                 });
             });

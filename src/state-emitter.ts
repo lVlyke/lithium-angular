@@ -354,7 +354,7 @@ export namespace StateEmitter {
 
         if (target[type]) {
             // Make sure the target class doesn't have a custom property already defined for this event type
-            throw new Error(`@StateEmitter metadata creation failed. Class already has a custom ${type} property.`);
+            throw new Error(`@StateEmitter metadata creation failed. Class already has a custom '${type}' property.`);
         }
 
         // Add the propertyKey to the class' metadata

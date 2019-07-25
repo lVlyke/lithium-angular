@@ -9,16 +9,21 @@ export function AutoPush(): ClassDecorator {
 
     return function<T extends Constructor<any>>(constructor: T): T {
         // Get the dependency metadata for this component
-        const diParams: any[] = Metadata.GetOwnMetadata(DI_METADATA, constructor, []);
+        let diParams: any[] = Metadata.GetOwnMetadata(DI_METADATA, constructor, []);
 
         // Create the wrapper class to inject the ChangeDetector
         const wrapper = AutoPush.createInjectorWrapper<T>(constructor);
+
+        // If there is no Change Detector being injected, augment the class with the Change Detector DI (JIT only)
+        if (!diParams.some(type => type === ChangeDetectorRef)) {
+            diParams = diParams.concat([ChangeDetectorRef]);
+        }
 
         // Copy the DI metadata from the original class, augmented with the Change Detector, to the wrapper class (JIT only)
         Metadata.SetMetadata(
             DI_METADATA,
             wrapper,
-            diParams.concat([ChangeDetectorRef])
+            diParams
         );
 
         // Return the new wrapper class with the same name as the given class
@@ -78,7 +83,7 @@ export namespace AutoPush {
         }
     }
 
-    function isChangeDetectorLike(object: any): object is ChangeDetectorLike {
+    export function isChangeDetectorLike(object: any): object is ChangeDetectorLike {
         return object && typeof object.detectChanges === "function";
     }
 

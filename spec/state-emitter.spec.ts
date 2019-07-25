@@ -6,18 +6,24 @@ import { take, map, withLatestFrom, mergeMapTo, filter } from "rxjs/operators";
 import { ManagedBehaviorSubject } from "../src/managed-observable";
 import { EventMetadata } from "../src/metadata";
 import { AngularLifecycleType } from "../src/lifecycle-event";
+import { ChangeDetectorRef } from "@angular/core";
+import { AutoPush } from "../src/autopush";
+
+type ChangeDetectorLike = Pick<ChangeDetectorRef, "detectChanges">;
 
 const spec = Spec.create<{
     targetPrototype: any;
     targetClass: any;
     targetInstance: any;
     setterValue: string;
+    cdRef: ChangeDetectorLike;
 }>();
 
 describe("Given a StateEmitter decorator", () => {
 
     type ConstructionTemplateInput = {
         propertyKey: string;
+        autopush: boolean;
         options?: StateEmitter.DecoratorParams;
         propertyDecorators?: PropertyDecorator[];
         angularPropMetadata?: any[];
@@ -42,12 +48,22 @@ describe("Given a StateEmitter decorator", () => {
             .fragment({ initialValue: Random.string() })
             .fragmentList({ unmanaged: [true, false, undefined] })
         )
-        .fragmentList({ angularPropMetadata: [undefined, [1, 2, 3]] });
+        .fragmentList({ angularPropMetadata: [undefined, [1, 2, 3]] })
+        .fragment({ autopush: false })
+        // TODO - Loosen test restrictions:
+        .fragment({ autopush: true }, input => !input.options || !input.options.proxyMode || input.options.proxyMode === EmitterMetadata.ProxyMode.None);
 
-    const ConstructionTemplateKeys: (keyof ConstructionTemplateInput)[] = ["propertyKey", "options", "propertyDecorators", "angularPropMetadata"];    
+    const ConstructionTemplateKeys: (keyof ConstructionTemplateInput)[] = [
+        "propertyKey",
+        "autopush",
+        "options",
+        "propertyDecorators",
+        "angularPropMetadata"
+    ];    
 
     describe("when constructed", Template(ConstructionTemplateKeys, ConstructionTemplateInput, (
         propertyKey: string,
+        autopush: boolean,
         options?: StateEmitter.DecoratorParams,
         propertyDecorators?: PropertyDecorator[],
         angularPropMetadata?: any[]
@@ -125,6 +141,10 @@ describe("Given a StateEmitter decorator", () => {
         spec.beforeEach((params) => {
             spyOn(StateEmitter, "WithParams").and.callThrough();
 
+            params.cdRef = jasmine.createSpyObj("ChangeDetectorRef", {
+                detectChanges: function () {}
+            });
+
             // Make sure a fresh class is created each time
             params.targetClass = class TestTargetClass {
                 public readonly static = {
@@ -136,7 +156,14 @@ describe("Given a StateEmitter decorator", () => {
                 public readonly dynamic = {
                     proxy$: new BehaviorSubject({ path: Random.string() })
                 };
+
+                constructor() {
+                    if (autopush) {
+                        AutoPush.enable(this, params.cdRef);
+                    }
+                }
             };
+            
             params.targetPrototype = params.targetClass.prototype;
 
             if (angularPropMetadata) {
@@ -375,6 +402,79 @@ describe("Given a StateEmitter decorator", () => {
                             }
                         }
                     });
+
+                    if (autopush) {
+                        describe("if the component is using AutoPush", () => {
+
+                            describe("if the component is destroyed", () => {
+
+                                spec.beforeEach((params) => {
+                                    params.targetInstance[CommonMetadata.MANAGED_ONDESTROY_KEY].next();
+                                });
+
+                                describe("when a new value is emitted from the StateEmitter", () => {
+
+                                    spec.beforeEach((params) => {
+                                        params.targetInstance[propertyKey].next(42);
+                                    });
+
+                                    spec.it("should NOT invoke change detection on the component", (params) => {
+                                        expect(params.cdRef.detectChanges).not.toHaveBeenCalled();
+                                    });
+                                });
+                            });
+
+                            describe("if the component is NOT destroyed", () => {
+
+                                describe("if the component has already been read in the template", () => {
+
+                                    spec.beforeEach((params) => {
+                                        params.targetInstance[propertyName];
+                                    });
+
+                                    describe("when a new value is emitted from the StateEmitter", () => {
+
+                                        spec.beforeEach((params) => {
+                                            params.targetInstance[propertyKey].next(42);
+                                        });
+
+                                        spec.it("should invoke change detection on the component", (params) => {
+                                            expect(params.cdRef.detectChanges).toHaveBeenCalled();
+                                        });
+                                    });
+
+                                    describe("when a new value is updated via the facade setter", () => {
+
+                                        spec.beforeEach((params) => {
+                                            params.targetInstance[propertyName] = 42;
+                                        });
+
+                                        spec.it("should invoke change detection on the component", (params) => {
+                                            expect(params.cdRef.detectChanges).toHaveBeenCalled();
+                                        });
+                                    });
+                                });
+
+                                describe("if the component has NOT yet been read in the template", () => {
+
+                                    spec.beforeEach((params) => {
+                                        params.targetInstance[propertyKey].next(42);
+                                    });
+
+                                    describe("when a new value is emitted from the StateEmitter", () => {
+
+                                        spec.beforeEach((params) => {
+                                            params.targetInstance[propertyKey].next(42);
+                                        });
+
+                                        spec.it("should NOT invoke change detection on the component", (params) => {
+                                            expect(params.cdRef.detectChanges).not.toHaveBeenCalled();
+                                        });
+                                    });
+                                });
+                            });
+                        });
+                    }
                 });
             });
         }

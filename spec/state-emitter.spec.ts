@@ -465,36 +465,75 @@ describe("Given a StateEmitter decorator", () => {
 
                         describe("if the component is NOT destroyed", () => {
 
-                            describe("if the component has already been read in the template", () => {
-
-                                spec.beforeEach((params) => {
-                                    params.targetInstance[propertyName];
-                                });
-
-                                describe("when a new value is emitted from the StateEmitter", () => {
-
-                                    spec.beforeEach((params) => {
-                                        params.targetInstance[propertyKey].next(42);
-                                    });
-
-                                    spec.it("should invoke change detection on the component", (params) => {
-                                        expect(params.cdRef.detectChanges).toHaveBeenCalled();
-                                    });
-                                });
-
-                                if (!options || !options.readOnly) {
-                                    describe("when a new value is updated via the facade setter", () => {
+                            if (!options || !options.writeOnly) {
+                                describe("if the StateEmitter is NOT writeOnly", () => {
+                                    
+                                    describe("if the component has already been read in the template", () => {
 
                                         spec.beforeEach((params) => {
-                                            params.targetInstance[propertyName] = 42;
+                                            params.targetInstance[propertyName];
                                         });
 
-                                        spec.it("should invoke change detection on the component", (params) => {
-                                            expect(params.cdRef.detectChanges).toHaveBeenCalled();
+                                        describe("when a new value is emitted from the StateEmitter", () => {
+
+                                            spec.beforeEach((params) => {
+                                                params.targetInstance[propertyKey].next(42);
+                                            });
+
+                                            spec.it("should invoke change detection on the component", (params) => {
+                                                expect(params.cdRef.detectChanges).toHaveBeenCalled();
+                                            });
                                         });
+
+                                        if (!options || !options.readOnly) {
+                                            describe("when a new value is updated via the facade setter", () => {
+
+                                                spec.beforeEach((params) => {
+                                                    params.targetInstance[propertyName] = 42;
+                                                });
+
+                                                spec.it("should invoke change detection on the component", (params) => {
+                                                    expect(params.cdRef.detectChanges).toHaveBeenCalled();
+                                                });
+                                            });
+                                        }
                                     });
-                                }
-                            });
+                                });
+                            } else {
+                                describe("if the StateEmitter is writeOnly", () => {
+
+                                    describe("if the component has already been read in the template", () => {
+
+                                        spec.beforeEach((params) => {
+                                            params.targetInstance[propertyName];
+                                        });
+
+                                        describe("when a new value is emitted from the StateEmitter", () => {
+
+                                            spec.beforeEach((params) => {
+                                                params.targetInstance[propertyKey].next(42);
+                                            });
+
+                                            spec.it("should invoke change detection on the component", (params) => {
+                                                expect(params.cdRef.detectChanges).toHaveBeenCalled();
+                                            });
+                                        });
+
+                                        if (!options || !options.readOnly) {
+                                            describe("when a new value is updated via the facade setter", () => {
+
+                                                spec.beforeEach((params) => {
+                                                    params.targetInstance[propertyName] = 42;
+                                                });
+
+                                                spec.it("should NOT invoke change detection on the component", (params) => {
+                                                    expect(params.cdRef.detectChanges).not.toHaveBeenCalled();
+                                                });
+                                            });
+                                        }
+                                    });
+                                });
+                            }
 
                             describe("if the component has NOT yet been read in the template", () => {
 

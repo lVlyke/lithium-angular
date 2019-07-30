@@ -183,11 +183,7 @@ export namespace StateEmitter {
                     }
                 }
 
-                // Let the getter caching mechanism detect changes for us,
-                // unless the StateEmitter is writeOnly and has no getter
-                if (subjectInfo.writeOnly && !CommonMetadata.instanceIsDestroyed(this)) {
-                    AutoPush.tryDetectChanges(this);
-                }
+                // Let the getter caching mechanism detect changes for us
             };
         }
 

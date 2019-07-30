@@ -774,6 +774,7 @@ describe("Given a StateEmitter decorator", () => {
             .fragmentList({ propertyName: [undefined, Random.string()] })
             .fragmentList({ mergeUpdates: [undefined, true, false] })
             .fragmentList({ readOnly: [undefined, true, false] })
+            .fragmentList({ writeOnly: [undefined, true, false] })
             .fragmentList({ unmanaged: [true, false, undefined]})
         )
         .fragmentList({ propertyDecorators: [undefined, [jasmine.createSpy("propertyDecorator")]] });
@@ -804,6 +805,7 @@ describe("Given a StateEmitter decorator", () => {
                     proxyPath: params.path,
                     proxyMergeUpdates: params.mergeUpdates,
                     readOnly: params.readOnly,
+                    writeOnly: params.writeOnly,
                     unmanaged: params.unmanaged
                 }, ...propertyDecorators);
             });
@@ -824,6 +826,7 @@ describe("Given a StateEmitter decorator", () => {
         .fragmentBuilder("options", InputBuilder
             .fragmentList<StateEmitter.SelfProxyDecoratorParams>({ propertyName: [undefined, Random.string()] })
             .fragmentList({ readOnly: [undefined, true, false] })
+            .fragmentList({ writeOnly: [undefined, true, false] })
             .fragmentList({ unmanaged: [true, false, undefined]})
         )
         .fragmentList({ propertyDecorators: [undefined, [jasmine.createSpy("propertyDecorator")]] });

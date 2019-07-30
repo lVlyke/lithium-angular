@@ -105,6 +105,7 @@ export namespace StateEmitter {
             proxyPath: $params.path,
             proxyMergeUpdates: $params.mergeUpdates,
             readOnly: $params.readOnly,
+            writeOnly: $params.writeOnly,
             unmanaged: $params.unmanaged
         }, ...propertyDecorators);
     }
@@ -119,6 +120,7 @@ export namespace StateEmitter {
             proxyPath: $params.path,
             proxyMergeUpdates: $params.mergeUpdates,
             readOnly: $params.readOnly,
+            writeOnly: $params.writeOnly,
             unmanaged: $params.unmanaged
         }, ...propertyDecorators);
     }
@@ -133,6 +135,7 @@ export namespace StateEmitter {
             proxyPath: $params.path,
             proxyMergeUpdates: $params.mergeUpdates,
             readOnly: $params.readOnly,
+            writeOnly: $params.writeOnly,
             unmanaged: $params.unmanaged
         }, ...propertyDecorators);
     }

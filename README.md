@@ -4,17 +4,39 @@
 
 [![Build Status](https://travis-ci.org/lVlyke/lithium-angular.svg?branch=master)](https://travis-ci.org/lVlyke/lithium-angular) [![Coverage](./coverage/coverage.svg)](./coverage/coverage.svg)
 
-A decorator-based library for Angular that enables seamless reactive data binding using RxJS.
+A decorator-based library for Angular that enables seamless reactive data binding using RxJS. It's like ```async``` but even better!
 
+* [Introduction](#introduction)
 * [Installation](#installation)
 * [Quick Intro Guide](#quick-intro-guide)
 * [Angular AoT Compiler](#angular-aot-compiler)
 * [API](#api)
 * [Other Information](#other-information)
 
-## [Example app](https://github.com/lVlyke/lithium-angular-example-app)
+## [Example app](https://github.com/lVlyke/lithium-angular-example-app) - [[Live demo]](https://lvlyke.github.io/lithium-angular-example-app)
 
-### [[Live demo]](https://lvlyke.github.io/lithium-angular-example-app)
+## Introduction
+
+Lithium is a decorator-based library for modern Angular applications that make use of reactive programming through RxJS. Lithium enables one-way and two-way binding of Observables and Subjects and allows them to be used like regular variables inside templates. OnPush change detection is easy to use with Lithium and makes writing more performant components trivial. Lithium is like ```async``` but better:
+
+### Lithium vs ```async```
+
+Angular has a built-in [async pipe](https://angular.io/api/common/AsyncPipe) that offers many similar features to Lithium. Lithium includes all of the benefits of ```async``` with additional features:
+
+* **No syntax overhead** - Lithium allows you to treat reactive variables just like normal variables inside templates. There's no pipes to use, and things like nested properties can be accessed easily without [ugly workarounds](https://coryrylan.com/blog/angular-async-data-binding-with-ng-if-and-ng-else).
+* **Reactive two-way binding support** - Lithium natively supports [two-way binding](https://angular.io/guide/template-syntax#two-way-binding---) of Subjects using ```[(ngModel)]``` and by direct template assignments (i.e. ```(click)="foo = 'bar'"```).
+* **Reactive event binding support** - Unlike ```async```, Lithium supports reactive [event binding](https://angular.io/guide/template-syntax#event-binding). Click events, [lifecycle events](#lifecycle-event-decorators), and more are Observables that can be subscribed to, instead of invoked as callback functions.
+* **Works with Angular component decorators (```@Input```, ```@Output```, ```@HostListener``` and more)** - Lithium can be used to make reactive component inputs as Subjects and respond to host events through subscriptions to Observables with no syntax overhead.
+* **Useful for directives** - Lithium's [AutoPush functionality](#autopush) can be used with directives for easily writing OnPush-friendly directives.
+
+Like ```async```, Lithium also has the following benefits:
+
+* **Automatic subscription management** - Lithium will automatically end subscriptions when components are destroyed.
+* **Simplified OnPush change detection** - Using AutoPush, Lithium makes writing [OnPush](https://angular.io/api/core/ChangeDetectionStrategy)-capable components trivial.
+* **Full AoT compiler support** - Lithium supports AoT compilation. See [here](#angular-aot-compiler) for more info.
+* **Can be used with other reactive libraries** - Lithium has full support for other decorator-based libraries like [NGXS](https://github.com/ngxs/store).
+
+Read through the [intro guide](#quick-intro-guide) to get to know Lithium's core features and view the [example app](https://github.com/lVlyke/lithium-angular-example-app) to see more advanced use cases. Full [API](#api) documentation is also available.
 
 ## Installation
 
@@ -30,6 +52,7 @@ npm install @lithiumjs/angular
 * [StateEmitter](#stateemitter)
 * [Proxied StateEmitters](#proxied-stateemitters)
 * [Lifecycle Event Decorators](#lifecycle-event-decorators)
+* [AutoPush (Automatic OnPush detection)](#autopush)
 
 (For more information, see the full [**API reference**](#api))
 
@@ -51,7 +74,8 @@ npm install @lithiumjs/angular
 @Component({...})
 class Component {
 
-    @EventSource() private onButtonPress$: Observable<any>;
+    @EventSource()
+    private readonly onButtonPress$: Observable<any>;
 
     constructor () {
         this.onButtonPress$.subscribe(() =>  console.log("The button was pressed."));
@@ -76,7 +100,8 @@ Method decorators may be passed to ```EventSource``` and will be forwarded to th
 class Component {
 
     // Given "Throttle" is a method decorator factory:
-    @EventSource(Throttle(1000)) private onButtonPress$: Observable<any>;
+    @EventSource(Throttle(1000))
+    private readonly onButtonPress$: Observable<any>;
 
     constructor () {
         this.onButtonPress$.subscribe(() =>  console.log("The button was pressed."));
@@ -94,7 +119,7 @@ class Component {
 
     @EventSource()
     @HostListener("click")
-    private onClick$: Observable<any>;
+    private readonly onClick$: Observable<any>;
 
     constructor () {
         this.onClick$.subscribe(() =>  console.log("The component was clicked."));
@@ -112,7 +137,7 @@ class Component {
 abstract class ComponentBase {
 
     @OnInit()
-    protected onInit$: Observable<void>;
+    protected readonly onInit$: Observable<void>;
 
     constructor() {
         this.onInit$.subscribe(() => console.log("OnInit event in parent."));
@@ -158,7 +183,8 @@ Log output:
 @Component({...})
 class Component {
 
-    @EventSource() private resetAmount$: Observable<void>;
+    @EventSource()
+    private readonly resetAmount$: Observable<void>;
 
     @StateEmitter({initialValue: 0}) private amount$: Subject<number>;
 
@@ -184,7 +210,8 @@ Property decorators may be passed to ```StateEmitter``` and will be forwarded to
 class Component {
 
     // Given "NonNull" is a property decorator:
-    @StateEmitter(NonNull()) private name$: Subject<string>;
+    @StateEmitter(NonNull())
+    private readonly name$: Subject<string>;
 
     constructor () {
         this.name$.subscribe(name =>  console.log(`Name: ${name}`));
@@ -206,7 +233,7 @@ class Component {
 
     @StateEmitter()
     @Input("disabled") // Input metdata will be forwarded to the underlying property.
-    private disabled$: Subject<boolean>;
+    private readonly disabled$: Subject<boolean>;
 
     constructor () {
         this.disabled$.subscribe(disabled =>  console.log(`Disabled: ${disabled}`)); // Output: Disabled: true
@@ -224,7 +251,7 @@ class Component {
 
     @StateEmitter({ readOnly: true })
     @Select(AppState.getUsername)
-    private username$: Observable<boolean>;
+    private readonly username$: Observable<boolean>;
 }
 ```
 
@@ -242,7 +269,7 @@ For more information, see [self-proxying StateEmitters](#self-proxying-stateemit
 abstract class ComponentBase {
 
     @StateEmitter({initialValue: "Default"})
-    protected username$: Subject<string>;
+    protected readonly username$: Subject<string>;
 
     constructor() {
         this.username$.subscribe(username => console.log(`Parent got ${username}.`));
@@ -295,7 +322,7 @@ class Component {
         proxyMode: EmitterMetadata.ProxyMode.Alias,
         proxyPath: "fooService.nestedProperty",
     })
-    private nestedProperty$: Observable<number>;
+    private readonly nestedProperty$: Observable<number>;
 
     constructor (private fooService: FooService) { }
 }
@@ -333,10 +360,10 @@ class SettingsService {
 class FormComponent {
 
     @StateEmitter.Alias("settingsService.settings$")
-    private settings$: Subject<Settings>;
+    private readonly settings$: Subject<Settings>;
 
     @StateEmitter.Alias("settings$.notificationsEnabled")
-    private notificationsEnabled$: Observable<boolean>;
+    private readonly notificationsEnabled$: Observable<boolean>;
 
     constructor (private settingsService: SettingsService) { }
 }
@@ -362,7 +389,7 @@ class FormComponent {
 
     // Dynamic proxy property path that contains a Subject
     @StateEmitter.Alias("settingsService.settings$.notificationsEnabled")
-    private notificationsEnabled$: Observable<boolean> ;
+    private readonly notificationsEnabled$: Observable<boolean> ;
 
     constructor (private settingsService: SettingsService) { }
 }
@@ -397,7 +424,8 @@ class SessionManager {
 @Component({...})
 class Component {
 
-    @StateEmitter.Alias("sessionManager.session$") private session$: Subject<Session>;
+    @StateEmitter.Alias("sessionManager.session$")
+    private readonly session$: Subject<Session>;
 
     constructor (private sessionManager: SessionManager) { }
 }
@@ -413,8 +441,11 @@ class Component {
 @Component({...})
 class Component {
 
-    @StateEmitter.Alias("sessionManager.session$") private session$: Subject<Session>;
-    @StateEmitter.Alias("session$.username") private username$: Observable<string>;
+    @StateEmitter.Alias("sessionManager.session$")
+    private readonly session$: Subject<Session>;
+
+    @StateEmitter.Alias("session$.username")
+    private readonly username$: Observable<string>;
 
     constructor (private sessionManager: SessionManager) { }
 }
@@ -436,7 +467,8 @@ The ```From``` proxy type creates a new ```Subject``` that gets its initial valu
 @Component({...})
 class FormComponent {
 
-    @StateEmitter.From("sessionManager.session$.username") private username$: Subject<string>;
+    @StateEmitter.From("sessionManager.session$.username")
+    private readonly username$: Subject<string>;
 
     constructor (private sessionManager: SessionManager) { }
 }
@@ -460,7 +492,8 @@ The ```Merge``` proxy type creates a new ```Subject``` that subscribes to all up
 @Component({...})
 class FormComponent {
 
-    @StateEmitter.Merge("fooService.date$") private date$: Subject<Date>;
+    @StateEmitter.Merge("fooService.date$")
+    private readonly date$: Subject<Date>;
 
     constructor (private fooService: FooService) { }
 }
@@ -478,7 +511,7 @@ class Component {
 
     @StateEmitter.Alias("username$")
     @Select(AppState.getUsername)
-    private username$: Observable<boolean>;
+    private readonly username$: Observable<boolean>;
 }
 ```
 
@@ -490,7 +523,7 @@ class Component {
 
     @StateEmitter.AliasSelf() // Equivalent to `@StateEmitter.Alias("username$")`
     @Select(AppState.getUsername)
-    private username$: Observable<boolean>;
+    private readonly username$: Observable<boolean>;
 }
 ```
 
@@ -502,7 +535,7 @@ class Component {
 
     @StateEmitter() // Equivalent to `@StateEmitter.AliasSelf()`
     @Select(AppState.getUsername)
-    private username$: Observable<boolean>;
+    private readonly username$: Observable<boolean>;
 }
 ```
 
@@ -529,7 +562,8 @@ Helper decorators are provided that proxy all of the Angular component lifecycle
 @Component({...})
 class Component {
 
-    @OnInit() private onInit$: Observable<void>;
+    @OnInit()
+    private readonly onInit$: Observable<void>;
 
     constructor () {
         this.onInit$.subscribe(() =>  console.log("Component is initialized."));
@@ -538,6 +572,51 @@ class Component {
 ```
 
 [**API reference**](#angular-lifecycle-eventsource-decorators)
+
+### AutoPush
+
+With AutoPush, Lithium will automatically invoke change detection on a component when the value of any ```StateEmitter``` changes. This allows for writing more performant components using [OnPush change detection](https://angular.io/api/core/ChangeDetectionStrategy) without the [traditional pitfalls](https://blog.angular-university.io/onpush-change-detection-how-it-works/) associated with OnPush change detection.
+
+#### Example
+
+```ts
+@Component({
+    ...
+    changeDetection: ChangeDetectionStrategy.OnPush
+})
+@AutoPush()
+class Component extends AotAware {
+
+    @StateEmitter()
+    private readonly value$: Subject<number>;
+}
+```
+
+All that's required to make a component use AutoPush is to use the ```@AutoPush``` class decorator. When using AutoPush, you should also set the component's ```changeDetection``` to ```ChangeDetectionStrategy.OnPush```. If a component's state is expressed entirely through ```StateEmitters```, change detection will no longer need to be manually invoked in the component.
+
+Please note that when using Angular's AoT compiler you must also inject a ```ChangeDetectorRef``` in the component's constructor. See [this section](#autopush-changedetectorref-example) for more info.
+
+AutoPush can also be manually enabled on a per-instance basis using the ```AutoPush.enable``` function.
+
+#### Example
+
+```ts
+@Component({
+    ...
+    changeDetection: ChangeDetectionStrategy.OnPush
+})
+class Component extends AotAware {
+
+    @StateEmitter()
+    private readonly value$: Subject<number>;
+
+    constructor(cdRef: ChangeDetectorRef) {
+        AutoPush.enable(this, cdRef);
+    }
+}
+```
+
+[**API reference**](#autopush-1)
 
 ## Angular AoT Compiler
 
@@ -556,9 +635,10 @@ class Component extends AotAware {
 
     @StateEmitter()
     @Input("disabled")
-    private disabled$: Subject<boolean>;
+    private readonly disabled$: Subject<boolean>;
 
-    @OnInit() private onInit$: Observable<void>;
+    @OnInit()
+    private readonly onInit$: Observable<void>;
 
     constructor () {
         this.onInit$.subscribe(() =>  console.log("Component is initialized."));
@@ -578,11 +658,12 @@ class Component {
 
     @StateEmitter()
     @Input("disabled")
-    private disabled$: Subject<boolean>;
+    private readonly disabled$: Subject<boolean>;
 
     // EventSource proxy for ngOnInit
     // Disable EventSource method usage checks with "skipMethodCheck"
-    @OnInit({ skipMethodCheck: true }) private onInit$: Observable<void>;
+    @OnInit({ skipMethodCheck: true })
+    private readonly onInit$: Observable<void>;
 
     // Dummy property must be declared for each StateEmitter in the component if not extending `AotAware`.
     public disabled: boolean;
@@ -609,7 +690,7 @@ class Component {
 
     @EventSource()
     @HostListener("click")
-    private onClick$: Observable<any>;
+    private readonly onClick$: Observable<any>;
 
     constructor () {
         // This will emit as expected
@@ -625,7 +706,7 @@ The following example will fail to work when compiled with AoT:
 class Component {
 
     @EventSource(HostListener("click"))
-    private onClick$: Observable<any>;
+    private readonly onClick$: Observable<any>;
 
     constructor () {
         // This will never emit when compiled with AoT
@@ -645,7 +726,7 @@ class Component {
     // This will allow "disabled" to be bound in a template without generating a compiler error
     @StateEmitter()
     @Input("disabled")
-    private disabled$: Subject<boolean>;
+    private readonly disabled$: Subject<boolean>;
 
     constructor () {
         this.disabled$.subscribe(disabled =>  console.log(`Disabled: ${disabled}`));
@@ -661,11 +742,61 @@ class Component {
 
     // This will generate a compiler error when "disabled" is bound to in a template.
     @StateEmitter(Input("disabled"))
-    private disabled$: Subject<boolean>;
+    private readonly disabled$: Subject<boolean>;
 
     constructor () {
         this.disabled$.subscribe(disabled =>  console.log(`Disabled: ${disabled}`));
     }
+}
+```
+
+**4. A ```ChangeDetectorRef``` instance must be injected into a component using ```@AutoPush```.**
+
+If the ```@AutoPush``` decorator is being used on a component, there must be a ```ChangeDetectorRef``` (or similar shaped object) injected into the component. If one isn't provided, an error will be thrown.
+
+### AutoPush ChangeDetectorRef Example
+
+```ts
+@Component({...})
+@AutoPush()
+class Component extends AotAware {
+
+    @StateEmitter()
+    private readonly value$: Subject<number>;
+
+    // A ChangeDetectorRef instance must be injected into the component, even if it's not used
+    constructor (_cdRef: ChangeDetectorRef) {
+        super();
+    }
+}
+```
+
+**5. ```@HostBinding``` won't work directly with ```@StateEmitter```.**
+
+Unlike most of the other Angular decorators, ```@HostBinding``` won't work with ```@StateEmitter``` in AoT. It can still be used together with ```@StateEmitter```, but the host binding decorator must be applied to the property reference instead of the StateEmitter.
+
+The follwing example will work in AoT:
+
+```ts
+@Component({...})
+class Component {
+
+    @StateEmitter()
+    private readonly disabled$: Subject<boolean>; // This will update the host binding below
+    @HostBinding("class.disabled")
+    public readonly disabled: boolean; // A dummy 'disabled' property must be declared to attach the host binding to
+}
+```
+
+The following will NOT work in AoT:
+
+```ts
+@Component({...})
+class Component {
+
+    @StateEmitter()
+    @HostBinding("class.disabled")
+    private readonly disabled$: Subject<boolean>; // This will have NO effect on the host binding!
 }
 ```
 
@@ -751,6 +882,7 @@ interface DecoratorParams {
     propertyName?: EmitterType;
     initialValue?: any;
     readOnly?: boolean;
+    writeOnly?: boolean;
     unmanaged?: boolean;
     proxyMode?: ProxyMode;
     proxyPath?: string;
@@ -763,6 +895,8 @@ interface DecoratorParams {
 **```initialValue```** - (Optional) The initial value to be emitted. Defaults to ```undefined```.
 
 **```readOnly```** - (Optional) Whether or not the underlying property being created should be read-only. Defaults to ```false```.
+
+**```writeOnly```** - (Optional) Whether or not the underlying property being created should be write-only. If set to ```true``` and the component/directive is using AutoPush, special care will be taken to ensure change detection is invoked even if the ```StateEmitter``` is never used in the template/binding (i.e. in a directive). Defaults to ```false```.
 
 **```unmanaged```** - (Optional) Whether or not the StateEmitter should be excluded from automatic subscription cleanup when component is destroyed. Defaults to ```false```. **Note**: This property has no effect when ```proxyMode``` is set to ```Alias```.
 
@@ -848,6 +982,7 @@ interface ProxyDecoratorParams {
     propertyName?: EmitterType;
     mergeUpdates?: boolean;
     readOnly?: boolean;
+    writeOnly?: boolean;
     unmanaged?: boolean;
 }
 ```
@@ -859,6 +994,8 @@ interface ProxyDecoratorParams {
 **```mergeUpdates```** - (Optional) See [**```StateEmitter.DecoratorParams.proxyMergeUpdates```**](#stateemitterdecoratorparams).
 
 **```readOnly```** - (Optional) See [**```StateEmitter.DecoratorParams.readOnly```**](#stateemitterdecoratorparams).
+
+**```writeOnly```** - (Optional) See [**```StateEmitter.DecoratorParams.writeOnly```**](#stateemitterdecoratorparams).
 
 **```unmanaged```** - (Optional) See [**```StateEmitter.DecoratorParams.unmanaged```**](#stateemitterdecoratorparams).
 
@@ -931,6 +1068,7 @@ public foo$: Subject<any>;
 interface SelfProxyDecoratorParams {
     propertyName?: EmitterType;
     readOnly?: boolean;
+    writeOnly?: boolean;
     unmanaged?: boolean;
 }
 ```
@@ -939,7 +1077,36 @@ interface SelfProxyDecoratorParams {
 
 **```readOnly```** - (Optional) See [**```StateEmitter.DecoratorParams.readOnly```**](#stateemitterdecoratorparams).
 
+**```writeOnly```** - (Optional) See [**```StateEmitter.DecoratorParams.writeOnly```**](#stateemitterdecoratorparams).
+
 **```unmanaged```** - (Optional) See [**```StateEmitter.DecoratorParams.unmanaged```**](#stateemitterdecoratorparams).
+
+### AutoPush
+
+AutoPush enables automatic change detection management of StateEmitters for performant [OnPush](https://angular.io/api/core/ChangeDetectionStrategy) components and directives. Any change to a  ```StateEmitter``` value will invoke detection on the component automatically, eliminating the need to ever manually invoke change detection in [special cases](https://blog.angular-university.io/onpush-change-detection-how-it-works/).
+
+#### Decorator
+
+```ts
+function AutoPush(): ClassDecorator
+```
+
+Class decorator that enables AutoPush for a component or directive.
+
+**Note**: When using Angular's AoT compiler, you must also inject a [change detector reference](https://angular.io/api/core/ChangeDetectorRef) in the component's constructor. See [this section](#autopush-changedetectorref-example) for more info.
+
+#### ```AutoPush.enable```
+
+```ts
+function enable(component: any, changeDetector: ChangeDetectorLike) {
+    Metadata.SetMetadata(CHANGE_DETECTOR_REF, component, changeDetector);
+}
+```
+
+Enables AutoPush for a specfic instance of a component or directive.
+
+**```component```** - The component or directive instance to enable AutoPush for.
+**```changeDetector```** - The [change detector reference](https://angular.io/api/core/ChangeDetectorRef) to use to invoke change detection.
 
 ### Angular Lifecycle ```EventSource``` decorators
 

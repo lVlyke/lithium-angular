@@ -32,6 +32,7 @@ export namespace EmitterMetadata {
         export interface CoreDetails {
             initialValue?: any;
             readOnly?: boolean;
+            writeOnly?: boolean;
             proxyMode?: ProxyMode;
             proxyPath?: string;
             proxyMergeUpdates?: boolean;

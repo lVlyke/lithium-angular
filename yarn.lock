@@ -428,10 +428,10 @@ detect-libc@^1.0.2:
   resolved "https://registry.yarnpkg.com/detect-libc/-/detect-libc-1.0.3.tgz#fa137c4bd698edf55cd5cd02ac559f91a4c4ba9b"
   integrity sha1-+hN8S9aY7fVc1c0CrFWfkaTEups=
 
-detest-bdd@^1.1.0:
-  version "1.1.0"
-  resolved "https://registry.yarnpkg.com/detest-bdd/-/detest-bdd-1.1.0.tgz#151e6fb734a2c9d19b1fb9c35fc1fe3e9a3d7221"
-  integrity sha512-g7ZnYmEfKsVbzwSK26/rg4gXz0nthKcK6ipcW6dWYShMYt77zpWQ8IeR+s4ewocXb+TBqUCgUa9ebxXrYDxsRg==
+detest-bdd@^1.1.1:
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/detest-bdd/-/detest-bdd-1.1.1.tgz#5d5aa07cd94807ae123e8f88be3e3bab511c3c16"
+  integrity sha512-To8zirKbh41xhmmCsyGDYnzXXGAbi5Vu6qBpJX0TjzWzD+h3GxlhjJvBK3yTbIIvvgHxhRGDTM9f8d8cgGNUcA==
 
 emoji-regex@^7.0.1:
   version "7.0.3"

@@ -32,26 +32,47 @@ describe("Given a StateEmitter decorator", () => {
     const STATIC_PROXY_PATH = "static.proxy.path$";
     const DYNAMIC_PROXY_PATH = "dynamic.proxy$.path";
 
-    // TODO - Separate these tests into smaller templates
-    const ConstructionTemplateInput = InputBuilder
+    const constructionTestInputs: InputBuilder<ConstructionTemplateInput>[] = [
+        // General tests
+        InputBuilder
         .fragment<ConstructionTemplateInput>({ propertyKey: Random.string() })
         .fragment({ propertyKey: Random.string() + "$" }, input => !input.options || !input.options.propertyName)
         .fragmentList({ propertyDecorators: [undefined, [jasmine.createSpy("propertyDecorator")]] })
         .fragment({ options: undefined })
         .fragmentBuilder<StateEmitter.DecoratorParams>("options", InputBuilder
             .fragmentList<StateEmitter.DecoratorParams>({ propertyName: [undefined, Random.string()] })
-            .fragmentList({ proxyMode: [undefined, EmitterMetadata.ProxyMode.Alias, EmitterMetadata.ProxyMode.From, EmitterMetadata.ProxyMode.Merge, EmitterMetadata.ProxyMode.None] })
-            .fragmentList({ proxyPath: [STATIC_PROXY_PATH, DYNAMIC_PROXY_PATH] }, options => options.proxyMode && options.proxyMode !== EmitterMetadata.ProxyMode.None)
-            .fragment({ proxyMergeUpdates: undefined })
-            .fragmentList({ proxyMergeUpdates: [true, false] }, options => options.proxyPath === DYNAMIC_PROXY_PATH)
-            .fragmentList({ readOnly: [undefined, true, false]})
-            .fragment({ initialValue: Random.string() })
+            .fragmentList({ initialValue: [undefined, Random.string()] })
             .fragmentList({ unmanaged: [true, false, undefined] })
         )
-        .fragmentList({ angularPropMetadata: [undefined, [1, 2, 3]] })
-        .fragment({ autopush: false })
-        // TODO - Loosen test restrictions:
-        .fragment({ autopush: true }, input => !input.options || !input.options.proxyMode || input.options.proxyMode === EmitterMetadata.ProxyMode.None);
+        .fragmentList({ angularPropMetadata: [undefined, [1, 2, 3]] }),
+
+        // Proxy tests
+        InputBuilder
+            .fragment<ConstructionTemplateInput>({ propertyKey: Random.string() })
+            .fragmentBuilder<StateEmitter.DecoratorParams>("options", InputBuilder
+                .fragment<StateEmitter.DecoratorParams>({ propertyName: Random.string() })
+                .fragmentList({ proxyMode: [undefined, EmitterMetadata.ProxyMode.Alias, EmitterMetadata.ProxyMode.From, EmitterMetadata.ProxyMode.Merge, EmitterMetadata.ProxyMode.None] })
+                .fragmentList({ proxyPath: [STATIC_PROXY_PATH, DYNAMIC_PROXY_PATH] }, options => options.proxyMode && options.proxyMode !== EmitterMetadata.ProxyMode.None)
+                .fragment({ proxyMergeUpdates: undefined })
+                .fragmentList({ proxyMergeUpdates: [true, false] }, options => options.proxyPath === DYNAMIC_PROXY_PATH)
+                .fragmentList({ unmanaged: [true, false, undefined] })
+            )
+            .fragment({ autopush: false })
+            // TODO - Loosen test restrictions:
+            .fragment({ autopush: true }, input => !input.options || !input.options.proxyMode || input.options.proxyMode === EmitterMetadata.ProxyMode.None),
+
+        // Read/write tests
+        InputBuilder
+            .fragment<ConstructionTemplateInput>({ propertyKey: Random.string() })
+            .fragmentBuilder<StateEmitter.DecoratorParams>("options", InputBuilder
+                .fragment<StateEmitter.DecoratorParams>({ propertyName: Random.string() })
+                .fragmentList({ readOnly: [undefined, false] })
+                .fragment({ readOnly: true }, options => !options.writeOnly)
+                .fragmentList({ writeOnly: [undefined, false] })
+                .fragment({ writeOnly: true }, options => !options.readOnly)
+            )
+            .fragmentList({ autopush: [false, true] })
+    ];
 
     const ConstructionTemplateKeys: (keyof ConstructionTemplateInput)[] = [
         "propertyKey",
@@ -61,7 +82,7 @@ describe("Given a StateEmitter decorator", () => {
         "angularPropMetadata"
     ];    
 
-    describe("when constructed", Template(ConstructionTemplateKeys, ConstructionTemplateInput, (
+    describe("when constructed", Template(ConstructionTemplateKeys, constructionTestInputs, (
         propertyKey: string,
         autopush: boolean,
         options?: StateEmitter.DecoratorParams,
@@ -274,31 +295,43 @@ describe("Given a StateEmitter decorator", () => {
                         });
                     }
 
-                    spec.it("then it should create a facade getter function on the instance for the property name", (params) => {
-                        const facadeProperty = Object.getOwnPropertyDescriptor(params.targetInstance, propertyName);
+                    if (!options || !options.writeOnly) {
+                        spec.it("then it should create a facade getter function on the instance for the property name", (params) => {
+                            const facadeProperty = Object.getOwnPropertyDescriptor(params.targetInstance, propertyName);
 
-                        expect(facadeProperty.get).toEqual(jasmine.any(Function));
-                    });
+                            expect(facadeProperty.get).toEqual(jasmine.any(Function));
+                        });
+                    } else {
+                        spec.it("then it should NOT create a facade getter function on the instance for the property name", (params) => {
+                            const facadeProperty = Object.getOwnPropertyDescriptor(params.targetInstance, propertyName);
+
+                            expect(facadeProperty.get).not.toBeDefined();
+                        });
+                    }
 
                     describe("when the facade getter is invoked", () => {
-
-                        spec.it("then it should return the expected value", (params) => {
-                            if (!options || !options.proxyMode || options.proxyMode === EmitterMetadata.ProxyMode.None) {
-                                expect(params.targetInstance[propertyName]).toEqual(mergedOptions().initialValue);
-                            }
-                            else if (isStaticProxyPath) {
-                                return params.targetInstance.static.proxy.path$.pipe(
-                                    take(1),
-                                    map((value: string) => expect(params.targetInstance[propertyName]).toEqual(value))
-                                ).toPromise();
-                            }
-                            else {
-                                return params.targetInstance.dynamic.proxy$.pipe(
-                                    take(1),
-                                    map((value: { path: string }) => expect(params.targetInstance[propertyName]).toEqual(value.path))
-                                ).toPromise();
-                            }
-                        });
+                        if (!options || !options.writeOnly) {
+                            describe("when the StateEmitter is NOT writeOnly", () => {
+    
+                                spec.it("then it should return the expected value", (params) => {
+                                    if (!options || !options.proxyMode || options.proxyMode === EmitterMetadata.ProxyMode.None) {
+                                        expect(params.targetInstance[propertyName]).toEqual(mergedOptions().initialValue);
+                                    }
+                                    else if (isStaticProxyPath) {
+                                        return params.targetInstance.static.proxy.path$.pipe(
+                                            take(1),
+                                            map((value: string) => expect(params.targetInstance[propertyName]).toEqual(value))
+                                        ).toPromise();
+                                    }
+                                    else {
+                                        return params.targetInstance.dynamic.proxy$.pipe(
+                                            take(1),
+                                            map((value: { path: string }) => expect(params.targetInstance[propertyName]).toEqual(value.path))
+                                        ).toPromise();
+                                    }
+                                });
+                            });
+                        }
                     });
 
                     if (!options || !options.readOnly) {
@@ -402,14 +435,40 @@ describe("Given a StateEmitter decorator", () => {
                             }
                         }
                     });
+                });
 
-                    if (autopush) {
-                        describe("if the component is using AutoPush", () => {
+                if (autopush) {
+                    describe("if the component is using AutoPush", () => {
 
-                            describe("if the component is destroyed", () => {
+                        spec.beforeEach(((params) => {
+                            params.targetInstance = new params.targetClass();
+                        }));
+
+                        describe("if the component is destroyed", () => {
+
+                            spec.beforeEach((params) => {
+                                params.targetInstance[propertyName];
+                                params.targetInstance[CommonMetadata.MANAGED_ONDESTROY_KEY].next();
+                            });
+
+                            describe("when a new value is emitted from the StateEmitter", () => {
 
                                 spec.beforeEach((params) => {
-                                    params.targetInstance[CommonMetadata.MANAGED_ONDESTROY_KEY].next();
+                                    params.targetInstance[propertyKey].next(42);
+                                });
+
+                                spec.it("should NOT invoke change detection on the component", (params) => {
+                                    expect(params.cdRef.detectChanges).not.toHaveBeenCalled();
+                                });
+                            });
+                        });
+
+                        describe("if the component is NOT destroyed", () => {
+
+                            describe("if the component has already been read in the template", () => {
+
+                                spec.beforeEach((params) => {
+                                    params.targetInstance[propertyName];
                                 });
 
                                 describe("when a new value is emitted from the StateEmitter", () => {
@@ -418,31 +477,12 @@ describe("Given a StateEmitter decorator", () => {
                                         params.targetInstance[propertyKey].next(42);
                                     });
 
-                                    spec.it("should NOT invoke change detection on the component", (params) => {
-                                        expect(params.cdRef.detectChanges).not.toHaveBeenCalled();
+                                    spec.it("should invoke change detection on the component", (params) => {
+                                        expect(params.cdRef.detectChanges).toHaveBeenCalled();
                                     });
                                 });
-                            });
 
-                            describe("if the component is NOT destroyed", () => {
-
-                                describe("if the component has already been read in the template", () => {
-
-                                    spec.beforeEach((params) => {
-                                        params.targetInstance[propertyName];
-                                    });
-
-                                    describe("when a new value is emitted from the StateEmitter", () => {
-
-                                        spec.beforeEach((params) => {
-                                            params.targetInstance[propertyKey].next(42);
-                                        });
-
-                                        spec.it("should invoke change detection on the component", (params) => {
-                                            expect(params.cdRef.detectChanges).toHaveBeenCalled();
-                                        });
-                                    });
-
+                                if (!options || !options.readOnly) {
                                     describe("when a new value is updated via the facade setter", () => {
 
                                         spec.beforeEach((params) => {
@@ -453,29 +493,31 @@ describe("Given a StateEmitter decorator", () => {
                                             expect(params.cdRef.detectChanges).toHaveBeenCalled();
                                         });
                                     });
-                                });
+                                }
+                            });
 
-                                describe("if the component has NOT yet been read in the template", () => {
+                            describe("if the component has NOT yet been read in the template", () => {
+
+                                describe("when a new value is emitted from the StateEmitter", () => {
 
                                     spec.beforeEach((params) => {
                                         params.targetInstance[propertyKey].next(42);
                                     });
 
-                                    describe("when a new value is emitted from the StateEmitter", () => {
-
-                                        spec.beforeEach((params) => {
-                                            params.targetInstance[propertyKey].next(42);
-                                        });
-
+                                    if (!options || !options.writeOnly) {
                                         spec.it("should NOT invoke change detection on the component", (params) => {
                                             expect(params.cdRef.detectChanges).not.toHaveBeenCalled();
                                         });
-                                    });
+                                    } else {
+                                        spec.it("should invoke change detection on the component", (params) => {
+                                            expect(params.cdRef.detectChanges).toHaveBeenCalled();
+                                        });
+                                    }
                                 });
                             });
                         });
-                    }
-                });
+                    });
+                }
             });
         }
     }));

@@ -38,12 +38,14 @@ export namespace StateEmitter {
         propertyName?: EmitterType;
         mergeUpdates?: boolean;
         readOnly?: boolean;
+        writeOnly?: boolean;
         unmanaged?: boolean;
     }
 
     export interface SelfProxyDecoratorParams {
         propertyName?: EmitterType;
         readOnly?: boolean;
+        writeOnly?: boolean;
         unmanaged?: boolean;
     }
 
@@ -181,7 +183,11 @@ export namespace StateEmitter {
                     }
                 }
 
-                // Let the getter caching mechanism detect changes for us
+                // Let the getter caching mechanism detect changes for us,
+                // unless the StateEmitter is writeOnly and has no getter
+                if (subjectInfo.writeOnly && !CommonMetadata.instanceIsDestroyed(this)) {
+                    AutoPush.tryDetectChanges(this);
+                }
             };
         }
 
@@ -332,17 +338,26 @@ export namespace StateEmitter {
         }
 
         const facadeSetter = subjectInfo.readOnly ? undefined : Facade.CreateSetter(emitterType);
+        const facadeGetter = Facade.CreateGetter(emitterType, subjectInfo.initialValue);
         // Assign the facade getter and setter to the target instance for targetInstance EmitterType
         Object.defineProperty(targetInstance, emitterType, {
             enumerable: true,
-            get: Facade.CreateGetter(emitterType, subjectInfo.initialValue),
+            get: subjectInfo.writeOnly ? undefined : facadeGetter,
             set: facadeSetter
         });
 
         // Define the StateEmitter reference
         Object.defineProperty(targetInstance, subjectInfo.propertyKey, {
             // Create a getter that lazily retreives the observable
-            get: () => subjectInfo.observable,
+            get: () => {
+                // Invoke the getter to start change detection of the value if this is a write-only property
+                // Note: This is called each time in case a dynamic proxy path is changed
+                if (subjectInfo.writeOnly) {
+                    facadeGetter.call(targetInstance);
+                }
+
+                return subjectInfo.observable;
+            },
             // Allow updates to the subject via the setter of the StateEmitter property
             // (This is needed to allow StateEmitters with attached Angular metadata decorators to work with AoT)
             set: facadeSetter

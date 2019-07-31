@@ -1,7 +1,7 @@
 {
   "name": "@lithiumjs/angular",
   "version": "3.0.0-rc.0",
-  "description": "A decorator-based library for Angular that enables seamless reactive data binding using RxJS.",
+  "description": "A decorator-based library for Angular that enables seamless reactive data binding using RxJS. Use Observables as first-class citizens in your view templates!",
   "author": "Mychal Thompson <mychal.r.thompson@gmail.com>",
   "repository": "https://github.com/lVlyke/lithium-angular",
   "license": "MIT",
@@ -25,7 +25,8 @@
     "template",
     "observable",
     "state",
-    "selector"
+    "selector",
+    "lifecycle-event-decorators"
   ],
   "scripts": {
     "prebuild:js": "yarn test",

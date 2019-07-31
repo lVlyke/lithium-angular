@@ -4,7 +4,7 @@
 
 [![Build Status](https://travis-ci.org/lVlyke/lithium-angular.svg?branch=master)](https://travis-ci.org/lVlyke/lithium-angular) [![Coverage](./coverage/coverage.svg)](./coverage/coverage.svg)
 
-A decorator-based library for Angular that enables seamless reactive data binding using RxJS. It's like ```async``` but even better!
+A decorator-based library for Angular that enables seamless reactive data binding using RxJS. Use Observables as first-class citizens in your view templates!
 
 * [Introduction](#introduction)
 * [Installation](#installation)

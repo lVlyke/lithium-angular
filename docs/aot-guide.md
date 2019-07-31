@@ -4,7 +4,7 @@ Lithium for Angular is compatible with Angular's AoT compiler. However, due to c
 
 **1. Components using Lithium must extend the ```AotAware``` class.**
 
-Because Lithium's ```StateEmitter``` and ```EventSource``` dynamically create and manage the properties that a component's view template will access, it is incompatible with how the current Angular AoT compiler handles template validation. To easily remedy this issue, your components can extend the [```AotAware```](/docs/api-reference#aotaware) base class to enable less strict validation and full AoT compliance:
+Because Lithium's ```StateEmitter``` and ```EventSource``` dynamically create and manage the properties that a component's view template will access, it is incompatible with how the current Angular AoT compiler handles template validation. To easily remedy this issue, your components can extend the [```AotAware```](/docs/api-reference.md#aotaware) base class to enable less strict validation and full AoT compliance:
 
 ```ts
 import { AotAware } from "@lithiumjs/angular";

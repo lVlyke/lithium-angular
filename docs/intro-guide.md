@@ -8,9 +8,9 @@ This guide is designed to go over at a high level the core features of Lithium a
 * [Lifecycle Event Decorators](#lifecycle-event-decorators)
 * [AutoPush (Automatic OnPush detection)](#autopush)
 
-(For more information, see the full [**API reference**](/docs/api-reference))
+(For more information, see the full [**API reference**](/docs/api-reference.md))
 
-**NOTE:** If you are using Angular's AoT compiler, some additional considerations are required to write fully AoT-compliant components with Lithium. See the [Angular AoT Compiler](/docs/aot-guide) section for details.
+**NOTE:** If you are using Angular's AoT compiler, some additional considerations are required to write fully AoT-compliant components with Lithium. See the [Angular AoT Compiler](/docs/aot-guide.md) section for details.
 
 ## EventSource
 
@@ -63,7 +63,7 @@ class Component {
 }
 ```
 
-Angular decorators may also be declared on the ```EventSource``` property itself. Lithium will automatically move the associated metadata to the facade function. This is useful for [staying compliant with Angular's AoT compiler](/docs/aot-guide).
+Angular decorators may also be declared on the ```EventSource``` property itself. Lithium will automatically move the associated metadata to the facade function. This is useful for [staying compliant with Angular's AoT compiler](/docs/aot-guide.md).
 
 #### Example
 
@@ -116,7 +116,7 @@ Log output:
 */
 ```
 
-[**API reference**](/docs/api-reference#eventsource)
+[**API reference**](/docs/api-reference.md#eventsource)
 
 ## StateEmitter
 
@@ -173,7 +173,7 @@ class Component {
 }
 ```
 
-Angular decorators may also be declared on the ```StateEmitter``` property itself. Lithium will automatically move the associated metadata to the underlying facade property. This is useful for [staying compliant with Angular's AoT compiler](/docs/aot-guide).
+Angular decorators may also be declared on the ```StateEmitter``` property itself. Lithium will automatically move the associated metadata to the underlying facade property. This is useful for [staying compliant with Angular's AoT compiler](/docs/aot-guide.md).
 
 #### Example
 
@@ -493,9 +493,9 @@ class Component {
 }
 ```
 
-For more information, see the [API reference](/docs/api-reference#stateemitteraliasself).
+For more information, see the [API reference](/docs/api-reference.md#stateemitteraliasself).
 
-[**API reference**](/docs/api-reference#stateemitter)
+[**API reference**](/docs/api-reference.md#stateemitter)
 
 ## Lifecycle Event Decorators
 
@@ -525,7 +525,7 @@ class Component {
 }
 ```
 
-[**API reference**](/docs/api-reference#angular-lifecycle-eventsource-decorators)
+[**API reference**](/docs/api-reference.md#angular-lifecycle-eventsource-decorators)
 
 ## AutoPush
 
@@ -548,7 +548,7 @@ class Component extends AotAware {
 
 All that's required to make a component use AutoPush is to use the ```@AutoPush``` class decorator. When using AutoPush, you should also set the component's ```changeDetection``` to ```ChangeDetectionStrategy.OnPush```. If a component's state is expressed entirely through ```StateEmitters```, change detection will no longer need to be manually invoked in the component.
 
-Please note that when using Angular's AoT compiler you must also inject a ```ChangeDetectorRef``` in the component's constructor. See [this section](/docs/aot-guide#autopush-changedetectorref-example) for more info.
+Please note that when using Angular's AoT compiler you must also inject a ```ChangeDetectorRef``` in the component's constructor. See [this section](/docs/aot-guide.md#autopush-changedetectorref-example) for more info.
 
 AutoPush can also be manually enabled on a per-instance basis using the ```AutoPush.enable``` function.
 
@@ -570,4 +570,4 @@ class Component extends AotAware {
 }
 ```
 
-[**API reference**](/docs/api-reference#autopush)
+[**API reference**](/docs/api-reference.md#autopush)

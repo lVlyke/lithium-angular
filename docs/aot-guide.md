@@ -151,7 +151,7 @@ class Component extends AotAware {
 }
 ```
 
-**5. ```@HostBinding``` won't work directly with ```@StateEmitter```.**
+## **5. ```@HostBinding``` won't work directly with ```@StateEmitter```.**
 
 Unlike most of the other Angular decorators, ```@HostBinding``` won't work with ```@StateEmitter``` in AoT. It can still be used together with ```@StateEmitter```, but the host binding decorator must be applied to the property reference instead of the StateEmitter.
 

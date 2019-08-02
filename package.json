@@ -49,14 +49,17 @@
     "istanbul": "^0.4.5",
     "istanbul-cobertura-badger": "^1.3.1",
     "jasmine": "^3.4.0",
+    "ng-packagr": "^5.4.3",
     "rxjs": "^6.5.2",
     "source-map-support": "^0.5.12",
+    "tslib": "^1.10.0",
     "typescript": "~3.4.5",
     "zone.js": "^0.9.1"
   },
   "dependencies": {},
-  "typings": "./index.d.ts",
-  "main": "./bundles/lithium.umd.js",
-  "module": "./esm5/index.js",
-  "es2015": "./esm2015/index.js"
+  "ngPackage": {
+    "lib": {
+      "entryFile": "./src/index.ts"
+    }
+  }
 }

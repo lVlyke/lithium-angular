@@ -34,7 +34,7 @@ Like ```async```, Lithium also has the following benefits:
 * **Automatic subscription management** - Lithium will automatically end subscriptions when components are destroyed.
 * **Simplified OnPush change detection** - Using AutoPush, Lithium makes writing [OnPush](https://angular.io/api/core/ChangeDetectionStrategy)-capable components trivial.
 * **Full AoT compiler support** - Lithium supports AoT compilation. See [here](/docs/aot-guide.md) for more info.
-* **Can be used with other reactive libraries** - Lithium has full support for other decorator-based libraries like [NGXS](https://github.com/ngxs/store).
+* **Can be used with other reactive libraries** - Lithium has full compatability with other decorator-based libraries like [NGXS](https://github.com/ngxs/store).
 
 Read through the [intro guide](/docs/intro-guide.md) to get to know Lithium's core features and view the [example app](https://github.com/lVlyke/lithium-angular-example-app) to see more advanced use cases. Full [API](/docs/api-reference.md) documentation is also available.
 

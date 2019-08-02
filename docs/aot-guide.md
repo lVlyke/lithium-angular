@@ -2,7 +2,7 @@
 
 Lithium for Angular is compatible with Angular's AoT compiler. However, due to current limitations of the compiler there are a few rules that need to be adhered to in order to write fully AoT-compliant code with Lithium:
 
-**1. Components using Lithium must extend the ```AotAware``` class.**
+## **1. Components using Lithium must extend the ```AotAware``` class.**
 
 Because Lithium's ```StateEmitter``` and ```EventSource``` dynamically create and manage the properties that a component's view template will access, it is incompatible with how the current Angular AoT compiler handles template validation. To easily remedy this issue, your components can extend the [```AotAware```](/docs/api-reference.md#aotaware) base class to enable less strict validation and full AoT compliance:
 
@@ -60,7 +60,7 @@ class Component {
 }
 ```
 
-**2. When applying an Angular decorator to an ```EventSource```, the decorator should be applied to the property directly instead of being passed into ```EventSource```.**
+## **2. When applying an Angular decorator to an ```EventSource```, the decorator should be applied to the property directly instead of being passed into ```EventSource```.**
 
 In the following example, ```HostListener``` should be declared on the property directly. This will work correctly when compiled with AoT:
 
@@ -95,7 +95,7 @@ class Component {
 }
 ```
 
-**3. When applying an Angular decorator to a ```StateEmitter```, the decorator should be applied to the property directly instead of being passed into ```StateEmitter```.**
+## **3. When applying an Angular decorator to a ```StateEmitter```, the decorator should be applied to the property directly instead of being passed into ```StateEmitter```.**
 
 In the following example, ```Input``` should be declared on the property directly. The following example will work correctly when compiled with AoT:
 
@@ -130,11 +130,11 @@ class Component {
 }
 ```
 
-**4. A ```ChangeDetectorRef``` instance must be injected into a component using ```@AutoPush```.**
+## **4. A ```ChangeDetectorRef``` instance must be injected into a component using ```@AutoPush```.**
 
 If the ```@AutoPush``` decorator is being used on a component, there must be a ```ChangeDetectorRef``` (or similar shaped object) injected into the component. If one isn't provided, an error will be thrown.
 
-## AutoPush ChangeDetectorRef Example
+### AutoPush ChangeDetectorRef Example
 
 ```ts
 @Component({...})

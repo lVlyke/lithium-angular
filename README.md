@@ -1,4 +1,4 @@
-<!-- markdownlint-disable MD024 MD031 -->
+<!-- markdownlint-disable MD024 MD031 --> 
 
 # Lithium for Angular (@lithiumjs/angular)
 

@@ -17,7 +17,7 @@ A decorator-based library for Angular that enables seamless reactive data bindin
 
 ## Introduction
 
-Lithium is a decorator-based library for modern Angular applications that make use of reactive programming through RxJS. Lithium enables one-way and two-way binding of Observables and Subjects and allows them to be used like regular variables inside templates. OnPush change detection is easy to use with Lithium and makes writing more performant components trivial. Lithium is like ```async``` but better:
+Lithium is a decorator-based library for modern Angular applications that use reactive programming through RxJS. Lithium enables one-way and two-way binding of Observables and Subjects in view templates and allows them to be used just like regular synchronous variables. Lithium makes writing more performant components with [OnPush change detection](https://angular.io/api/core/ChangeDetectionStrategy) trivial with [AutoPush](/docs/intro-guide.md#autopush). Lithium is like ```async``` but better:
 
 ### Lithium vs ```AsyncPipe```
 
@@ -36,11 +36,11 @@ Like ```async```, Lithium also has the following benefits:
 * **Full AoT compiler support** - Lithium supports AoT compilation. See [here](/docs/aot-guide.md) for more info.
 * **Can be used with other reactive libraries** - Lithium has full compatability with other decorator-based libraries like [NGXS](https://github.com/ngxs/store).
 
-Read through the [intro guide](/docs/intro-guide.md) to get to know Lithium's core features and view the [example app](https://github.com/lVlyke/lithium-angular-example-app) to see more advanced use cases. Full [API](/docs/api-reference.md) documentation is also available.
+Read through the [intro guide](/docs/intro-guide.md) to get to know Lithium's core features and view the [example app](https://github.com/lVlyke/lithium-angular-example-app) to see Lithium in action with real-world use-cases. Full [API](/docs/api-reference.md) documentation is also available.
 
 ## Installation
 
-The project can be installed [via **npm**](https://www.npmjs.com/package/@lithiumjs/angular) using the following command:
+Lithium can be installed [via **npm**](https://www.npmjs.com/package/@lithiumjs/angular) using the following command:
 
 ```bash
 npm install @lithiumjs/angular

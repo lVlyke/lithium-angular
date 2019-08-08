@@ -4,7 +4,7 @@ Lithium for Angular is compatible with Angular's AoT compiler. However, due to c
 
 ## **1. Components using Lithium must extend the ```AotAware``` class.**
 
-Because Lithium's ```StateEmitter``` and ```EventSource``` dynamically create and manage the properties that a component's view template will access, it is incompatible with how the current Angular AoT compiler handles template validation. To easily remedy this issue, your components can extend the [```AotAware```](/docs/api-reference.md#aotaware) base class to enable less strict validation and full AoT compliance:
+Because Lithium's ```StateEmitter``` and ```EventSource``` decorators dynamically create and manage the properties that a component's view template will access, it is incompatible with how the current Angular AoT compiler handles template validation. To easily remedy this issue, your components can extend the provided [```AotAware```](/docs/api-reference.md#aotaware) base class to enable less strict validation and still retain full AoT compliance:
 
 ```ts
 import { AotAware } from "@lithiumjs/angular";
@@ -29,7 +29,7 @@ class Component extends AotAware {
 ```
 
 
-However, if using ```AotAware``` is not possible in your configuration, you **must** instead declare dummy properties, illustrated in the example below:
+However, if using ```AotAware``` is not possible or desired in your configuration, you **must** instead declare dummy properties, illustrated in the example below:
 
 ```ts
 // Without AotAware:
@@ -46,7 +46,7 @@ class Component {
     private readonly onInit$: Observable<void>;
 
     // Dummy property must be declared for each StateEmitter in the component if not extending `AotAware`.
-    public disabled: boolean;
+    public readonly disabled: boolean;
 
     // This stub declaration must be provided in the component to allow onInit$ to fire in AoT mode if not extending `AotAware`.
     // NOTE: Any stub method declarations will be overidden. Any code inside this declaration will not be executed.
@@ -79,7 +79,7 @@ class Component {
 }
 ```
 
-The following example will fail to work when compiled with AoT:
+The following example click event will silently fail to fire when compiled with AoT:
 
 ```ts
 @Component({...})
@@ -114,7 +114,7 @@ class Component {
 }
 ```
 
-The following example will fail to work when compiled with AoT:
+The following example will fail to work with AoT:
 
 ```ts
 @Component({...})
@@ -151,9 +151,9 @@ class Component extends AotAware {
 }
 ```
 
-## **5. ```@HostBinding``` won't work directly with ```@StateEmitter```.**
+## **5. ```@HostBinding``` cannot be used directly with ```@StateEmitter```.**
 
-Unlike most of the other Angular decorators, ```@HostBinding``` won't work with ```@StateEmitter``` in AoT. It can still be used together with ```@StateEmitter```, but the host binding decorator must be applied to the property reference instead of the StateEmitter.
+Unlike the other Angular decorators, ```@HostBinding``` won't work when applied directly to a ```@StateEmitter``` property in AoT. It is still possible to use ```@HostBinding``` in conjunction with ```@StateEmitter```, but the host binding decorator must be applied to the underlying property reference instead of the StateEmitter.
 
 The follwing example will work in AoT:
 

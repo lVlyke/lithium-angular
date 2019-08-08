@@ -1,6 +1,6 @@
 # Quick Guide to Lithium for Angular
 
-This guide is designed to go over at a high level the core features of Lithium and the use cases for them.
+This guide is designed to go over at a high level the core features of Lithium and examples of how to use them.
 
 * [EventSource](#eventsource)
 * [StateEmitter](#stateemitter)
@@ -8,7 +8,7 @@ This guide is designed to go over at a high level the core features of Lithium a
 * [Lifecycle Event Decorators](#lifecycle-event-decorators)
 * [AutoPush (Automatic OnPush detection)](#autopush)
 
-(For more information, see the full [**API reference**](/docs/api-reference.md))
+(Also see the full [**API reference**](/docs/api-reference.md))
 
 **NOTE:** If you are using Angular's AoT compiler, some additional considerations are required to write fully AoT-compliant components with Lithium. See the [Angular AoT Compiler](/docs/aot-guide.md) section for details.
 
@@ -186,7 +186,7 @@ Angular decorators may also be declared on the ```StateEmitter``` property itsel
 class Component {
 
     @StateEmitter()
-    @Input("disabled") // Input metdata will be forwarded to the underlying property.
+    @Input("disabled") // @Input values will automatically be forwarded to the underlying property.
     private readonly disabled$: Subject<boolean>;
 
     constructor () {
@@ -197,7 +197,7 @@ class Component {
 
 ### Combining StateEmitter with other reactive decorators
 
-```StateEmitter``` can be combined with other reactive decorators. The following example shows ```StateEmitter``` being used with the ```Select``` decorator from [NGXS](https://github.com/ngxs/store):
+```StateEmitter``` can be combined with other reactive decorators. The following example shows ```@StateEmitter``` being used with the ```@Select``` decorator from [NGXS](https://github.com/ngxs/store):
 
 ```ts
 @Component({...})
@@ -209,9 +209,9 @@ class Component {
 }
 ```
 
-For more information, see [self-proxying StateEmitters](#self-proxying-stateemitters).
-
 ```username$``` will now function as both a ```StateEmitter``` and an NGXS ```Selector```.
+
+For more information, see [self-proxying StateEmitters](#self-proxying-stateemitters).
 
 ### StateEmitter and inheritance
 

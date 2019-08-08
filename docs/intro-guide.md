@@ -278,7 +278,7 @@ class Component {
     })
     private readonly nestedProperty$: Observable<number>;
 
-    constructor (private fooService: FooService) { }
+    constructor (public fooService: FooService) { }
 }
 ```
 
@@ -319,7 +319,7 @@ class FormComponent {
     @StateEmitter.Alias("settings$.notificationsEnabled")
     private readonly notificationsEnabled$: Observable<boolean>;
 
-    constructor (private settingsService: SettingsService) { }
+    constructor (public settingsService: SettingsService) { }
 }
 ```
 
@@ -345,7 +345,7 @@ class FormComponent {
     @StateEmitter.Alias("settingsService.settings$.notificationsEnabled")
     private readonly notificationsEnabled$: Observable<boolean> ;
 
-    constructor (private settingsService: SettingsService) { }
+    constructor (public settingsService: SettingsService) { }
 }
 ```
 
@@ -381,7 +381,7 @@ class Component {
     @StateEmitter.Alias("sessionManager.session$")
     private readonly session$: Subject<Session>;
 
-    constructor (private sessionManager: SessionManager) { }
+    constructor (public sessionManager: SessionManager) { }
 }
 ```
 
@@ -401,7 +401,7 @@ class Component {
     @StateEmitter.Alias("session$.username")
     private readonly username$: Observable<string>;
 
-    constructor (private sessionManager: SessionManager) { }
+    constructor (public sessionManager: SessionManager) { }
 }
 ```
 

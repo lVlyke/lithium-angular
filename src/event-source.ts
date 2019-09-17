@@ -120,8 +120,16 @@ export namespace EventSource {
          */
         export function Create(eventType: EventType): Function & { eventType: EventType } {
             return Object.assign(function (value: any) {
+                const subjectInfoList = Array.from(EventMetadata.GetPropertySubjectMap(eventType, this).values());
+
+                // Iterate in reverse order for ngOnDestroy eventTypes.
+                // This ensures that all user-defined OnDestroy EventSources are fired before final cleanup of subscriptions.
+                if (eventType === "ngOnDestroy") {
+                    subjectInfoList.reverse();
+                }
+                
                 // Iterate over all class properties that have a proxy subject for this event type and notify each subscriber
-                EventMetadata.GetPropertySubjectMap(eventType, this).forEach(subjectInfo => subjectInfo.subject.next(value));
+                subjectInfoList.forEach(subjectInfo => subjectInfo.subject.next(value));
             }, { eventType });
         }
     }

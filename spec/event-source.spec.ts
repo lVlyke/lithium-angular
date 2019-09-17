@@ -23,22 +23,32 @@ describe("An EventSource decorator", () => {
         angularPropMetadata?: any[];
     };
 
-    const ConstructionTemplateInput = InputBuilder
-        .fragment<ConstructionTemplateInput>({ propertyKey: Random.string() })
-        .fragment({ propertyKey: Random.string() + "$" }, input => !input.options || !input.options.eventType)
-        .fragment({ propertyKey: CommonMetadata.MANAGED_ONDESTROY_KEY })
-        .fragmentList({ methodDecorators: [undefined, [jasmine.createSpy("methodDecorator")]] })
-        .fragment({ options: undefined })
-        .fragmentBuilder<EventSource.DecoratorOptions>("options", InputBuilder
-            .fragmentList<EventSource.DecoratorOptions>({ eventType: [undefined, Random.string()] })
-            .fragmentList({ skipMethodCheck: [true, false, undefined] })
-            .fragmentList({ unmanaged: [true, false, undefined] })
-        )
-        .fragmentList({ angularPropMetadata: [undefined, [1, 2, 3]] });
+    const constructionTemplateInput = [
+        // General tests:
+        InputBuilder
+            .fragment<ConstructionTemplateInput>({ propertyKey: Random.string() })
+            .fragment({ propertyKey: Random.string() + "$" }, input => !input.options || !input.options.eventType)
+            .fragment({ propertyKey: CommonMetadata.MANAGED_ONDESTROY_KEY })
+            .fragmentList({ methodDecorators: [undefined, [jasmine.createSpy("methodDecorator")]] })
+            .fragment({ options: undefined })
+            .fragmentBuilder<EventSource.DecoratorOptions>("options", InputBuilder
+                .fragmentList<EventSource.DecoratorOptions>({ eventType: [undefined, Random.string()] })
+                .fragmentList({ skipMethodCheck: [true, false, undefined] })
+                .fragmentList({ unmanaged: [true, false, undefined] })
+            )
+            .fragmentList({ angularPropMetadata: [undefined, [1, 2, 3]] }),
+        
+        // ngOnDestroy tests:
+        InputBuilder
+            .fragment<ConstructionTemplateInput>({ propertyKey: Random.string() })
+            .fragmentBuilder<EventSource.DecoratorOptions>("options", InputBuilder
+                .fragment<EventSource.DecoratorOptions>({ eventType: "ngOnDestroy" })
+            )
+    ];
 
-    const ConstructionTemplateKeys: (keyof ConstructionTemplateInput)[] = ["propertyKey", "options", "methodDecorators", "angularPropMetadata"];
+    const constructionTemplateKeys: (keyof ConstructionTemplateInput)[] = ["propertyKey", "options", "methodDecorators", "angularPropMetadata"];
 
-    describe("when constructed", Template(ConstructionTemplateKeys, ConstructionTemplateInput, (
+    describe("when constructed", Template(constructionTemplateKeys, constructionTemplateInput, (
         propertyKey: string,
         options?: EventSource.DecoratorOptions,
         methodDecorators?: MethodDecorator[],

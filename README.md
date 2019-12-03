@@ -6,12 +6,12 @@
 
 A decorator-based library for Angular that enables seamless reactive data binding using RxJS. Use Observables as first-class citizens in your view templates!
 
-* [Introduction](#introduction)
-* [Installation](#installation)
-* [Quick Start Guide](/docs/intro-guide.md)
-* [AoT Compiler Guide](/docs/aot-guide.md)
-* [API Reference](/docs/api-reference.md)
-* [Other Information](#other-information)
+* [**Introduction**](#introduction)
+* [**Installation**](#installation)
+* [**Quick Start Guide**](/docs/intro-guide.md)
+* [**AoT Compiler Guide**](/docs/aot-guide.md)
+* [**API Reference**](/docs/api-reference.md)
+* [**Other Information**](#other-information)
 
 ## [Example app](https://github.com/lVlyke/lithium-angular-example-app) - [[Live demo]](https://lvlyke.github.io/lithium-angular-example-app)
 

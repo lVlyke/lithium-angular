@@ -286,25 +286,64 @@ AutoPush enables automatic change detection management of StateEmitters for perf
 ### Decorator
 
 ```ts
-function AutoPush(): ClassDecorator
+function AutoPush(options?: AutoPush.CdRefOptions): ClassDecorator
 ```
 
 Class decorator that enables AutoPush for a component or directive.
+
+**```options```** - The change detection options to use for this component. See [**```AutoPush.CdRefOptions```**](#autopushcdrefoptions).
 
 **Note**: When using Angular's AoT compiler, you must also inject a [change detector reference](https://angular.io/api/core/ChangeDetectorRef) in the component's constructor. See [this section](#autopush-changedetectorref-example) for more info.
 
 ### ```AutoPush.enable```
 
 ```ts
-function enable(component: any, changeDetector: ChangeDetectorLike) {
+function enable(component: any, changeDetector: ChangeDetectorLike, options?: CdRefOptions) {
     Metadata.SetMetadata(CHANGE_DETECTOR_REF, component, changeDetector);
 }
 ```
 
-Enables AutoPush for a specfic instance of a component or directive.
+```ts
+function enable(component: any, changeDetector: ChangeDetectorProxy, options?: Options) {
+    Metadata.SetMetadata(CHANGE_DETECTOR_REF, component, changeDetector);
+}
+```
+
+Enables AutoPush for a specfic instance of a component or directive using the given change detector reference or proxy.
 
 **```component```** - The component or directive instance to enable AutoPush for.
-**```changeDetector```** - The [change detector reference](https://angular.io/api/core/ChangeDetectorRef) to use to invoke change detection.
+
+**```changeDetector```** - The [change detector reference](https://angular.io/api/core/ChangeDetectorRef) or [```ChangeDetectorProxy```](#autopushchangedetectorproxy) to use to invoke change detection.
+
+**```options```** - The change detection options to use for this instance. See [**```AutoPush.CdRefOptions```**](#autopushcdrefoptions).
+
+### ```AutoPush.Options```
+
+```ts
+interface Options {}
+```
+
+### ```AutoPush.CdRefOptions```
+
+```ts
+interface CdRefOptions extends Options {
+    forceDetectChanges?: boolean;
+}
+```
+
+**```forceDetectChanges```** - By default, [```ChangeDetectorRef.markforCheck```](https://angular.io/api/core/ChangeDetectorRef#markforcheck) will be called when ```StateEmitter``` properties are changed. When this is enabled, [```ChangeDetectorRef.detectChanges```](https://angular.io/api/core/ChangeDetectorRef#detectchanges) will be called instead.
+
+### ```AutoPush.ChangeDetectorProxy```
+
+```ts
+interface ChangeDetectorProxy {
+    doCheck(): void;
+}
+```
+
+Interface that represents logic to be invoked as change detection.
+
+**```doCheck```** - Function that will be invoked when a component's ```StateEmitter``` properties are changed.
 
 ## Angular Lifecycle ```EventSource``` decorators
 

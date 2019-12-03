@@ -217,7 +217,7 @@ export namespace StateEmitter {
                         // If the getter wasn't just called (in case of a Behavior/Replay subject)...
                         if (lastObservable === curObservable && !CommonMetadata.instanceIsDestroyed(this)) {
                             // Notify the component of changes if AutoPush is enabled
-                            AutoPush.tryDetectChanges(this);
+                            AutoPush.notifyChanges(this);
                         }
                     });
 

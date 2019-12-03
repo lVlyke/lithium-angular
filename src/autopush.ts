@@ -5,14 +5,14 @@ import { Constructor } from "./managed-observable";
 const DI_METADATA = "design:paramtypes";
 
 /** @ClassDecoratorFactory */
-export function AutoPush(): ClassDecorator {
+export function AutoPush(options?: AutoPush.CdRefOptions): ClassDecorator {
 
     return function<T extends Constructor<any>>(constructor: T): T {
         // Get the dependency metadata for this component
         let diParams: any[] = Metadata.GetOwnMetadata(DI_METADATA, constructor, []);
 
         // Create the wrapper class to inject the ChangeDetector
-        const wrapper = AutoPush.createInjectorWrapper<T>(constructor);
+        const wrapper = AutoPush.createInjectorWrapper<T>(constructor, options);
 
         // If there is no Change Detector being injected, augment the class with the Change Detector DI (JIT only)
         if (!diParams.some(type => type === ChangeDetectorRef)) {
@@ -33,11 +33,41 @@ export function AutoPush(): ClassDecorator {
 
 export namespace AutoPush {
 
-    const CHANGE_DETECTOR_REF = Symbol("cdRef");
+    const CHANGE_DETECTOR_DATA = Symbol("cdRefData");
 
-    type ChangeDetectorLike = Pick<ChangeDetectorRef, "detectChanges">;
+    type ChangeDetectorLike = Pick<ChangeDetectorRef, "detectChanges" | "markForCheck">;
 
-    export function createInjectorWrapper<T extends Constructor<any>>(constructor: T): T {
+    interface Metadata {
+        changeDetector: ChangeDetectorProxy;
+        options: Options;
+    }
+
+    export interface ChangeDetectorProxy {
+        doCheck(): void;
+    }
+
+    export namespace ChangeDetectorProxy {
+
+        export function fromRef(ref: ChangeDetectorLike, options: CdRefOptions): ChangeDetectorProxy {
+            return {
+                doCheck() {
+                    if (options.forceDetectChanges) {
+                        ref.detectChanges();
+                    } else {
+                        ref.markForCheck();
+                    }
+                }
+            };
+        }
+    }
+
+    export interface Options {}
+
+    export interface CdRefOptions extends Options {
+        forceDetectChanges?: boolean;
+    }
+
+    export function createInjectorWrapper<T extends Constructor<any>>(constructor: T, options?: AutoPush.CdRefOptions): T {
         // Create the wrapper class
         const result = class extends constructor {
 
@@ -52,7 +82,7 @@ export namespace AutoPush {
 
                     if (changeDetector) {
                         // Store the change detector for later use
-                        enable(this, changeDetector);
+                        enable(this, changeDetector, options);
                     } else {
                         throw new Error(`[${constructor.name}] A ChangeDetectorRef must be injected into a component with @AutoPush enabled.`);
                     }
@@ -65,26 +95,37 @@ export namespace AutoPush {
         return result;
     }
 
-    export function changeDetector(component: any): ChangeDetectorLike {
-        return Metadata.GetMetadata<ChangeDetectorRef>(CHANGE_DETECTOR_REF, component);
+    export function changeDetector(component: any): ChangeDetectorProxy {
+        const metadata = changeDetectorMetadata(component);
+        return metadata ? metadata.changeDetector : undefined;
     }
 
-    export function enable(component: any, changeDetector: ChangeDetectorLike) {
-        Metadata.SetMetadata(CHANGE_DETECTOR_REF, component, changeDetector);
+    export function enable(component: any, changeDetector: ChangeDetectorLike, options?: CdRefOptions): void;
+    export function enable(component: any, changeDetector: ChangeDetectorProxy, options?: Options): void;
+
+    export function enable(component: any, changeDetector: ChangeDetectorLike | ChangeDetectorProxy, options: Options = {}) {
+        Metadata.SetMetadata<Metadata>(CHANGE_DETECTOR_DATA, component, {
+            options,
+            changeDetector: isProxy(changeDetector) ? changeDetector : ChangeDetectorProxy.fromRef(changeDetector, options)
+        });
     }
 
-    export function tryDetectChanges(component: any) {
+    export function notifyChanges(component: any) {
         // Check to see if AutoPush is enabled on this component
-        const cdRef: ChangeDetectorLike = changeDetector(component);
+        const cdData = changeDetectorMetadata(component);
 
-        if (cdRef) {
-            // Notify Angular that there were changes to a component value
-            cdRef.detectChanges();
+        if (cdData) {
+            // Notify change detector that there were changes to a component value
+            cdData.changeDetector.doCheck();
         }
     }
 
     export function isChangeDetectorLike(object: any): object is ChangeDetectorLike {
         return object && typeof object.detectChanges === "function";
+    }
+
+    function changeDetectorMetadata(component: any): Metadata {
+        return Metadata.GetMetadata<Metadata>(CHANGE_DETECTOR_DATA, component);
     }
 
     function copyAngularMetadata(dest: any, src: any) {
@@ -112,5 +153,9 @@ export namespace AutoPush {
     function copyMetadata(dest: any, src: any) {
         copyAngularMetadata(dest, src);
         copyClassMetadata(dest, src);
+    }
+
+    function isProxy(input: any): input is ChangeDetectorProxy {
+        return input && typeof input.doCheck === "function";
     }
 }

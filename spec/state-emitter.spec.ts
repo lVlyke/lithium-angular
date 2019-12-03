@@ -6,17 +6,14 @@ import { take, map, withLatestFrom, mergeMapTo, filter } from "rxjs/operators";
 import { ManagedBehaviorSubject } from "../src/managed-observable";
 import { EventMetadata } from "../src/metadata";
 import { AngularLifecycleType } from "../src/lifecycle-event";
-import { ChangeDetectorRef } from "@angular/core";
 import { AutoPush } from "../src/autopush";
-
-type ChangeDetectorLike = Pick<ChangeDetectorRef, "detectChanges">;
 
 const spec = Spec.create<{
     targetPrototype: any;
     targetClass: any;
     targetInstance: any;
     setterValue: string;
-    cdRef: ChangeDetectorLike;
+    cdProxy: AutoPush.ChangeDetectorProxy;
 }>();
 
 describe("Given a StateEmitter decorator", () => {
@@ -162,8 +159,8 @@ describe("Given a StateEmitter decorator", () => {
         spec.beforeEach((params) => {
             spyOn(StateEmitter, "WithParams").and.callThrough();
 
-            params.cdRef = jasmine.createSpyObj("ChangeDetectorRef", {
-                detectChanges: function () {}
+            params.cdProxy = jasmine.createSpyObj("ChangeDetectorRef", {
+                doCheck: function () {}
             });
 
             // Make sure a fresh class is created each time
@@ -180,7 +177,7 @@ describe("Given a StateEmitter decorator", () => {
 
                 constructor() {
                     if (autopush) {
-                        AutoPush.enable(this, params.cdRef);
+                        AutoPush.enable(this, params.cdProxy);
                     }
                 }
             };
@@ -458,7 +455,7 @@ describe("Given a StateEmitter decorator", () => {
                                 });
 
                                 spec.it("should NOT invoke change detection on the component", (params) => {
-                                    expect(params.cdRef.detectChanges).not.toHaveBeenCalled();
+                                    expect(params.cdProxy.doCheck).not.toHaveBeenCalled();
                                 });
                             });
                         });
@@ -481,7 +478,7 @@ describe("Given a StateEmitter decorator", () => {
                                             });
 
                                             spec.it("should invoke change detection on the component", (params) => {
-                                                expect(params.cdRef.detectChanges).toHaveBeenCalled();
+                                                expect(params.cdProxy.doCheck).toHaveBeenCalled();
                                             });
                                         });
 
@@ -493,7 +490,7 @@ describe("Given a StateEmitter decorator", () => {
                                                 });
 
                                                 spec.it("should invoke change detection on the component", (params) => {
-                                                    expect(params.cdRef.detectChanges).toHaveBeenCalled();
+                                                    expect(params.cdProxy.doCheck).toHaveBeenCalled();
                                                 });
                                             });
                                         }
@@ -515,7 +512,7 @@ describe("Given a StateEmitter decorator", () => {
                                             });
 
                                             spec.it("should invoke change detection on the component", (params) => {
-                                                expect(params.cdRef.detectChanges).toHaveBeenCalled();
+                                                expect(params.cdProxy.doCheck).toHaveBeenCalled();
                                             });
                                         });
 
@@ -527,7 +524,7 @@ describe("Given a StateEmitter decorator", () => {
                                                 });
 
                                                 spec.it("should NOT invoke change detection on the component", (params) => {
-                                                    expect(params.cdRef.detectChanges).not.toHaveBeenCalled();
+                                                    expect(params.cdProxy.doCheck).not.toHaveBeenCalled();
                                                 });
                                             });
                                         }
@@ -545,11 +542,11 @@ describe("Given a StateEmitter decorator", () => {
 
                                     if (!options || !options.writeOnly) {
                                         spec.it("should NOT invoke change detection on the component", (params) => {
-                                            expect(params.cdRef.detectChanges).not.toHaveBeenCalled();
+                                            expect(params.cdProxy.doCheck).not.toHaveBeenCalled();
                                         });
                                     } else {
                                         spec.it("should invoke change detection on the component", (params) => {
-                                            expect(params.cdRef.detectChanges).toHaveBeenCalled();
+                                            expect(params.cdProxy.doCheck).toHaveBeenCalled();
                                         });
                                     }
                                 });

@@ -68,7 +68,7 @@ export namespace EventSource {
         // Assign the facade function for the given event type to the appropriate target class method
         Object.defineProperty(targetInstance, eventType, {
             enumerable: true,
-            value: Facade.Create(eventType)
+            value: Object.assign(Facade.Create(eventType), { bootstrapped: true })
         });
 
         function classMetadataMerged(merged?: boolean): boolean | undefined {
@@ -155,7 +155,11 @@ export namespace EventSource {
         Object.defineProperty(target, propertyKey, {
             configurable: true,
             get: function () {
-                BootstrapInstance.bind(this)(options.eventType);
+                // Ensure we only bootstrap once for this `eventType` if the intializer is re-invoked (Ivy)
+                if (!this[options.eventType].bootstrapped) {
+                    BootstrapInstance.bind(this)(options.eventType);
+                }
+                
                 return this[propertyKey];
             }
         });
@@ -164,9 +168,13 @@ export namespace EventSource {
         Object.defineProperty(target, options.eventType, {
             configurable: true,
             writable: true,
-            value: Object.assign(function () {
-                BootstrapInstance.bind(this)(options.eventType);
-                return this[options.eventType];
+            value: Object.assign(function (...args: any[]) {
+                // Ensure we only bootstrap once for this `eventType` if the intializer is re-invoked (Ivy)
+                if (!this[options.eventType].bootstrapped) {
+                    BootstrapInstance.bind(this)(options.eventType);
+                }
+
+                return this[options.eventType](...args);
             }, { eventType: options.eventType })
         });
     }

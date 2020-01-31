@@ -1,3 +1,4 @@
+import { ɵNG_COMP_DEF as NG_COMP_DEF } from "@angular/core";
 import { Spec, Template, Random, InputBuilder } from "detest-bdd";
 import { StateEmitter } from "../src/state-emitter";
 import { EmitterMetadata, AngularMetadata, CommonMetadata } from "../src/metadata";
@@ -181,7 +182,8 @@ describe("Given a StateEmitter decorator", () => {
                     }
                 }
             };
-            
+
+            params.targetClass[NG_COMP_DEF] = {};
             params.targetPrototype = params.targetClass.prototype;
 
             if (angularPropMetadata) {
@@ -609,6 +611,7 @@ describe("Given a StateEmitter decorator", () => {
                     proxy$: new BehaviorSubject({ path: Random.string() })
                 };
             };
+            params.targetClass[NG_COMP_DEF] = {};
             params.targetPrototype = params.targetClass.prototype;
 
             if (initialPropertyValue) {

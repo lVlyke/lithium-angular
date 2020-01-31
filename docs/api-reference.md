@@ -1,4 +1,4 @@
-# Lithium for API Reference
+# Lithium for Angular API Reference
 
 ## ```AotAware```
 

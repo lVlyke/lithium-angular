@@ -35,7 +35,7 @@
     "test": "node ./scripts/test.js"
   },
   "peerDependencies": {
-    "@angular/core": "6.x.x - 9.x.x",
+    "@angular/core": "9.x.x",
     "rxjs": "6.x.x"
   },
   "devDependencies": {

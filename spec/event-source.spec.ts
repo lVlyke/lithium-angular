@@ -1,3 +1,4 @@
+import { ɵNG_COMP_DEF as NG_COMP_DEF } from "@angular/core";
 import { EventSource } from "../src/event-source";
 import { Spec, Random, Template, InputBuilder } from "detest-bdd";
 import { EventMetadata, AngularMetadata, CommonMetadata } from "../src/metadata";
@@ -58,12 +59,14 @@ describe("An EventSource decorator", () => {
         const is$ = propertyKey.endsWith("$");
         const eventType = (options && options.eventType) ? options.eventType : (is$ ? propertyKey.slice(0, -1) : undefined);
         const isValid = !!eventType;
+        const isLifecycleEvent = AngularLifecycleType.values.includes(eventType as AngularLifecycleType);
         const createEventSource = () => options ? EventSource(options, ...methodDecorators) : EventSource(...methodDecorators);
         const getOptions = (): EventSource.DecoratorOptions => is$ ? Object.assign({ eventType }, options) : options;
-        
+
         spec.beforeEach((params) => {
             params.targetClass = class TestTargetClass {}; // Make sure a fresh class is created each time
             params.targetPrototype = params.targetClass.prototype;
+            params.targetClass[NG_COMP_DEF] = {};
 
             if (angularPropMetadata) {
                 Object.defineProperty(params.targetClass, AngularMetadata.PROP_METADATA, {
@@ -82,9 +85,15 @@ describe("An EventSource decorator", () => {
                 if (options && options.eventType) {
                     describe("when an eventType is specified", () => {
 
-                        spec.it("should create a facade function for the eventType", (params) => {
-                            expect(params.targetPrototype[options.eventType]).toEqual(jasmine.any(Function));
-                        });
+                        if (isLifecycleEvent) {
+                            spec.it("should NOT create a facade function for the eventType", (params) => {
+                                expect(params.targetPrototype[options.eventType]).not.toBeDefined();
+                            });
+                        } else {
+                            spec.it("should create a facade function for the eventType", (params) => {
+                                expect(params.targetPrototype[options.eventType]).toEqual(jasmine.any(Function));
+                            });
+                        }
 
                         spec.it("should NOT create a facade function for the property key", (params) => {
                             expect(params.targetPrototype[propertyKey.slice(0, -1)]).not.toBeDefined();
@@ -94,9 +103,15 @@ describe("An EventSource decorator", () => {
                 else {
                     describe("when an eventType is NOT specified", () => {
 
-                        spec.it("should create a facade function for the property key", (params) => {
-                            expect(params.targetPrototype[propertyKey.slice(0, -1)]).toEqual(jasmine.any(Function));
-                        });
+                        if (isLifecycleEvent) {
+                            spec.it("should NOT create a facade function for the property key", (params) => {
+                                expect(params.targetPrototype[propertyKey.slice(0, -1)]).not.toBeDefined();
+                            });
+                        } else {
+                            spec.it("should create a facade function for the property key", (params) => {
+                                expect(params.targetPrototype[propertyKey.slice(0, -1)]).toEqual(jasmine.any(Function));
+                            });
+                        }
                     });
                 }
             });
@@ -111,9 +126,16 @@ describe("An EventSource decorator", () => {
                             createEventSource()(params.targetPrototype, propertyKey);
                         }));
 
-                        spec.it("should create a facade function for the eventType", (params) => {
-                            expect(params.targetPrototype[options.eventType]).toEqual(jasmine.any(Function));
-                        });
+                        if (isLifecycleEvent) {
+                            spec.it("should NOT create a facade function for the eventType", (params) => {
+                                expect(params.targetPrototype[options.eventType]).not.toBeDefined();
+                            });
+                        } else {
+                            spec.it("should create a facade function for the eventType", (params) => {
+                                expect(params.targetPrototype[options.eventType]).toEqual(jasmine.any(Function));
+                            });
+                        }
+                        
                     });
                 }
                 else {
@@ -210,9 +232,15 @@ describe("An EventSource decorator", () => {
 
                     // TODO - Test copying of inheritted metadata
 
-                    spec.it("should create the expected eventType facade function on the instance", (params) => {
-                        expect(params.targetInstance[eventType]).toEqual(jasmine.any(Function));
-                    });
+                    if (isLifecycleEvent) {
+                        spec.it("should NOT create the expected eventType facade function on the instance", (params) => {
+                            expect(params.targetInstance[eventType]).not.toBeDefined();
+                        });
+                    } else {
+                        spec.it("should create the expected eventType facade function on the instance", (params) => {
+                            expect(params.targetInstance[eventType]).toEqual(jasmine.any(Function));
+                        });
+                    }
 
                     spec.it("should create the expected propertyKey facade function on the instance for AoT", (params) => {
                         expect(params.targetInstance[propertyKey]).toEqual(jasmine.any(Function));
@@ -241,26 +269,30 @@ describe("An EventSource decorator", () => {
                         })));
                     });
 
-                    describe("when the facade function is invoked", Template.withInputs(["facadeFnKey"], (facadeFnKey: string) => {
+                    if (!isLifecycleEvent) {
+                        describe("when the facade function is invoked", Template.withInputs(["facadeFnKey"], (facadeFnKey: string) => {
 
-                        spec.beforeEach((params) => {
-                            params.observable = params.targetInstance[propertyKey].pipe(shareReplay());
+                            spec.beforeEach((params) => {
+                                params.observable = params.targetInstance[propertyKey].pipe(shareReplay());
 
-                            // Subscribe first to capture the facade fn event
-                            params.observable.subscribe();
+                                // Subscribe first to capture the facade fn event
+                                params.observable.subscribe();
 
-                            // Invoke the facade function
-                            params.facadeData = Random.string();
-                            params.targetInstance[facadeFnKey](params.facadeData);
-                        });
+                                // Invoke the facade function
+                                params.facadeData = Random.string();
+                                params.targetInstance[facadeFnKey](params.facadeData);
+                            });
 
-                        spec.it("should update the Observable with the data passed to the function", (params) => {
-                            return params.observable.pipe(
-                                map(data => { expect(data).toEqual(params.facadeData) }),
-                                take(1)
-                            ).toPromise();
-                        });
-                    }, { facadeFnKey: eventType }, { facadeFnKey: propertyKey }));
+                            spec.it(`should update the Observable with the data passed to the function ('${facadeFnKey}')`, (params) => {
+                                return params.observable.pipe(
+                                    map(data => { expect(data).toEqual(params.facadeData) }),
+                                    take(1)
+                                ).toPromise();
+                            });
+                        }, { facadeFnKey: eventType }, { facadeFnKey: propertyKey }));
+                    } else {
+                        // TODO - Tests for making sure lifecycle events are registered with Ivy
+                    }
                 });
             });
         }

@@ -6,12 +6,14 @@
 
 A decorator-based library for Angular that enables seamless reactive data binding using RxJS. Use Observables as first-class citizens in your view templates!
 
+Lithium now has experimental support for Ivy as of the [latest Angular 9 RC](https://github.com/angular/angular/releases/tag/9.0.0-rc.11)! [Read here](#does-lithium-support-ivy) for more info.
+
 * [**Introduction**](#introduction)
 * [**Installation**](#installation)
 * [**Quick Start Guide**](/docs/intro-guide.md)
 * [**AoT Compiler Guide**](/docs/aot-guide.md)
 * [**API Reference**](/docs/api-reference.md)
-* [**Other Information**](#other-information)
+* [**FAQ and Other Information**](#other-information)
 
 ## [Example app](https://github.com/lVlyke/lithium-angular-example-app) - [[Live demo]](https://lvlyke.github.io/lithium-angular-example-app)
 
@@ -46,6 +48,15 @@ Lithium can be installed [via **npm**](https://www.npmjs.com/package/@lithiumjs/
 npm install @lithiumjs/angular
 ```
 
-## Other information
+## FAQ and Other information
 
-* Lithium for [Ionic](https://github.com/lVlyke/lithium-ionic).
+### FAQ
+
+#### Does Lithium support Ivy?
+
+Yes, Lithium supports Ivy as of the [latest Angular 9 RC](https://github.com/angular/angular/releases/tag/9.0.0-rc.11). However, since Angular 9 is still in the RC phase and the Ivy API has not been finalized, Lithium's support for Ivy is still considered expirmental. While most if not all features should be working, some features may stop working as the Ivy API changes.
+
+### Other information
+
+* [@lithiumjs/ngx-material-theming](https://github.com/lVlyke/lithium-ngx-material-theming)
+* Lithium extensions for [Ionic](https://github.com/lVlyke/lithium-ionic).

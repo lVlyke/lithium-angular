@@ -1,3 +1,4 @@
+import { ɵNG_COMP_DEF as NG_COMP_DEF } from "@angular/core";
 import { Spec, InputBuilder, Template } from "detest-bdd";
 import { EventSource } from "../src/event-source";
 import * as Lifecycle from "../src/lifecycle";
@@ -41,6 +42,7 @@ describe("Given Angular lifecycle event EventSource decorators", () => {
                 const lifecycleDecorator: Lifecycle.AngularLifecycleDecorator.Factory = (<any>Lifecycle)[lifecycleDecoratorName];
 
                 params.targetClass = class {};
+                params.targetClass[NG_COMP_DEF] = {};
 
                 // Apply the lifecycle decorator
                 lifecycleDecorator(options, ...methodDecorators)(params.targetClass.prototype, lifecycleDecoratorName);

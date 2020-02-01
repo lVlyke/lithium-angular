@@ -1,4 +1,4 @@
-import { ɵNG_COMP_DEF as NG_COMP_DEF } from "@angular/core";
+import { ɵComponentType as ComponentType } from "@angular/core";
 import { EventSource } from "../src/event-source";
 import { Spec, Random, Template, InputBuilder } from "detest-bdd";
 import { EventMetadata, CommonMetadata } from "../src/metadata";
@@ -13,6 +13,7 @@ const spec = Spec.create<{
     targetInstance: any;
     facadeData: string;
     observable: Observable<string>;
+    ngCompDef: ComponentType<any> | { ɵcmp: any };
 }>();
 
 describe("An EventSource decorator", () => {
@@ -37,11 +38,12 @@ describe("An EventSource decorator", () => {
                 .fragmentList({ unmanaged: [true, false, undefined] })
             ),
         
-        // ngOnDestroy tests:
+        // Lifecycle tests:
         InputBuilder
             .fragment<ConstructionTemplateInput>({ propertyKey: Random.string() })
+            .fragment({ propertyKey: `${AngularLifecycleType.OnInit}$` }, options => !options.options.eventType)
             .fragmentBuilder<EventSource.DecoratorOptions>("options", InputBuilder
-                .fragment<EventSource.DecoratorOptions>({ eventType: "ngOnDestroy" })
+                .fragmentList<EventSource.DecoratorOptions>({ eventType: [...AngularLifecycleType.values, undefined] })
             )
     ];
 
@@ -63,7 +65,8 @@ describe("An EventSource decorator", () => {
         spec.beforeEach((params) => {
             params.targetClass = class TestTargetClass {}; // Make sure a fresh class is created each time
             params.targetPrototype = params.targetClass.prototype;
-            params.targetClass[NG_COMP_DEF] = {};
+            params.ngCompDef = params.targetClass;
+            params.ngCompDef.ɵcmp = {};
         });
 
         if (is$) {
@@ -217,6 +220,11 @@ describe("An EventSource decorator", () => {
                         spec.it("should NOT create the expected eventType facade function on the instance", (params) => {
                             expect(params.targetInstance[eventType]).not.toBeDefined();
                         });
+
+                        spec.it("should register the lifecycle event with Ivy", (params) => {
+                            const hookName = AngularLifecycleType.hookNames[eventType as AngularLifecycleType];
+                            expect(params.ngCompDef.ɵcmp[hookName]).toEqual(jasmine.any(Function));
+                        });
                     } else {
                         spec.it("should create the expected eventType facade function on the instance", (params) => {
                             expect(params.targetInstance[eventType]).toEqual(jasmine.any(Function));
@@ -250,7 +258,29 @@ describe("An EventSource decorator", () => {
                         })));
                     });
 
-                    if (!isLifecycleEvent) {
+                    if (isLifecycleEvent) {
+                        describe("when the Ivy lifecycle hook function is invoked", () => {
+
+                            spec.beforeEach((params) => {
+                                params.observable = params.targetInstance[propertyKey].pipe(shareReplay());
+
+                                // Subscribe first to capture the facade fn event
+                                params.observable.subscribe();
+
+                                // Invoke the hook function
+                                params.facadeData = Random.string();
+                                const hookName = AngularLifecycleType.hookNames[eventType as AngularLifecycleType];
+                                params.ngCompDef.ɵcmp[hookName](params.facadeData);
+                            });
+
+                            spec.it("should update the Observable with the data passed to the function", (params) => {
+                                return params.observable.pipe(
+                                    map(data => { expect(data).toEqual(params.facadeData) }),
+                                    take(1)
+                                ).toPromise();
+                            });
+                        });
+                    } else {
                         describe("when the facade function is invoked", Template.withInputs(["facadeFnKey"], (facadeFnKey: string) => {
 
                             spec.beforeEach((params) => {
@@ -271,8 +301,6 @@ describe("An EventSource decorator", () => {
                                 ).toPromise();
                             });
                         }, { facadeFnKey: eventType }, { facadeFnKey: propertyKey }));
-                    } else {
-                        // TODO - Tests for making sure lifecycle events are registered with Ivy
                     }
                 });
             });

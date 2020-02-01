@@ -1,5 +1,5 @@
 import { Spec, Template, InputBuilder } from "detest-bdd";
-import { Metadata, AngularMetadata } from "../src/metadata";
+import { Metadata } from "../src/metadata";
 import { AutoPush } from "../src/autopush";
 import { ChangeDetectorRef } from "@angular/core";
 
@@ -62,11 +62,6 @@ describe("Given a component that will use AutoPush functionality", () => {
                     }
                 }
             };
-            
-            // Add Angular metadata to the target classS
-            Object.defineProperty(params.targetClass, AngularMetadata.PARAMETERS, { value: ["a", "b", "c"] });
-            Object.defineProperty(params.targetClass, AngularMetadata.PROP_METADATA, { value: ["d", "e", "f"] });
-            Object.defineProperty(params.targetClass, AngularMetadata.ANNOTATIONS, { value: ["g", "h", "i"] });
 
             if (existingChangeDetector) {
                 Metadata.setMetadata(DI_METADATA, params.targetClass, [ChangeDetectorRef]);

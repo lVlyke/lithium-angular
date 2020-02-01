@@ -1,7 +1,7 @@
 import { ɵNG_COMP_DEF as NG_COMP_DEF } from "@angular/core";
 import { Spec, Template, Random, InputBuilder } from "detest-bdd";
 import { StateEmitter } from "../src/state-emitter";
-import { EmitterMetadata, AngularMetadata, CommonMetadata } from "../src/metadata";
+import { EmitterMetadata, CommonMetadata } from "../src/metadata";
 import { BehaviorSubject, Observable, Subject, of } from "rxjs";
 import { take, map, withLatestFrom, mergeMapTo, filter } from "rxjs/operators";
 import { ManagedBehaviorSubject } from "../src/managed-observable";
@@ -24,7 +24,6 @@ describe("Given a StateEmitter decorator", () => {
         autopush: boolean;
         options?: StateEmitter.DecoratorParams;
         propertyDecorators?: PropertyDecorator[];
-        angularPropMetadata?: any[];
     };
 
     const STATIC_PROXY_PATH = "static.proxy.path$";
@@ -41,8 +40,7 @@ describe("Given a StateEmitter decorator", () => {
             .fragmentList<StateEmitter.DecoratorParams>({ propertyName: [undefined, Random.string()] })
             .fragmentList({ initialValue: [undefined, Random.string()] })
             .fragmentList({ unmanaged: [true, false, undefined] })
-        )
-        .fragmentList({ angularPropMetadata: [undefined, [1, 2, 3]] }),
+        ),
 
         // Proxy tests
         InputBuilder
@@ -76,16 +74,14 @@ describe("Given a StateEmitter decorator", () => {
         "propertyKey",
         "autopush",
         "options",
-        "propertyDecorators",
-        "angularPropMetadata"
+        "propertyDecorators"
     ];    
 
     describe("when constructed", Template(ConstructionTemplateKeys, constructionTestInputs, (
         propertyKey: string,
         autopush: boolean,
         options?: StateEmitter.DecoratorParams,
-        propertyDecorators?: PropertyDecorator[],
-        angularPropMetadata?: any[]
+        propertyDecorators?: PropertyDecorator[]
     ) => {
         propertyDecorators = propertyDecorators || [];
         const is$ = propertyKey.endsWith("$");
@@ -185,12 +181,6 @@ describe("Given a StateEmitter decorator", () => {
 
             params.targetClass[NG_COMP_DEF] = {};
             params.targetPrototype = params.targetClass.prototype;
-
-            if (angularPropMetadata) {
-                Object.defineProperty(params.targetClass, AngularMetadata.PROP_METADATA, {
-                    value: { [propertyKey]: angularPropMetadata }
-                });
-            }
         });
 
         if (!is$ && !(options && options.propertyName)) {
@@ -251,16 +241,6 @@ describe("Given a StateEmitter decorator", () => {
                             AngularLifecycleType.OnDestroy,
                             params.targetClass
                         ).has(CommonMetadata.MANAGED_ONDESTROY_KEY)).toBeTruthy();
-                    });
-                }
-
-                if (angularPropMetadata) {
-                    describe("when there's Angular metadata for this property", () => {
-
-                        spec.it("then it should move the metadata from the StateEmitter property to the facade property", (params) => {
-                            expect(AngularMetadata.hasPropMetadataEntry(params.targetClass, propertyKey)).toBeFalsy();
-                            expect(AngularMetadata.getPropMetadata(params.targetClass)).toEqual({ [propertyName]: angularPropMetadata });
-                        });
                     });
                 }
 

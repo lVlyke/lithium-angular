@@ -1,5 +1,5 @@
 import { Observable, BehaviorSubject, Subscription } from "rxjs";
-import { EmitterMetadata, EmitterType, AngularMetadata, Metadata, CommonMetadata } from "./metadata";
+import { EmitterMetadata, EmitterType, Metadata, CommonMetadata } from "./metadata";
 import { ObservableUtil } from "./observable-util";
 import { take, tap, filter } from "rxjs/operators";
 import { ManagedBehaviorSubject } from "./managed-observable";
@@ -80,12 +80,7 @@ export namespace StateEmitter {
             propertyDecorators.forEach(propertyDecorator => propertyDecorator(target, params.propertyName));
 
             // Create the state emitter metadata for the decorated property
-            StateEmitter.CreateMetadata(target, params.propertyName, Object.assign({ propertyKey, observable: undefined }, params));
-
-            // Point any Angular metadata attached to the StateEmitter to the underlying facade property
-            if (AngularMetadata.hasPropMetadataEntry(target.constructor, propertyKey)) {
-                AngularMetadata.renamePropMetadataEntry(target.constructor, propertyKey, params.propertyName);
-            }
+            createMetadata(target, params.propertyName, Object.assign({ propertyKey, observable: undefined }, params));
         };
     }
 
@@ -161,7 +156,7 @@ export namespace StateEmitter {
         return StateEmitter.Merge($params, ...propertyDecorators);
     }
 
-    export namespace Facade {
+    namespace Facade {
 
         export function CreateSetter(type: EmitterType): (value: any) => void {
             return function (value: any) {
@@ -230,7 +225,7 @@ export namespace StateEmitter {
         }
     }
 
-    export function BootstrapInstance(initialPropertyDescriptor: PropertyDescriptor, emitterType: EmitterType) {
+    function bootstrapInstance(initialPropertyDescriptor: PropertyDescriptor, emitterType: EmitterType) {
         const targetInstance: any = this;
 
         function classMetadataMerged(merged?: boolean): boolean | undefined {
@@ -242,7 +237,7 @@ export namespace StateEmitter {
             return undefined;
         }
 
-        function DefineProxyObservableGetter(subjectInfo: EmitterMetadata.SubjectInfo, alwaysResolvePath?: boolean, onResolve?: (proxySubscribable: Observable<any>) => Observable<any> | void) {
+        function defineProxyObservableGetter(subjectInfo: EmitterMetadata.SubjectInfo, alwaysResolvePath?: boolean, onResolve?: (proxySubscribable: Observable<any>) => Observable<any> | void) {
             let observable: Observable<any>;
 
             // Create a getter that resolves the observable from the target proxy path
@@ -303,7 +298,7 @@ export namespace StateEmitter {
         switch (subjectInfo.proxyMode) {
             // Aliased emitters simply pass directly through to their source value
             case EmitterMetadata.ProxyMode.Alias: {
-                DefineProxyObservableGetter(subjectInfo, true);
+                defineProxyObservableGetter(subjectInfo, true);
                 break;
             }
 
@@ -315,7 +310,7 @@ export namespace StateEmitter {
                 const subject = makeEmitterSubject();
 
                 // Create a getter that returns the new subject
-                DefineProxyObservableGetter(subjectInfo, false, (proxyObservable: Observable<any>) => {
+                defineProxyObservableGetter(subjectInfo, false, (proxyObservable: Observable<any>) => {
                     // Only take the first value if targetInstance is a From proxy
                     if (subjectInfo.proxyMode === EmitterMetadata.ProxyMode.From) {
                         proxyObservable = proxyObservable.pipe(take(1));
@@ -363,7 +358,7 @@ export namespace StateEmitter {
         });
     }
 
-    export function CreateMetadata(target: any, type: EmitterType, metadata: EmitterMetadata.SubjectInfo) {
+    function createMetadata(target: any, type: EmitterType, metadata: EmitterMetadata.SubjectInfo) {
         const initialPropertyDescriptor = Object.getOwnPropertyDescriptor(target, metadata.propertyKey);
 
         if (target[type]) {
@@ -378,13 +373,14 @@ export namespace StateEmitter {
         Object.defineProperty(target, metadata.propertyKey, {
             configurable: true,
             get: function () {
-                BootstrapInstance.bind(this)(initialPropertyDescriptor, type);
+                bootstrapInstance.bind(this)(initialPropertyDescriptor, type);
                 return this[metadata.propertyKey];
             },
-            // Allow updates to the subject via the setter of the StateEmitter property
-            // (This is needed to allow StateEmitters with attached Angular metadata decorators to work with AoT)
+            // Allow updates to the subject via the setter of the StateEmitter property itself
+            // (This is needed to allow StateEmitters to work with Angular property decorators like @ViewChild)
+            // TODO - Figure out a better way to do this with Ivy
             set: function(value: any) {
-                BootstrapInstance.bind(this)(initialPropertyDescriptor, type);
+                bootstrapInstance.bind(this)(initialPropertyDescriptor, type);
                 this[type] = value;
             }
         });
@@ -393,11 +389,11 @@ export namespace StateEmitter {
         Object.defineProperty(target, type, {
             configurable: true,
             get: function () {
-                BootstrapInstance.bind(this)(initialPropertyDescriptor, type);
+                bootstrapInstance.bind(this)(initialPropertyDescriptor, type);
                 return this[type];
             },
             set: function(value: any) {
-                BootstrapInstance.bind(this)(initialPropertyDescriptor, type);
+                bootstrapInstance.bind(this)(initialPropertyDescriptor, type);
                 this[type] = value;
             }
         });

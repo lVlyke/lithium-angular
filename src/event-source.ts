@@ -1,7 +1,7 @@
 
 import { ɵComponentType as ComponentType, ɵDirectiveType as DirectiveType } from "@angular/core";
 import { Observable, Subject } from "rxjs";
-import { EventMetadata, EventType, AngularMetadata, Metadata, CommonMetadata } from "./metadata";
+import { EventMetadata, EventType, Metadata, CommonMetadata } from "./metadata";
 import { AotAware } from "./aot";
 import { ManagedSubject } from "./managed-observable";
 import { AngularLifecycleType } from "./lifecycle-event";
@@ -53,23 +53,22 @@ export namespace EventSource {
             }
 
             // Create the event source metadata for the decorated property
-            EventSource._createMetadata(options as EventMetadata.SubjectInfo, target, propertyKey);
+            createMetadata(options as EventMetadata.SubjectInfo, target, propertyKey);
 
             // Apply any method decorators to the facade function
             methodDecorators.forEach(methodDecorator => methodDecorator(target, options.eventType, Object.getOwnPropertyDescriptor(target, options.eventType)));
-
-            // Point any Angular metadata attached to the EventSource to the underlying facade method
-            if (AngularMetadata.hasPropMetadataEntry(target.constructor, propertyKey)) {
-                AngularMetadata.renamePropMetadataEntry(target.constructor, propertyKey, options.eventType);
-            }
         };
     }
 
-    function bootstrapInstance(eventType: EventType, skipFacadeCreation?: boolean) {
+    function bootstrapInstance(eventType: EventType, isLifecycleEvent: boolean) {
         const targetInstance: any = this;
-
-        if (!skipFacadeCreation) {
+        
+        if (isLifecycleEvent) {
+            // If this is a lifecycle event, register it to be handled by Ivy
+            registerIvyLifecycleEvent(targetInstance, eventType);  
+        } else {
             // Assign the facade function for the given event type to the appropriate target class method
+            // This function gets called from the view template and triggers the associated Subject
             Object.defineProperty(targetInstance, eventType, {
                 enumerable: true,
                 value: Facade.Create(eventType)
@@ -108,7 +107,7 @@ export namespace EventSource {
             }
 
             // Set the property key to a function that will invoke the facade method when called
-            // (This is needed to allow EventSources with attached Angular metadata decorators to work with AoT)
+            // (This is needed to allow EventSources to work with Angular event decorators like @HostListener)
             // Compose the function with the observable
             let propertyValue: Observable<any> & Function = Object.setPrototypeOf(Facade.Create(eventType), subjectInfo.subject);
 
@@ -141,7 +140,7 @@ export namespace EventSource {
         }
     }
 
-    export function _createMetadata(options: EventMetadata.SubjectInfo, target: any, propertyKey: string) {
+    function createMetadata(options: EventMetadata.SubjectInfo, target: any, propertyKey: string) {
         const ContainsCustomMethod = ($class = target): boolean => {
             const methodDescriptor = Object.getOwnPropertyDescriptor($class, options.eventType);
             const method = methodDescriptor ? (methodDescriptor.value || methodDescriptor.get) : undefined; 
@@ -169,11 +168,6 @@ export namespace EventSource {
                 if (!isBootstrapped.call(this, options.eventType)) {
                     // Boostrap the event source for this instance
                     bootstrapInstance.bind(this)(options.eventType, isLifecycleEvent);
-
-                    // If this is a lifecycle event, register it to be handled by Ivy
-                    if (isLifecycleEvent) {
-                        registerIvyLifecycleEvent(this.constructor, this, options.eventType);  
-                    }
                 }
                 
                 // Return the Observable for the event
@@ -201,8 +195,9 @@ export namespace EventSource {
         }
     }
 
-    function registerIvyLifecycleEvent(component: ComponentType<any> & DirectiveType<any>, instance: any, eventType: EventType) {
+    function registerIvyLifecycleEvent(instance: any, eventType: EventType) {
         // Resolve the metadata for this component or directive
+        const component: ComponentType<any> & DirectiveType<any> = instance.constructor;
         const componentDef = (): any => component.ɵcmp || component.ɵdir;
 
         if (componentDef()) {

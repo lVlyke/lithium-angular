@@ -262,12 +262,12 @@ interface SelfProxyDecoratorParams {
 
 **```unmanaged```** - (Optional) See [**```StateEmitter.DecoratorParams.unmanaged```**](#stateemitterdecoratorparams).
 
-## ```AotAware```
+## ```LiComponent```
 
-An abstract class that an Angular component class can extend to automatically allow dynamic template checking to enable use with AoT-compiled builds.
+An abstract class that an Angular component class can extend to automatically allow dynamic template checking to enable use with Ivy-compiled builds.
 
 ```ts
-abstract class AotAware extends AotDynamic() {}
+abstract class LiComponent extends TemplateDynamic() {}
 ```
 
 ## AutoPush

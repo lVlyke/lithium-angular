@@ -6,12 +6,12 @@
 
 A decorator-based library for Angular that enables seamless reactive data binding using RxJS. Use Observables as first-class citizens in your view templates!
 
-Lithium now has experimental support for Ivy as of the [latest Angular 9 RC](https://github.com/angular/angular/releases/tag/9.0.0-rc.11)! [Read here](#does-lithium-support-ivy) for more info.
+Lithium now has experimental support for Ivy as of the [latest Angular 9 RC](https://github.com/angular/angular/releases/tag/9.0.0-rc.12)! [Read here](#does-lithium-support-ivy) for more info.
 
 * [**Introduction**](#introduction)
 * [**Installation**](#installation)
 * [**Quick Start Guide**](/docs/intro-guide.md)
-* [**AoT Compiler Guide**](/docs/aot-guide.md)
+* [**Ivy Compiler Guide**](/docs/aot-guide.md)
 * [**API Reference**](/docs/api-reference.md)
 * [**FAQ and Other Information**](#other-information)
 
@@ -29,13 +29,13 @@ Angular has a built-in [async pipe](https://angular.io/api/common/AsyncPipe) tha
 * **Reactive two-way binding support** - Lithium natively supports [two-way binding](https://angular.io/guide/template-syntax#two-way-binding---) of Subjects using ```[(ngModel)]``` and by direct template assignments (i.e. ```(click)="foo = 'bar'"```).
 * **Reactive event binding support** - Unlike ```async```, Lithium supports reactive [event binding](https://angular.io/guide/template-syntax#event-binding). Click events, [lifecycle events](/docs/intro-guide.md#lifecycle-event-decorators), and more are Observables that can be subscribed to, instead of invoked as callback functions.
 * **Works with Angular component decorators (```@Input```, ```@Output```, ```@HostListener``` and more)** - Lithium can be used to make reactive component inputs as Subjects and respond to host events through subscriptions to Observables with no syntax overhead.
-* **Useful for directives** - Lithium's [AutoPush functionality](/docs/intro-guide.md#autopush) can be used with directives for easily writing OnPush-friendly directives.
+* **Useful for components and directives** - Lithium's [AutoPush functionality](/docs/intro-guide.md#autopush) can also be used for easily writing OnPush-friendly directives.
 
 Like ```async```, Lithium also has the following benefits:
 
 * **Automatic subscription management** - Lithium will automatically end subscriptions when components are destroyed.
 * **Simplified OnPush change detection** - Using AutoPush, Lithium makes writing [OnPush](https://angular.io/api/core/ChangeDetectionStrategy)-capable components trivial.
-* **Full AoT compiler support** - Lithium supports AoT compilation. See [here](/docs/aot-guide.md) for more info.
+* **Full Ivy compiler support** - Lithium supports Angular's new Ivy compiler. See [here](/docs/aot-guide.md) for more info.
 * **Can be used with other reactive libraries** - Lithium has full compatability with other decorator-based libraries like [NGXS](https://github.com/ngxs/store).
 
 Read through the [intro guide](/docs/intro-guide.md) to get to know Lithium's core features and view the [example app](https://github.com/lVlyke/lithium-angular-example-app) to see Lithium in action with real-world use-cases. Full [API](/docs/api-reference.md) documentation is also available.
@@ -52,9 +52,17 @@ npm install @lithiumjs/angular
 
 ### FAQ
 
+#### Does Lithium support ViewEngine (Ivy opt-out, Angular pre-9)
+
+Lithium 3.x.x, the current stable version of Lithium, still supports ViewEngine. Lithium 4.x.x no longer supports the ViewEngine renderer and will **only** work with Ivy.
+
 #### Does Lithium support Ivy?
 
-Yes, Lithium supports Ivy as of the [latest Angular 9 RC](https://github.com/angular/angular/releases/tag/9.0.0-rc.11). However, since Angular 9 is still in the RC phase and the Ivy API has not been finalized, Lithium's support for Ivy is still considered experimental. While most if not all features should be working, some features may stop working as the Ivy API changes.
+Yes, Lithium 4.x.x supports Ivy as of the [latest Angular 9 RC](https://github.com/angular/angular/releases/tag/9.0.0-rc.12). However, since Angular 9 is still in the RC phase and the Ivy API has not been finalized, Lithium's support for Ivy is still considered experimental. While most if not all features should be working, some features may stop working as the Ivy API changes.
+
+#### Are there any known limitations with Lithium?
+
+While Lithium integrates cleanly with Angular for the majority of cases, there are certain limitations that [are noted here](/docs/limitations.md).
 
 ### Other information
 

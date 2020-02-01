@@ -7,10 +7,10 @@ This guide is designed to go over at a high level the core features of Lithium a
 * [Proxied StateEmitters](#proxied-stateemitters)
 * [Lifecycle Event Decorators](#lifecycle-event-decorators)
 * [AutoPush (Automatic OnPush detection)](#autopush)
+* [Limitations](/docs/limitations.md)
+* [Further reading](#further-reading)
 
 (Also see the full [**API reference**](/docs/api-reference.md))
-
-**NOTE:** If you are using Angular's AoT compiler, some additional considerations are required to write fully AoT-compliant components with Lithium. See the [Angular AoT Compiler](/docs/aot-guide.md) section for details.
 
 ## EventSource
 
@@ -63,7 +63,7 @@ class Component {
 }
 ```
 
-Angular decorators may also be declared on the ```EventSource``` property itself. Lithium will automatically move the associated metadata to the facade function. This is useful for [staying compliant with Angular's AoT compiler](/docs/aot-guide.md).
+Angular decorators like `@HostListener` may also be used with `@EventSource`, however they **must** be applied to the ```EventSource``` property itself, as illustrated below:
 
 #### Example
 
@@ -71,8 +71,8 @@ Angular decorators may also be declared on the ```EventSource``` property itself
 @Component({...})
 class Component {
 
+    @HostListener("click") // Add @HostListener directly to `onClick$`
     @EventSource()
-    @HostListener("click")
     private readonly onClick$: Observable<any>;
 
     constructor () {
@@ -80,6 +80,8 @@ class Component {
     }
 }
 ```
+
+See the [limitations section](/docs/limitations.md) for more info.
 
 ### EventSource and inheritance
 
@@ -140,7 +142,8 @@ class Component {
     @EventSource()
     private readonly resetAmount$: Observable<void>;
 
-    @StateEmitter({initialValue: 0}) private amount$: Subject<number>;
+    @StateEmitter({initialValue: 0})
+    private amount$: Subject<number>;
 
     constructor () {
         this.resetAmount$.subscribe(() => this.amount$.next(0));
@@ -173,7 +176,7 @@ class Component {
 }
 ```
 
-Angular decorators may also be declared on the ```StateEmitter``` property itself. Lithium will automatically move the associated metadata to the underlying facade property. This is useful for [staying compliant with Angular's AoT compiler](/docs/aot-guide.md).
+Angular decorators like `@Input` and `@ViewChild` may also be used with `@StateEmitter`, however they **must** be applied to the ```StateEmitter``` property itself, as illustrated below:
 
 #### Example
 
@@ -185,8 +188,8 @@ Angular decorators may also be declared on the ```StateEmitter``` property itsel
 @Component({...})
 class Component {
 
+    @Input("disabled") // Add @Input directly to `disabled$`
     @StateEmitter()
-    @Input("disabled") // @Input values will automatically be forwarded to the underlying property.
     private readonly disabled$: Subject<boolean>;
 
     constructor () {
@@ -194,6 +197,8 @@ class Component {
     }
 }
 ```
+
+Names for `@Input` and `@Output` decorators must explicitly be declared when used with `@StateEmitter`, as shown above. See the [limitations section](/docs/limitations.md) for more info.
 
 ### Combining StateEmitter with other reactive decorators
 
@@ -554,3 +559,7 @@ class Component extends AotAware {
 When using AutoPush, you should also set the component's ```changeDetection``` to ```ChangeDetectionStrategy.OnPush```. If a component's state is expressed entirely through ```StateEmitters```, change detection will no longer need to be manually invoked in the component.
 
 [**API reference**](/docs/api-reference.md#autopush)
+
+## Further Reading
+
+* Take a look at the [example project](https://github.com/lVlyke/lithium-angular-example-app) to see Lithium used in a real app alongside libraries like NGXS and Angular Material.

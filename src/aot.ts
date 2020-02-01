@@ -1,6 +1,7 @@
-// Enable dynamic templating in AoT compiled components
-export function AotDynamic(): new(...args: any[]) => { [K in keyof any]: any[K]; } {
-    return class AotDynamic{};
-}
+import { LiComponent } from "./component";
 
-export class AotAware extends AotDynamic() {}
+/**
+ * @deprecated
+ * @see LiComponent
+ */ 
+export const AotAware = LiComponent;

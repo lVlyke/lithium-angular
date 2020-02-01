@@ -352,8 +352,9 @@ export namespace StateEmitter {
 
                 return subjectInfo.observable;
             },
-            // Allow updates to the subject via the setter of the StateEmitter property
-            // (This is needed to allow StateEmitters with attached Angular metadata decorators to work with AoT)
+            // Allow updates to the subject via the setter of the StateEmitter property itself
+            // (This is needed to allow StateEmitters to work with Angular property decorators like @ViewChild)
+            // TODO - Figure out a better way to do this with Ivy
             set: facadeSetter
         });
     }

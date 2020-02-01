@@ -2,7 +2,6 @@
 import { ɵComponentType as ComponentType, ɵDirectiveType as DirectiveType } from "@angular/core";
 import { Observable, Subject } from "rxjs";
 import { EventMetadata, EventType, Metadata, CommonMetadata } from "./metadata";
-import { AotAware } from "./aot";
 import { ManagedSubject } from "./managed-observable";
 import { AngularLifecycleType } from "./lifecycle-event";
 
@@ -130,7 +129,7 @@ export namespace EventSource {
                 // Get the list of subjects to notify for this `eventType`
                 const subjectInfoList = Array.from(EventMetadata.GetPropertySubjectMap(eventType, this).values());
                 // Use the first value from this event if only a single value was given, otherwise emit all given values as an array to the Subject
-                const valueToEmit = values.length > 1 ? values : values.length > 0 ? values[0] : undefined;
+                const valueToEmit = (values.length > 1) ? values : (values.length > 0) ? values[0] : undefined;
 
                 // Iterate in reverse order for ngOnDestroy eventTypes.
                 // This ensures that all user-defined OnDestroy EventSources are fired before final cleanup of subscriptions.
@@ -149,8 +148,7 @@ export namespace EventSource {
             const methodDescriptor = Object.getOwnPropertyDescriptor($class, options.eventType);
             const method = methodDescriptor ? (methodDescriptor.value || methodDescriptor.get) : undefined; 
             const isCustomMethod = method && method.eventType !== options.eventType;
-            const isExcludedClass = $class.name === AotAware.name;
-            return (isCustomMethod && !isExcludedClass) || (!method && target.prototype && ContainsCustomMethod(target.prototype));
+            return isCustomMethod || (!method && target.prototype && ContainsCustomMethod(target.prototype));
         };
 
         // Determine if this EventSource is handling an Angular lifecycle event

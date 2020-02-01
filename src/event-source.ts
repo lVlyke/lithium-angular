@@ -109,6 +109,7 @@ export namespace EventSource {
             // Set the property key to a function that will invoke the facade method when called
             // (This is needed to allow EventSources to work with Angular event decorators like @HostListener)
             // Compose the function with the observable
+            // TODO - Figure out a better way to do this with Ivy
             let propertyValue: Observable<any> & Function = Object.setPrototypeOf(Facade.Create(eventType), subjectInfo.subject);
 
             Object.defineProperty(targetInstance, propertyKey, {
@@ -125,8 +126,11 @@ export namespace EventSource {
          *  Creates an event facade function (the function that is invoked during an event) for the given event type.
          */
         export function Create(eventType: EventType): Function & { eventType: EventType } {
-            return Object.assign(function (value: any) {
+            return Object.assign(function (...values: any[]) {
+                // Get the list of subjects to notify for this `eventType`
                 const subjectInfoList = Array.from(EventMetadata.GetPropertySubjectMap(eventType, this).values());
+                // Use the first value from this event if only a single value was given, otherwise emit all given values as an array to the Subject
+                const valueToEmit = values.length > 1 ? values : values.length > 0 ? values[0] : undefined;
 
                 // Iterate in reverse order for ngOnDestroy eventTypes.
                 // This ensures that all user-defined OnDestroy EventSources are fired before final cleanup of subscriptions.
@@ -134,8 +138,8 @@ export namespace EventSource {
                     subjectInfoList.reverse();
                 }
                 
-                // Iterate over all class properties that have a proxy subject for this event type and notify each subscriber
-                subjectInfoList.forEach(subjectInfo => subjectInfo.subject.next(value));
+                // Emit the given event value to each interested subject
+                subjectInfoList.forEach(subjectInfo => subjectInfo.subject.next(valueToEmit));
             }, { eventType });
         }
     }

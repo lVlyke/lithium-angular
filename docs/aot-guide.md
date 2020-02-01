@@ -62,7 +62,11 @@ class Component {
 
 ## **2. When applying an Angular decorator to an ```EventSource```, the decorator should be applied to the property directly instead of being passed into ```EventSource```.**
 
-In the following example, ```HostListener``` should be declared on the property directly. This will work correctly when compiled with AoT:
+In the following example, ```HostListener``` should be declared on the property directly.
+
+```diff
++ This will work correctly when compiled with AoT:
+```
 
 ```ts
 @Component({...})
@@ -79,7 +83,9 @@ class Component {
 }
 ```
 
-The following example click event will silently fail to fire when compiled with AoT:
+```diff
+- The following example click event will silently fail to fire when compiled with AoT:
+```
 
 ```ts
 @Component({...})
@@ -97,7 +103,11 @@ class Component {
 
 ## **3. When applying an Angular decorator to a ```StateEmitter```, the decorator should be applied to the property directly instead of being passed into ```StateEmitter```.**
 
-In the following example, ```Input``` should be declared on the property directly. The following example will work correctly when compiled with AoT:
+In the following example, ```Input``` should be declared on the property directly.
+
+```diff
++ The following example will work correctly when compiled with AoT:
+```
 
 ```ts
 @Component({...})
@@ -114,7 +124,9 @@ class Component {
 }
 ```
 
-The following example will fail to work with AoT:
+```diff
+- The following example will fail to work with AoT:
+```
 
 ```ts
 @Component({...})
@@ -153,9 +165,29 @@ class Component extends AotAware {
 
 ## **5. ```@HostBinding``` cannot be used directly with ```@StateEmitter```.**
 
-Unlike the other Angular decorators, ```@HostBinding``` won't work when applied directly to a ```@StateEmitter``` property in AoT. It is still possible to use ```@HostBinding``` in conjunction with ```@StateEmitter```, but the host binding decorator must be applied to the underlying property reference instead of the StateEmitter.
+Unlike the other Angular decorators, ```@HostBinding``` won't work when applied directly to a ```@StateEmitter``` property in AoT. It is instead recommended to use [```host``` metadata](https://angular.io/guide/styleguide#style-06-03), as binding through host metadata definitions works natively with Lithium. It is still possible to use ```@HostBinding``` in conjunction with ```@StateEmitter``` with AoT, but the host binding decorator must instead be applied to the underlying property reference, rather than the StateEmitter itself, as is usually the case.
 
-The follwing example will work in AoT:
+```diff
++ The follwing example will work with AoT:
+```
+
+```ts
+@Component({
+    ...
+    host: {
+        '[class.disabled]': 'disabled' // This works correctly with AoT
+    }
+})
+class Component {
+
+    @StateEmitter()
+    private readonly disabled$: Subject<boolean>; // This will update the host metadata above
+}
+```
+
+```diff
++ The follwing example will also work with AoT:
+```
 
 ```ts
 @Component({...})
@@ -168,7 +200,9 @@ class Component {
 }
 ```
 
-The following will NOT work in AoT:
+```diff
+- The following will NOT work with AoT:
+```
 
 ```ts
 @Component({...})

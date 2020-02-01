@@ -54,7 +54,7 @@ npm install @lithiumjs/angular
 
 #### Does Lithium support Ivy?
 
-Yes, Lithium supports Ivy as of the [latest Angular 9 RC](https://github.com/angular/angular/releases/tag/9.0.0-rc.11). However, since Angular 9 is still in the RC phase and the Ivy API has not been finalized, Lithium's support for Ivy is still considered expirmental. While most if not all features should be working, some features may stop working as the Ivy API changes.
+Yes, Lithium supports Ivy as of the [latest Angular 9 RC](https://github.com/angular/angular/releases/tag/9.0.0-rc.11). However, since Angular 9 is still in the RC phase and the Ivy API has not been finalized, Lithium's support for Ivy is still considered experimental. While most if not all features should be working, some features may stop working as the Ivy API changes.
 
 ### Other information
 

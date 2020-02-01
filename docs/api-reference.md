@@ -1,22 +1,5 @@
 # Lithium for Angular API Reference
 
-## ```AotAware```
-
-An abstract class that an Angular component class can extend to automatically handle defining lifecycle event methods for the AoT compiler, as well as allowing dynamic template checking with AoT.
-
-```ts
-abstract class AotAware extends AotDynamic() {
-    public ngOnChanges();
-    public ngOnInit();
-    public ngOnDestroy();
-    public ngDoCheck();
-    public ngAfterContentInit();
-    public ngAfterContentChecked();
-    public ngAfterViewInit();
-    public ngAfterViewChecked();
-}
-```
-
 ## ```EventSource```
 
 Creates an event source, which is an ```Observable``` that automatically emits when the given function (```eventType```) is called.
@@ -278,6 +261,14 @@ interface SelfProxyDecoratorParams {
 **```writeOnly```** - (Optional) See [**```StateEmitter.DecoratorParams.writeOnly```**](#stateemitterdecoratorparams).
 
 **```unmanaged```** - (Optional) See [**```StateEmitter.DecoratorParams.unmanaged```**](#stateemitterdecoratorparams).
+
+## ```AotAware```
+
+An abstract class that an Angular component class can extend to automatically allow dynamic template checking to enable use with AoT-compiled builds.
+
+```ts
+abstract class AotAware extends AotDynamic() {}
+```
 
 ## AutoPush
 

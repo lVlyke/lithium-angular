@@ -26,12 +26,14 @@ This guide is designed to go over at a high level the core features of Lithium a
 
 ```ts
 @Component({...})
-class Component {
+class Component extends LiComponent {
 
     @EventSource()
     private readonly onButtonPress$: Observable<any>;
 
     constructor () {
+        super();
+
         this.onButtonPress$.subscribe(() =>  console.log("The button was pressed."));
     }
 }
@@ -51,13 +53,15 @@ Method decorators may be passed to ```EventSource``` and will be forwarded to th
 
 ```ts
 @Component({...})
-class Component {
+class Component extends LiComponent {
 
     // Given "Throttle" is a method decorator factory:
     @EventSource(Throttle(1000))
     private readonly onButtonPress$: Observable<any>;
 
     constructor () {
+        super();
+
         this.onButtonPress$.subscribe(() =>  console.log("The button was pressed."));
     }
 }
@@ -69,13 +73,15 @@ Angular decorators like `@HostListener` may also be used with `@EventSource`, ho
 
 ```ts
 @Component({...})
-class Component {
+class Component extends LiComponent {
 
     @HostListener("click") // Add @HostListener directly to `onClick$`
     @EventSource()
     private readonly onClick$: Observable<any>;
 
     constructor () {
+        super();
+
         this.onClick$.subscribe(() =>  console.log("The component was clicked."));
     }
 }
@@ -90,12 +96,14 @@ See the [limitations section](/docs/limitations.md) for more info.
 #### Example
 
 ```ts
-abstract class ComponentBase {
+abstract class ComponentBase extends LiComponent {
 
     @OnInit()
     protected readonly onInit$: Observable<void>;
 
     constructor() {
+        super();
+
         this.onInit$.subscribe(() => console.log("OnInit event in parent."));
     }
 }
@@ -137,7 +145,7 @@ Log output:
 
 ```ts
 @Component({...})
-class Component {
+class Component extends LiComponent {
 
     @EventSource()
     private readonly resetAmount$: Observable<void>;
@@ -146,6 +154,8 @@ class Component {
     private amount$: Subject<number>;
 
     constructor () {
+        super();
+
         this.resetAmount$.subscribe(() => this.amount$.next(0));
     }
 }
@@ -164,13 +174,15 @@ Property decorators may be passed to ```StateEmitter``` and will be forwarded to
     selector: "component",
     ...
 })
-class Component {
+class Component extends LiComponent {
 
     // Given "NonNull" is a property decorator:
     @StateEmitter(NonNull())
     private readonly name$: Subject<string>;
 
     constructor () {
+        super();
+
         this.name$.subscribe(name =>  console.log(`Name: ${name}`));
     }
 }
@@ -186,13 +198,15 @@ Angular decorators like `@Input` and `@ViewChild` may also be used with `@StateE
 
 ```ts
 @Component({...})
-class Component {
+class Component extends LiComponent {
 
     @Input("disabled") // Add @Input directly to `disabled$`
     @StateEmitter()
     private readonly disabled$: Subject<boolean>;
 
     constructor () {
+        super();
+
         this.disabled$.subscribe(disabled =>  console.log(`Disabled: ${disabled}`)); // Output: Disabled: true
     }
 }
@@ -206,7 +220,7 @@ Names for `@Input` and `@Output` decorators must explicitly be declared when use
 
 ```ts
 @Component({...})
-class Component {
+class Component extends LiComponent {
 
     @StateEmitter({ readOnly: true })
     @Select(AppState.getUsername)
@@ -225,12 +239,14 @@ For more information, see [self-proxying StateEmitters](#self-proxying-stateemit
 #### Example
 
 ```ts
-abstract class ComponentBase {
+abstract class ComponentBase extends LiComponent {
 
     @StateEmitter({initialValue: "Default"})
     protected readonly username$: Subject<string>;
 
     constructor() {
+        super();
+
         this.username$.subscribe(username => console.log(`Parent got ${username}.`));
     }
 }
@@ -275,7 +291,7 @@ class FooService {
 
 ```ts
 @Component({...})
-class Component {
+class Component extends LiComponent {
 
     @StateEmitter({
         proxyMode: EmitterMetadata.ProxyMode.Alias,
@@ -283,7 +299,9 @@ class Component {
     })
     private readonly nestedProperty$: Observable<number>;
 
-    constructor (public fooService: FooService) { }
+    constructor (public fooService: FooService) {
+        super();
+    }
 }
 ```
 
@@ -316,7 +334,7 @@ class SettingsService {
 
 ```ts
 @Component({...})
-class FormComponent {
+class FormComponent extends LiComponent {
 
     @StateEmitter.Alias("settingsService.settings$")
     private readonly settings$: Subject<Settings>;
@@ -324,7 +342,9 @@ class FormComponent {
     @StateEmitter.Alias("settings$.notificationsEnabled")
     private readonly notificationsEnabled$: Observable<boolean>;
 
-    constructor (public settingsService: SettingsService) { }
+    constructor (public settingsService: SettingsService) {
+        super();
+    }
 }
 ```
 
@@ -344,13 +364,15 @@ If a dynamic property path contains a ```Subject```, it will automatically be no
 
 ```ts
 @Component({...})
-class FormComponent {
+class FormComponent extends LiComponent {
 
     // Dynamic proxy property path that contains a Subject
     @StateEmitter.Alias("settingsService.settings$.notificationsEnabled")
     private readonly notificationsEnabled$: Observable<boolean> ;
 
-    constructor (public settingsService: SettingsService) { }
+    constructor (public settingsService: SettingsService) {
+        super();
+    }
 }
 ```
 
@@ -381,12 +403,14 @@ class SessionManager {
 
 ```ts
 @Component({...})
-class Component {
+class Component extends LiComponent {
 
     @StateEmitter.Alias("sessionManager.session$")
     private readonly session$: Subject<Session>;
 
-    constructor (public sessionManager: SessionManager) { }
+    constructor (public sessionManager: SessionManager) {
+        super();
+    }
 }
 ```
 
@@ -398,7 +422,7 @@ class Component {
 
 ```ts
 @Component({...})
-class Component {
+class Component extends LiComponent {
 
     @StateEmitter.Alias("sessionManager.session$")
     private readonly session$: Subject<Session>;
@@ -406,7 +430,9 @@ class Component {
     @StateEmitter.Alias("session$.username")
     private readonly username$: Observable<string>;
 
-    constructor (public sessionManager: SessionManager) { }
+    constructor (public sessionManager: SessionManager) {
+        super();
+    }
 }
 ```
 
@@ -424,12 +450,14 @@ The ```From``` proxy type creates a new ```Subject``` that gets its initial valu
 
 ```ts
 @Component({...})
-class FormComponent {
+class FormComponent extends LiComponent {
 
     @StateEmitter.From("sessionManager.session$.username")
     private readonly username$: Subject<string>;
 
-    constructor (private sessionManager: SessionManager) { }
+    constructor (private sessionManager: SessionManager) {
+        super();
+    }
 }
 ```
 
@@ -449,12 +477,14 @@ The ```Merge``` proxy type creates a new ```Subject``` that subscribes to all up
 
 ```ts
 @Component({...})
-class FormComponent {
+class FormComponent extends LiComponent {
 
     @StateEmitter.Merge("fooService.date$")
     private readonly date$: Subject<Date>;
 
-    constructor (private fooService: FooService) { }
+    constructor (private fooService: FooService) {
+        super();
+    }
 }
 ```
 
@@ -466,7 +496,7 @@ A self-proxying ```StateEmitter``` is simply a proxied ```StateEmitter``` with a
 
 ```ts
 @Component({...})
-class Component {
+class Component extends LiComponent {
 
     @StateEmitter.Alias("username$")
     @Select(AppState.getUsername)
@@ -478,7 +508,7 @@ In the above example, the ```@Select()``` decorator creates an ```Observable``` 
 
 ```ts
 @Component({...})
-class Component {
+class Component extends LiComponent {
 
     @StateEmitter.AliasSelf() // Equivalent to `@StateEmitter.Alias("username$")`
     @Select(AppState.getUsername)
@@ -490,7 +520,7 @@ Lithium will automatically detect if a ```StateEmitter``` decorator is being use
 
 ```ts
 @Component({...})
-class Component {
+class Component extends LiComponent {
 
     @StateEmitter() // Equivalent to `@StateEmitter.AliasSelf()`
     @Select(AppState.getUsername)
@@ -545,12 +575,14 @@ AutoPush is enabled on a component by using the ```AutoPush.enable``` function:
     ...
     changeDetection: ChangeDetectionStrategy.OnPush // Enable OnPush change detection for this component
 })
-class Component extends AotAware {
+class Component extends LiComponent {
 
     @StateEmitter()
     private readonly value$: Subject<number>;
 
     constructor(cdRef: ChangeDetectorRef) {
+        super();
+
         AutoPush.enable(this, cdRef); // Enable AutoPush
     }
 }

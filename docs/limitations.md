@@ -2,16 +2,18 @@
 
 While Lithium transparently integrates with Angular for the majority of cases, there are some limitations in certain cases that must be noted:
 
-## **1. Components that use Lithium must extend the ```AotAware``` class, or declare extra properties.**
+## **1. Components that use Lithium must extend the ```LiComponent``` class, or declare extra properties.**
 
-Because Lithium's ```StateEmitter``` and ```EventSource``` decorators dynamically create and manage the properties that a component's view template will access, it is incompatible with how the current Angular compiler handles template validation. To easily remedy this issue, your components can extend the provided [```AotAware```](/docs/api-reference.md#aotaware) base class to enable less strict validation and still retain full compiler compliance:
+> _Note_: If your application only uses lifecycle event sources from Lithium (i.e. `@OnInit`), the following section does not apply.
+
+Lithium's ```StateEmitter``` and ```EventSource``` decorators dynamically create and manage the properties that a component's view template will access, it is incompatible with how the current Angular compiler handles template validation. To easily remedy this issue, your components can extend the provided [```LiComponent```](/docs/api-reference.md#licomponent) base class to enable less strict validation and still retain full compiler compliance:
 
 ```ts
-import { AotAware } from "@lithiumjs/angular";
+import { LiComponente } from "@lithiumjs/angular";
 
-// Lithium with AotAware:
+// Lithium with LiComponent:
 @Component({...})
-class Component extends AotAware {
+class Component extends LiComponent {
 
     @Input("disabled")
     @StateEmitter()
@@ -21,6 +23,8 @@ class Component extends AotAware {
     private readonly onItemClicked$: Observable<void>;
 
     constructor () {
+        super();
+
         this.onItemClicked$.subscribe((item) =>  console.log(`Item clicked: ${item.name}`));
 
         this.disabled$.subscribe(disabled =>  console.log(`Disabled: ${disabled}`));
@@ -28,10 +32,10 @@ class Component extends AotAware {
 }
 ```
 
-However, if using ```AotAware``` is not possible or desired in your configuration, you **must** instead declare dummy properties, as illustrated in the example below:
+However, if using ```LiComponent``` is not possible or desired in your configuration, you **must** instead declare dummy properties, as illustrated in the example below:
 
 ```ts
-// Lithium without AotAware:
+// Lithium without LiComponent:
 @Component({...})
 class Component {
 
@@ -68,13 +72,15 @@ In the following example, ```@HostListener``` decorator should be declared on th
 
 ```ts
 @Component({...})
-class Component {
+class Component extends LiComponent {
 
     @HostListener("click")
     @EventSource()
     private readonly onClick$: Observable<any>;
 
     constructor () {
+        super();
+
         // This will emit as expected
         this.onClick$.subscribe(() =>  console.log("The component was clicked."));
     }
@@ -87,12 +93,14 @@ class Component {
 
 ```ts
 @Component({...})
-class Component {
+class Component extends LiComponent {
 
     @EventSource(HostListener("click"))
     private readonly onClick$: Observable<any>;
 
     constructor () {
+        super();
+
         // This will never emit
         this.onClick$.subscribe(() =>  console.log("The component was clicked."));
     }
@@ -109,13 +117,15 @@ In the following example, ```@Input``` decorator should be declared on the prope
 
 ```ts
 @Component({...})
-class Component {
+class Component extends LiComponent {
 
     @Input("disabled")
     @StateEmitter()
     private readonly disabled$: Subject<boolean>;
 
     constructor () {
+        super();
+
         this.disabled$.subscribe(disabled =>  console.log(`Disabled: ${disabled}`));
     }
 }
@@ -127,13 +137,15 @@ class Component {
 
 ```ts
 @Component({...})
-class Component {
+class Component extends LiComponent {
 
     // This will generate a compiler error when "disabled" is bound to in a template.
     @StateEmitter(Input("disabled"))
     private readonly disabled$: Subject<boolean>;
 
     constructor () {
+        super();
+
         this.disabled$.subscribe(disabled =>  console.log(`Disabled: ${disabled}`));
     }
 }
@@ -149,13 +161,15 @@ As shown in the previous example, a name must be given to an `@Input` or `@Outpu
 
 ```ts
 @Component({...})
-class Component {
+class Component extends LiComponent {
 
     @Input("disabled")
     @StateEmitter()
     private readonly disabled$: Subject<boolean>;
 
     constructor () {
+        super();
+
         this.disabled$.subscribe(disabled =>  console.log(`Disabled: ${disabled}`));
     }
 }
@@ -167,13 +181,15 @@ class Component {
 
 ```ts
 @Component({...})
-class Component {
+class Component extends LiComponent {
 
     @Input()
     @StateEmitter()
     private readonly disabled$: Subject<boolean>;
 
     constructor () {
+        super();
+
         this.disabled$.subscribe(disabled =>  console.log(`Disabled: ${disabled}`));
     }
 }
@@ -194,7 +210,7 @@ Unlike the other Angular decorators, ```@HostBinding``` won't work when applied 
         '[class.disabled]': 'disabled' // This works as expected
     }
 })
-class Component {
+class Component extends LiComponent {
 
     @StateEmitter()
     private readonly disabled$: Subject<boolean>; // This will update the host metadata above
@@ -207,7 +223,7 @@ class Component {
 
 ```ts
 @Component({...})
-class Component {
+class Component extends LiComponent {
 
     @StateEmitter()
     private readonly disabled$: Subject<boolean>; // This will update the host binding below
@@ -222,7 +238,7 @@ class Component {
 
 ```ts
 @Component({...})
-class Component {
+class Component extends LiComponent {
 
     @StateEmitter()
     @HostBinding("class.disabled")

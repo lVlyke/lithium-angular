@@ -531,33 +531,14 @@ class Component {
 
 With AutoPush, Lithium will automatically invoke change detection on a component when the value of any ```StateEmitter``` changes. This allows for writing more performant components using [OnPush change detection](https://angular.io/api/core/ChangeDetectionStrategy) without the [traditional pitfalls](https://blog.angular-university.io/onpush-change-detection-how-it-works/) associated with OnPush change detection.
 
-### Example
-
-```ts
-@Component({
-    ...
-    changeDetection: ChangeDetectionStrategy.OnPush
-})
-@AutoPush()
-class Component extends AotAware {
-
-    @StateEmitter()
-    private readonly value$: Subject<number>;
-}
-```
-
-All that's required to make a component use AutoPush is to use the ```@AutoPush``` class decorator. When using AutoPush, you should also set the component's ```changeDetection``` to ```ChangeDetectionStrategy.OnPush```. If a component's state is expressed entirely through ```StateEmitters```, change detection will no longer need to be manually invoked in the component.
-
-Please note that when using Angular's AoT compiler you must also inject a ```ChangeDetectorRef``` in the component's constructor. See [this section](/docs/aot-guide.md#autopush-changedetectorref-example) for more info.
-
-AutoPush can also be manually enabled on a per-instance basis using the ```AutoPush.enable``` function.
+AutoPush is enabled on a component by using the ```AutoPush.enable``` function:
 
 ### Example
 
 ```ts
 @Component({
     ...
-    changeDetection: ChangeDetectionStrategy.OnPush
+    changeDetection: ChangeDetectionStrategy.OnPush // Enable OnPush change detection for this component
 })
 class Component extends AotAware {
 
@@ -565,9 +546,11 @@ class Component extends AotAware {
     private readonly value$: Subject<number>;
 
     constructor(cdRef: ChangeDetectorRef) {
-        AutoPush.enable(this, cdRef);
+        AutoPush.enable(this, cdRef); // Enable AutoPush
     }
 }
 ```
+
+When using AutoPush, you should also set the component's ```changeDetection``` to ```ChangeDetectionStrategy.OnPush```. If a component's state is expressed entirely through ```StateEmitters```, change detection will no longer need to be manually invoked in the component.
 
 [**API reference**](/docs/api-reference.md#autopush)

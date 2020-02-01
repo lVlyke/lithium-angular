@@ -7,7 +7,7 @@
         "allowSyntheticDefaultImports": true,
         "declaration": true,
         "stripInternal": true,
-        "emitDecoratorMetadata": true,
+        "emitDecoratorMetadata": false,
         "experimentalDecorators": true,
         "module": "commonjs",
         "moduleResolution": "node",

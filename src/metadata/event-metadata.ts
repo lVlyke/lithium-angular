@@ -27,16 +27,16 @@ export namespace EventMetadata {
 
     /** @description Gets the metadata map object for the given target class (or its inheritted classes). */
     export function GetEventSubjectTable(target: Object): EventSubjectTable {
-        return Metadata.GetMetadata<EventSubjectTable>(EventSubjectTableSymbol, target, new Map());
+        return Metadata.requireMetadata<EventSubjectTable>(EventSubjectTableSymbol, target, new Map());
     }
 
     /** @description Gets the metadata map object for the given target class. */
     export function GetOwnEventSubjectTable(target: Object): EventSubjectTable {
-        return Metadata.GetOwnMetadata<EventSubjectTable>(EventSubjectTableSymbol, target, new Map());
+        return Metadata.requireOwnMetadata<EventSubjectTable>(EventSubjectTableSymbol, target, new Map());
     }
 
     export function GetInstanceBootstrapMap(target: Object): InstanceBootstrapMap {
-        return Metadata.GetMetadata<InstanceBootstrapMap>(InstanceBootstrapMapSymbol, target, new Map());
+        return Metadata.requireMetadata<InstanceBootstrapMap>(InstanceBootstrapMapSymbol, target, new Map());
     }
 
     /** @description
@@ -70,11 +70,11 @@ export namespace EventMetadata {
     }
 
     export function HasOwnEventSubjectTable(target: Object): boolean {
-        return Reflect.hasOwnMetadata(EventSubjectTableSymbol, target);
+        return Metadata.hasOwnMetadata(EventSubjectTableSymbol, target);
     }
 
     export function SetEventSubjectTable(target: Object, map: EventSubjectTable) {
-        Metadata.SetMetadata(EventSubjectTableSymbol, target, map);
+        Metadata.setMetadata(EventSubjectTableSymbol, target, map);
     }
 
     /** @description Copy all metadata from the source map to the target map.

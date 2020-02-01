@@ -274,18 +274,6 @@ abstract class AotAware extends AotDynamic() {}
 
 AutoPush enables automatic change detection management of StateEmitters for performant [OnPush](https://angular.io/api/core/ChangeDetectionStrategy) components and directives. Any change to a  ```StateEmitter``` value will invoke detection on the component automatically, eliminating the need to ever manually invoke change detection in [special cases](https://blog.angular-university.io/onpush-change-detection-how-it-works/).
 
-### Decorator
-
-```ts
-function AutoPush(options?: AutoPush.CdRefOptions): ClassDecorator
-```
-
-Class decorator that enables AutoPush for a component or directive.
-
-**```options```** - The change detection options to use for this component. See [**```AutoPush.CdRefOptions```**](#autopushcdrefoptions).
-
-**Note**: When using Angular's AoT compiler, you must also inject a [change detector reference](https://angular.io/api/core/ChangeDetectorRef) in the component's constructor. See [this section](#autopush-changedetectorref-example) for more info.
-
 ### ```AutoPush.enable```
 
 ```ts

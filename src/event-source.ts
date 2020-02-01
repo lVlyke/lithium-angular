@@ -78,9 +78,9 @@ export namespace EventSource {
 
         function classSubjectTableMerged(merged?: boolean): boolean | undefined {
             if (merged === undefined) {
-                return Metadata.GetMetadata(EventMetadata.SUBJECT_TABLE_MERGED_KEY, targetInstance, false);
+                return !!Metadata.getMetadata(EventMetadata.SUBJECT_TABLE_MERGED_KEY, targetInstance);
             } else {
-                Metadata.SetMetadata(EventMetadata.SUBJECT_TABLE_MERGED_KEY, targetInstance, merged);
+                Metadata.setMetadata(EventMetadata.SUBJECT_TABLE_MERGED_KEY, targetInstance, merged);
             }
             return undefined;
         }

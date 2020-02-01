@@ -142,28 +142,7 @@ class Component {
 }
 ```
 
-## **4. A ```ChangeDetectorRef``` instance must be injected into a component using ```@AutoPush```.**
-
-If the ```@AutoPush``` decorator is being used on a component, there must be a ```ChangeDetectorRef``` (or similar shaped object) injected into the component. If one isn't provided, an error will be thrown.
-
-### AutoPush ChangeDetectorRef Example
-
-```ts
-@Component({...})
-@AutoPush()
-class Component extends AotAware {
-
-    @StateEmitter()
-    private readonly value$: Subject<number>;
-
-    // A ChangeDetectorRef instance must be injected into the component, even if it's not used
-    constructor (_cdRef: ChangeDetectorRef) {
-        super();
-    }
-}
-```
-
-## **5. ```@HostBinding``` cannot be used directly with ```@StateEmitter```.**
+## **4. ```@HostBinding``` cannot be used directly with ```@StateEmitter```.**
 
 Unlike the other Angular decorators, ```@HostBinding``` won't work when applied directly to a ```@StateEmitter``` property in AoT. It is instead recommended to use [```host``` metadata](https://angular.io/guide/styleguide#style-06-03), as binding through host metadata definitions works natively with Lithium. It is still possible to use ```@HostBinding``` in conjunction with ```@StateEmitter``` with AoT, but the host binding decorator must instead be applied to the underlying property reference, rather than the StateEmitter itself, as is usually the case.
 

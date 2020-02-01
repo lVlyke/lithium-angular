@@ -1,28 +1,79 @@
 export namespace Metadata {
 
-    export function SetMetadata<T>(symbol: symbol | string, target: Object, value: T) {
-        Reflect.defineMetadata(symbol, value, target);
-    }
+    type MetadataKey = string | symbol | number;
 
-    export function GetMetadata<T>(symbol: symbol | string, target: Object, defaultValue?: T): T {
-        if (!Reflect.hasMetadata(symbol, target)) {
-            SetMetadata<T>(symbol, target, defaultValue);
+    const LI_METADATA_ROOT = Symbol('$LI_');
+
+    export function requireMetadata<T>(symbol: MetadataKey, target: any, defaultValue?: T): T {
+        if (!hasMetadata(symbol, target)) {
+            setMetadata(symbol, target, defaultValue);
         }
 
-        return Reflect.getOwnMetadata(symbol, target) || Reflect.getMetadata(symbol, target);
+        return getOwnMetadata(symbol, target) || getMetadata(symbol, target);
     }
 
-    export function GetOwnMetadata<T>(symbol: symbol | string, target: Object, defaultValue?: T): T {
-        if (!Reflect.hasOwnMetadata(symbol, target)) {
-            SetMetadata<T>(symbol, target, defaultValue);
+    export function requireOwnMetadata<T>(symbol: MetadataKey, target: any, defaultValue?: T): T {
+        if (!hasOwnMetadata(symbol, target)) {
+            setMetadata(symbol, target, defaultValue);
         }
 
-        return Reflect.getOwnMetadata(symbol, target);
+        return getOwnMetadata(symbol, target);
     }
 
-    export function GetAllMetadata(target: Object): Map<symbol | string, any> {
-        return (Reflect.getMetadataKeys(target) || [])
-            .reduce((map, key) => map.set(key, Reflect.getMetadata(key, target)), new Map());
+    export function getMetadataMap(target: any): Map<MetadataKey, any> {
+        return (getMetadataKeys(target) || [])
+            .reduce((map, key) => map.set(key, getMetadata(key, target)), new Map());
+    }
+
+    export function setMetadata(symbol: MetadataKey, target: any, value: any) {
+        Object.defineProperty(rootMetadata(target), symbol, {
+            writable: true,
+            enumerable: true,
+            value
+        });
+    }
+
+    export function hasMetadata(symbol: MetadataKey, target: any): boolean {
+        return !!getMetadata(symbol, target); // TODO
+    }
+
+    export function hasOwnMetadata(symbol: MetadataKey, target: any): boolean {
+        return !!getOwnMetadata(symbol, target);
+    }
+
+    export function getMetadata(symbol: MetadataKey, target: any): any {
+        const metadata = getOwnMetadata(symbol, target);
+
+        if (!metadata && target.prototype) {
+            return getMetadata(symbol, target.prototype);
+        }
+        
+        return metadata;
+    }
+
+    export function getOwnMetadata(symbol: MetadataKey | number, target: any): any {
+        const descriptor = Object.getOwnPropertyDescriptor(rootMetadata(target), symbol);
+        return descriptor ? descriptor.value : undefined;
+    }
+
+    export function getMetadataKeys(target: any): MetadataKey[] {
+        return Object.keys(rootMetadata(target));
+    }
+
+    function ensureRootMetadataExists(target: any) {
+        if (!Object.getOwnPropertyDescriptor(target, LI_METADATA_ROOT)) {
+            Object.defineProperty(target, LI_METADATA_ROOT, {
+                enumerable: false,
+                writable: true,
+                value: Object.create({})
+            })
+        }
+    }
+
+    function rootMetadata(target: any): any {
+        ensureRootMetadataExists(target);
+
+        return Object.getOwnPropertyDescriptor(target, LI_METADATA_ROOT).value;
     }
 }
 

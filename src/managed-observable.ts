@@ -18,7 +18,7 @@ export function ManagedObservableWrapper/*<T, BaseObservable extends Observable<
             // Automatically handle unsubscribing on component's ngOnDestroy event
             this.subscriptions.push(componentInstance[CommonMetadata.MANAGED_ONDESTROY_KEY].subscribe(() => {
                 // Mark the component instance as destroyed
-                Metadata.SetMetadata(CommonMetadata.MANAGED_INSTANCE_DESTROYED_KEY, this.componentInstance, true);
+                Metadata.setMetadata(CommonMetadata.MANAGED_INSTANCE_DESTROYED_KEY, this.componentInstance, true);
 
                 this.subscriptions
                     .filter(subscription => !subscription.closed)

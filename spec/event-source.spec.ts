@@ -10,7 +10,7 @@ const spec = Spec.create<{
     targetPrototype: any;
     targetClass: any;
     targetInstance: any;
-    facadeData: string;
+    facadeData: string | string[];
     observable: Observable<string>;
 }>();
 
@@ -243,23 +243,31 @@ describe("An EventSource decorator", () => {
 
                     describe("when the facade function is invoked", Template.withInputs(["facadeFnKey"], (facadeFnKey: string) => {
 
-                        spec.beforeEach((params) => {
-                            params.observable = params.targetInstance[propertyKey].pipe(shareReplay());
+                        Template.create(["multiInput"], (multiInput: boolean) => {
 
-                            // Subscribe first to capture the facade fn event
-                            params.observable.subscribe();
+                            describe(`when there is ${multiInput ? "more than one" : "one"} input to the function`, () => {
 
-                            // Invoke the facade function
-                            params.facadeData = Random.string();
-                            params.targetInstance[facadeFnKey](params.facadeData);
-                        });
-
-                        spec.it("should update the Observable with the data passed to the function", (params) => {
-                            return params.observable.pipe(
-                                map(data => { expect(data).toEqual(params.facadeData) }),
-                                take(1)
-                            ).toPromise();
-                        });
+                                spec.beforeEach((params) => {
+                                    params.observable = params.targetInstance[propertyKey].pipe(shareReplay());
+        
+                                    // Subscribe first to capture the facade fn event
+                                    params.observable.subscribe();
+        
+                                    // Create the facade input data
+                                    params.facadeData = multiInput ? [Random.string(), Random.string()] : [Random.string()];
+        
+                                    // Invoke the facade function with the input
+                                    params.targetInstance[facadeFnKey](...params.facadeData);
+                                });
+        
+                                spec.it(`should update the Observable with the data passed to the function ('${facadeFnKey}')`, (params) => {
+                                    return params.observable.pipe(
+                                        map(data => { expect(data).toEqual(multiInput ? params.facadeData : params.facadeData[0]) }),
+                                        take(1)
+                                    ).toPromise();
+                                });
+                            });
+                        }).run({ multiInput: false }, { multiInput: true });
                     }, { facadeFnKey: eventType }, { facadeFnKey: propertyKey }));
                 });
             });

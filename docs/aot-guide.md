@@ -2,16 +2,16 @@
 
 Lithium for Angular is compatible with Angular's AoT compiler. However, due to current limitations of the compiler there are a few rules that need to be adhered to in order to write fully AoT-compliant code with Lithium:
 
-## **1. Components using Lithium must extend the ```AotAware``` class.**
+## **1. Components using Lithium must extend the ```LiComponent``` class.**
 
-Because Lithium's ```StateEmitter``` and ```EventSource``` decorators dynamically create and manage the properties that a component's view template will access, it is incompatible with how the current Angular AoT compiler handles template validation. To easily remedy this issue, your components can extend the provided [```AotAware```](/docs/api-reference.md#aotaware) base class to enable less strict validation and still retain full AoT compliance:
+Because Lithium's ```StateEmitter``` and ```EventSource``` decorators dynamically create and manage the properties that a component's view template will access, it is incompatible with how the current Angular AoT compiler handles template validation. To easily remedy this issue, your components can extend the provided [```LiComponent```](/docs/api-reference.md#LiComponent) base class to enable less strict validation and still retain full AoT compliance:
 
 ```ts
-import { AotAware } from "@lithiumjs/angular";
+import { LiComponent } from "@lithiumjs/angular";
 
-// With AotAware:
+// With LiComponent:
 @Component({...})
-class Component extends AotAware {
+class Component extends LiComponent {
 
     @StateEmitter()
     @Input("disabled")
@@ -21,6 +21,8 @@ class Component extends AotAware {
     private readonly onInit$: Observable<void>;
 
     constructor () {
+        super();
+
         this.onInit$.subscribe(() =>  console.log("Component is initialized."));
 
         this.disabled$.subscribe(disabled =>  console.log(`Disabled: ${disabled}`));
@@ -29,10 +31,10 @@ class Component extends AotAware {
 ```
 
 
-However, if using ```AotAware``` is not possible or desired in your configuration, you **must** instead declare dummy properties, illustrated in the example below:
+However, if using ```LiComponent``` is not possible or desired in your configuration, you **must** instead declare dummy properties, illustrated in the example below:
 
 ```ts
-// Without AotAware:
+// Without LiComponent:
 @Component({...})
 class Component {
 
@@ -45,10 +47,10 @@ class Component {
     @OnInit({ skipMethodCheck: true })
     private readonly onInit$: Observable<void>;
 
-    // Dummy property must be declared for each StateEmitter in the component if not extending `AotAware`.
+    // Dummy property must be declared for each StateEmitter in the component if not extending `LiComponent`.
     public readonly disabled: boolean;
 
-    // This stub declaration must be provided in the component to allow onInit$ to fire in AoT mode if not extending `AotAware`.
+    // This stub declaration must be provided in the component to allow onInit$ to fire in AoT mode if not extending `LiComponent`.
     // NOTE: Any stub method declarations will be overidden. Any code inside this declaration will not be executed.
     public ngOnInit() {}
 
@@ -139,7 +141,7 @@ If the ```@AutoPush``` decorator is being used on a component, there must be a `
 ```ts
 @Component({...})
 @AutoPush()
-class Component extends AotAware {
+class Component extends LiComponent {
 
     @StateEmitter()
     private readonly value$: Subject<number>;

@@ -54,11 +54,11 @@ npm install @lithiumjs/angular
 
 #### Does Lithium support ViewEngine (Ivy opt-out, Angular pre-9)
 
-Lithium 3.x.x, the current stable version of Lithium, still supports ViewEngine. Lithium 4.x.x no longer supports the ViewEngine renderer and will **only** work with Ivy.
+Lithium 3.x.x, the current stable version of Lithium, still supports ViewEngine. Lithium 5.x.x no longer supports the ViewEngine renderer and will **only** work with Ivy.
 
 #### Does Lithium support Ivy?
 
-Yes, Lithium 4.x.x supports Ivy as of the [latest Angular 9 RC](https://github.com/angular/angular/releases/tag/9.0.0-rc.12). However, since Angular 9 is still in the RC phase and the Ivy API has not been finalized, Lithium's support for Ivy is still considered experimental. While most if not all features should be working, some features may stop working as the Ivy API changes.
+Yes, Lithium 5.x.x supports Ivy as of the [latest Angular 9 RC](https://github.com/angular/angular/releases/tag/9.0.0-rc.12). However, since Angular 9 is still in the RC phase and the Ivy API has not been finalized, Lithium's support for Ivy is still considered experimental. While most if not all features should be working, some features may stop working as the Ivy API changes.
 
 #### Are there any known limitations with Lithium?
 

@@ -6,6 +6,6 @@ export namespace CommonMetadata {
     export const MANAGED_INSTANCE_DESTROYED_KEY = "__LI__MANAGED__INSTANCE__DESTROYED__";
 
     export function instanceIsDestroyed(componentInstance: any): boolean {
-        return Metadata.GetOwnMetadata(CommonMetadata.MANAGED_INSTANCE_DESTROYED_KEY, componentInstance, false);
+        return !!Metadata.getOwnMetadata(CommonMetadata.MANAGED_INSTANCE_DESTROYED_KEY, componentInstance);
     }
 }

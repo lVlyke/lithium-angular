@@ -6,7 +6,7 @@
         "noImplicitReturns": true,
         "allowSyntheticDefaultImports": true,
         "stripInternal": true,
-        "emitDecoratorMetadata": true,
+        "emitDecoratorMetadata": false,
         "experimentalDecorators": true,
         "declaration": true,
         "module": "es2015",

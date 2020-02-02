@@ -235,9 +235,9 @@ export namespace StateEmitter {
 
         function classMetadataMerged(merged?: boolean): boolean | undefined {
             if (merged === undefined) {
-                return Metadata.GetMetadata(EmitterMetadata.BOOTSTRAPPED_KEY, targetInstance, false);
+                return !!Metadata.getMetadata(EmitterMetadata.BOOTSTRAPPED_KEY, targetInstance);
             } else {
-                Metadata.SetMetadata(EmitterMetadata.BOOTSTRAPPED_KEY, targetInstance, merged);
+                Metadata.setMetadata(EmitterMetadata.BOOTSTRAPPED_KEY, targetInstance, merged);
             }
             return undefined;
         }

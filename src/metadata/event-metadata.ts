@@ -5,6 +5,7 @@ export type EventType = string;
 
 export namespace EventMetadata {
 
+    export const SUBJECT_TABLE_MERGED_KEY = "$$EVENTSOURCE_SUBJECT_TABLE_MERGED";
     export const BOOTSTRAPPED_KEY = "$$EVENTSOURCE_BOOTSTRAPPED";
 
     export interface ConfigOptions {
@@ -18,30 +19,36 @@ export namespace EventMetadata {
     }
 
     export type PropertySubjectMap = Map<string, SubjectInfo>;
-    export type MetadataMap = Map<EventType, PropertySubjectMap>;
+    export type EventSubjectTable = Map<EventType, PropertySubjectMap>;
+    export type InstanceBootstrapMap = Map<EventType, boolean>;
 
-    export const EventMapSymbol = Symbol("EventMapSymbol");
+    const EventSubjectTableSymbol = Symbol("EventSubjectTableSymbol");
+    const InstanceBootstrapMapSymbol = Symbol("InstanceBootstrapMapSymbol");
 
     /** @description Gets the metadata map object for the given target class (or its inheritted classes). */
-    export function GetMetadataMap(target: Object): MetadataMap {
-        return Metadata.GetMetadata<MetadataMap>(EventMapSymbol, target, new Map());
+    export function GetEventSubjectTable(target: Object): EventSubjectTable {
+        return Metadata.requireMetadata<EventSubjectTable>(EventSubjectTableSymbol, target, new Map());
     }
 
     /** @description Gets the metadata map object for the given target class. */
-    export function GetOwnMetadataMap(target: Object): MetadataMap {
-        return Metadata.GetOwnMetadata<MetadataMap>(EventMapSymbol, target, new Map());
+    export function GetOwnEventSubjectTable(target: Object): EventSubjectTable {
+        return Metadata.requireOwnMetadata<EventSubjectTable>(EventSubjectTableSymbol, target, new Map());
+    }
+
+    export function GetInstanceBootstrapMap(target: Object): InstanceBootstrapMap {
+        return Metadata.requireMetadata<InstanceBootstrapMap>(InstanceBootstrapMapSymbol, target, new Map());
     }
 
     /** @description
      *  Gets the property subject map for the given event type from the metadata map for the given target class (or its inheritted classes).
      */
     export function GetPropertySubjectMap(type: EventType, target: Object): PropertySubjectMap {
-        let map = GetMetadataMap(target);
-        let subjectMap = map.get(type);
+        let table = GetEventSubjectTable(target);
+        let subjectMap = table.get(type);
 
         if (!subjectMap) {
             subjectMap = new Map();
-            map.set(type, subjectMap);
+            table.set(type, subjectMap);
         }
 
         return subjectMap;
@@ -51,30 +58,30 @@ export namespace EventMetadata {
      *  Gets the property subject map for the given event type from the metadata map for the given target class.
      */
     export function GetOwnPropertySubjectMap(type: EventType, target: Object): PropertySubjectMap {
-        let map = GetOwnMetadataMap(target);
-        let subjectMap = map.get(type);
+        let table = GetOwnEventSubjectTable(target);
+        let subjectMap = table.get(type);
 
         if (!subjectMap) {
             subjectMap = new Map();
-            map.set(type, subjectMap);
+            table.set(type, subjectMap);
         }
 
         return subjectMap;
     }
 
-    export function HasOwnMetadataMap(target: Object): boolean {
-        return Reflect.hasOwnMetadata(EventMapSymbol, target);
+    export function HasOwnEventSubjectTable(target: Object): boolean {
+        return Metadata.hasOwnMetadata(EventSubjectTableSymbol, target);
     }
 
-    export function SetMetadataMap(target: Object, map: MetadataMap) {
-        Metadata.SetMetadata(EventMapSymbol, target, map);
+    export function SetEventSubjectTable(target: Object, map: EventSubjectTable) {
+        Metadata.setMetadata(EventSubjectTableSymbol, target, map);
     }
 
     /** @description Copy all metadata from the source map to the target map.
      * 
      *  Note: This mutates the target map.
      **/
-    export function CopyMetadata(target: MetadataMap, source: MetadataMap, overwrite?: boolean): MetadataMap {
+    export function CopySubjectTable(target: EventSubjectTable, source: EventSubjectTable, overwrite?: boolean): EventSubjectTable {
         // Iterate over all source metadata properties...
         source.forEach((propertySubjectMap, eventType) => propertySubjectMap.forEach((value, propertyKey) => {
             let targetPropertySubjectMap: PropertySubjectMap;
@@ -101,13 +108,13 @@ export namespace EventMetadata {
      * 
      *  Note: This mutates the object's metadata.
      **/
-    export function CopyInherittedMetadata(object: any): MetadataMap {
+    export function CopyInherittedSubjectTable(object: any): EventSubjectTable {
         if (object) {
-            let metadataMap: MetadataMap = GetMetadataMap(object);
-            let inherittedMap: MetadataMap = CopyInherittedMetadata(Object.getPrototypeOf(object));
+            let subjectTable = GetEventSubjectTable(object);
+            let inherittedTable = CopyInherittedSubjectTable(Object.getPrototypeOf(object));
 
             // Merge own and inheritted metadata into a single map (note: this mutates object's metadata)
-            return CopyMetadata(metadataMap, inherittedMap);
+            return CopySubjectTable(subjectTable, inherittedTable);
         }
 
         return new Map();

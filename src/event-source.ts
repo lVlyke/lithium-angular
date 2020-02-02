@@ -71,24 +71,24 @@ export namespace EventSource {
             value: Facade.Create(eventType)
         });
 
-        function classMetadataMerged(merged?: boolean): boolean | undefined {
+        function classSubjectTableMerged(merged?: boolean): boolean | undefined {
             if (merged === undefined) {
-                return Metadata.GetMetadata(EventMetadata.BOOTSTRAPPED_KEY, targetInstance, false);
+                return !!Metadata.getMetadata(EventMetadata.SUBJECT_TABLE_MERGED_KEY, targetInstance);
             } else {
-                Metadata.SetMetadata(EventMetadata.BOOTSTRAPPED_KEY, targetInstance, merged);
+                Metadata.setMetadata(EventMetadata.SUBJECT_TABLE_MERGED_KEY, targetInstance, merged);
             }
             return undefined;
         }
 
-        const metadataMap = EventMetadata.GetOwnMetadataMap(targetInstance);
+        const subjectTable = EventMetadata.GetOwnEventSubjectTable(targetInstance);
 
-        if (!classMetadataMerged()) {
+        if (!classSubjectTableMerged()) {
             // Copy all event metadata from the class constructor to the target instance
-            EventMetadata.CopyMetadata(metadataMap, EventMetadata.CopyInherittedMetadata(targetInstance.constructor), true);
-            classMetadataMerged(true);
+            EventMetadata.CopySubjectTable(subjectTable, EventMetadata.CopyInherittedSubjectTable(targetInstance.constructor), true);
+            classSubjectTableMerged(true);
         }
 
-        const propertySubjectMap = metadataMap.get(eventType);
+        const propertySubjectMap = subjectTable.get(eventType);
 
         // Iterate over each of the target properties for each proxied event type used in this class
         propertySubjectMap.forEach((subjectInfo, propertyKey) => {
@@ -111,6 +111,8 @@ export namespace EventSource {
                 get: () => propertyValue
             });
         });
+
+        EventMetadata.GetInstanceBootstrapMap(targetInstance).set(eventType, true);
     }
 
     export namespace Facade {
@@ -158,7 +160,11 @@ export namespace EventSource {
         Object.defineProperty(target, propertyKey, {
             configurable: true,
             get: function () {
-                BootstrapInstance.bind(this)(options.eventType);
+                // Ensure we only bootstrap once for this `eventType` if the intializer is re-invoked
+                if (!isBootstrapped.call(this, options.eventType)) {
+                    BootstrapInstance.bind(this)(options.eventType);
+                }
+
                 return this[propertyKey];
             }
         });
@@ -167,10 +173,20 @@ export namespace EventSource {
         Object.defineProperty(target, options.eventType, {
             configurable: true,
             writable: true,
-            value: Object.assign(function () {
-                BootstrapInstance.bind(this)(options.eventType);
-                return this[options.eventType];
+            value: Object.assign(function (...args: any[]) {
+                // Ensure we only bootstrap once for this `eventType` if the intializer is re-invoked
+                if (!isBootstrapped.call(this, options.eventType)) {
+                    BootstrapInstance.bind(this)(options.eventType);
+                }
+
+                // Invoke the facade function for the event
+                return this[options.eventType].call(this, ...args);
             }, { eventType: options.eventType })
         });
+    }
+
+    function isBootstrapped(eventType: EventType): boolean {
+        const map = EventMetadata.GetInstanceBootstrapMap(this);
+        return map.has(eventType) ? map.get(eventType) : false;
     }
 }

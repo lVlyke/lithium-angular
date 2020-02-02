@@ -11,7 +11,7 @@ A decorator-based library for Angular that enables seamless reactive data bindin
 * [**Quick Start Guide**](/docs/intro-guide.md)
 * [**AoT Compiler Guide**](/docs/aot-guide.md)
 * [**API Reference**](/docs/api-reference.md)
-* [**Other Information**](#other-information)
+* [**FAQ and Other Information**](#other-information)
 
 ## [Example app](https://github.com/lVlyke/lithium-angular-example-app) - [[Live demo]](https://lvlyke.github.io/lithium-angular-example-app)
 
@@ -46,6 +46,15 @@ Lithium can be installed [via **npm**](https://www.npmjs.com/package/@lithiumjs/
 npm install @lithiumjs/angular
 ```
 
-## Other information
+## FAQ and Other information
 
-* Lithium for [Ionic](https://github.com/lVlyke/lithium-ionic).
+### FAQ
+
+#### Does Lithium support Angular's new view renderer, Ivy?
+
+Yes, but you must use [Lithium 5.x.x](https://github.com/lVlyke/lithium-angular/blob/5.0.0/README.md#does-lithium-support-ivy) for full Ivy support.
+
+### Other information
+
+* [@lithiumjs/ngx-material-theming](https://github.com/lVlyke/lithium-ngx-material-theming)
+* Lithium extensions for [Ionic](https://github.com/lVlyke/lithium-ionic).

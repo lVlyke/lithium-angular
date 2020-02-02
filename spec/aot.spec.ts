@@ -1,23 +1,12 @@
-import { Template, Spec } from "detest-bdd";
+import { Spec } from "detest-bdd";
 import { AotAware } from "../src/aot";
-import { AngularLifecycleType } from "../src/lifecycle-event";
+import { LiComponent } from "../src/component";
 
-const spec = Spec.create<{
-    targetClass: AotAware
-}>();
+const spec = Spec.create<{}>();
 
 describe("Given an AotAware class", () => {
 
-    Template.withInputs<{ methodName: AngularLifecycleType }>(["methodName"], (methodName: AngularLifecycleType) => {
-
-        spec.beforeEach(params => { params.targetClass = new class extends AotAware {} });
-
-        spec.it(`should define a ${methodName} method`, (params) => {
-            const angularFn = params.targetClass[methodName];
-
-            expect(() => angularFn()).not.toThrow();
-
-            expect(params.targetClass[methodName]).toEqual(jasmine.any(Function));
-        });
-    }, ...AngularLifecycleType.values.map(methodName => ({ methodName })))();
+    spec.it("it should equal LiComponent", () => {
+        expect(AotAware).toBe(LiComponent)
+    });
 });

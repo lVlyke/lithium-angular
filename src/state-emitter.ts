@@ -1,5 +1,5 @@
 import { Observable, BehaviorSubject, Subscription } from "rxjs";
-import { EmitterMetadata, EmitterType, AngularMetadata, Metadata, CommonMetadata } from "./metadata";
+import { EmitterMetadata, EmitterType, Metadata, CommonMetadata } from "./metadata";
 import { ObservableUtil } from "./observable-util";
 import { take, tap, filter } from "rxjs/operators";
 import { ManagedBehaviorSubject } from "./managed-observable";
@@ -81,11 +81,6 @@ export namespace StateEmitter {
 
             // Create the state emitter metadata for the decorated property
             StateEmitter.CreateMetadata(target, params.propertyName, Object.assign({ propertyKey, observable: undefined }, params));
-
-            // Point any Angular metadata attached to the StateEmitter to the underlying facade property
-            if (AngularMetadata.hasPropMetadataEntry(target.constructor, propertyKey)) {
-                AngularMetadata.renamePropMetadataEntry(target.constructor, propertyKey, params.propertyName);
-            }
         };
     }
 

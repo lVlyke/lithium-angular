@@ -1,6 +1,6 @@
 import { EventSource } from "../src/event-source";
 import { Spec, Random, Template, InputBuilder } from "detest-bdd";
-import { EventMetadata, AngularMetadata, CommonMetadata } from "../src/metadata";
+import { EventMetadata, CommonMetadata } from "../src/metadata";
 import { Subject, Observable } from 'rxjs';
 import { map, take, shareReplay } from "rxjs/operators";
 import { AngularLifecycleType } from "../src/lifecycle-event";
@@ -20,7 +20,6 @@ describe("An EventSource decorator", () => {
         propertyKey: string;
         options?: EventSource.DecoratorOptions;
         methodDecorators?: MethodDecorator[];
-        angularPropMetadata?: any[];
     };
 
     const constructionTemplateInput = [
@@ -35,8 +34,7 @@ describe("An EventSource decorator", () => {
                 .fragmentList<EventSource.DecoratorOptions>({ eventType: [undefined, Random.string()] })
                 .fragmentList({ skipMethodCheck: [true, false, undefined] })
                 .fragmentList({ unmanaged: [true, false, undefined] })
-            )
-            .fragmentList({ angularPropMetadata: [undefined, [1, 2, 3]] }),
+            ),
         
         // ngOnDestroy tests:
         InputBuilder
@@ -46,13 +44,12 @@ describe("An EventSource decorator", () => {
             )
     ];
 
-    const constructionTemplateKeys: (keyof ConstructionTemplateInput)[] = ["propertyKey", "options", "methodDecorators", "angularPropMetadata"];
+    const constructionTemplateKeys: (keyof ConstructionTemplateInput)[] = ["propertyKey", "options", "methodDecorators"];
 
     describe("when constructed", Template(constructionTemplateKeys, constructionTemplateInput, (
         propertyKey: string,
         options?: EventSource.DecoratorOptions,
-        methodDecorators?: MethodDecorator[],
-        angularPropMetadata?: any[]
+        methodDecorators?: MethodDecorator[]
     ) => {
         methodDecorators = methodDecorators || [];
         const is$ = propertyKey.endsWith("$");
@@ -64,12 +61,6 @@ describe("An EventSource decorator", () => {
         spec.beforeEach((params) => {
             params.targetClass = class TestTargetClass {}; // Make sure a fresh class is created each time
             params.targetPrototype = params.targetClass.prototype;
-
-            if (angularPropMetadata) {
-                Object.defineProperty(params.targetClass, AngularMetadata.PROP_METADATA, {
-                    value: { [propertyKey]: angularPropMetadata }
-                });
-            }
         });
 
         if (is$) {
@@ -188,16 +179,6 @@ describe("An EventSource decorator", () => {
 
                     expect(metadata).toEqual(getOptions());
                 });
-
-                if (angularPropMetadata) {
-                    describe("when there's Angular metadata for this property", () => {
-
-                        spec.it("then it should move the metadata from the EventSource property to the facade function property", (params) => {
-                            expect(AngularMetadata.hasPropMetadataEntry(params.targetClass, propertyKey)).toBeFalsy();
-                            expect(AngularMetadata.getPropMetadata(params.targetClass)).toEqual({ [eventType]: angularPropMetadata });
-                        });
-                    });
-                }
 
                 describe("when a new instance is created", () => {
 

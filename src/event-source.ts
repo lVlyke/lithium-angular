@@ -1,5 +1,5 @@
 import { Observable, Subject } from "rxjs";
-import { EventMetadata, EventType, AngularMetadata, Metadata, CommonMetadata } from "./metadata";
+import { EventMetadata, EventType, Metadata, CommonMetadata } from "./metadata";
 import { AotAware } from "./aot";
 import { ManagedSubject } from "./managed-observable";
 import { AngularLifecycleType } from "./lifecycle-event";
@@ -55,11 +55,6 @@ export namespace EventSource {
 
             // Apply any method decorators to the facade function
             methodDecorators.forEach(methodDecorator => methodDecorator(target, options.eventType, Object.getOwnPropertyDescriptor(target, options.eventType)));
-
-            // Point any Angular metadata attached to the EventSource to the underlying facade method
-            if (AngularMetadata.hasPropMetadataEntry(target.constructor, propertyKey)) {
-                AngularMetadata.renamePropMetadataEntry(target.constructor, propertyKey, options.eventType);
-            }
         };
     }
 

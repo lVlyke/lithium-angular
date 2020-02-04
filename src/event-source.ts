@@ -207,19 +207,23 @@ export namespace EventSource {
             const hookName = AngularLifecycleType.hookNames[eventType as AngularLifecycleType];
             // Store a reference to the original hook function
             const baseHook = componentDef()[hookName];
-            // Create the facade function for this event
-            const facadeFn = Facade.Create(eventType);
 
-            // Replace the hook function with a modified one that ensures the event source facade function is invoked
-            componentDef()[hookName] = function (...args: any[]) {
-                // Call the base hook function on the component instance if there is one
-                if (baseHook) {
-                    baseHook.call(instance, ...args);
-                }
+            // If we haven't already replaced the hook function for this component target...
+            if (!baseHook || !baseHook.eventType) {
+                // Create the facade function for this event
+                const facadeFn = Facade.Create(eventType);
 
-                // Call the facade function associated with this event type on the component instance
-                facadeFn.call(instance, ...args);
-            };
+                // Replace the hook function with a modified one that ensures the event source facade function is invoked
+                componentDef()[hookName] = Object.assign(function (...args: any[]) {
+                    // Call the base hook function on the component instance if there is one
+                    if (baseHook) {
+                        baseHook.call(this, ...args);
+                    }
+
+                    // Call the facade function associated with this event type on the component instance
+                    facadeFn.call(this, ...args);
+                }, { eventType });
+            }
         } else {
             throw new Error(`Failed to register ${eventType} handler.`);
         }

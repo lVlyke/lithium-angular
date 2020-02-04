@@ -277,11 +277,18 @@ describe("An EventSource decorator", () => {
                                     // Invoke the facade function with the input
                                     if (isLifecycleEvent) {
                                         const hookName = AngularLifecycleType.hookNames[eventType as AngularLifecycleType];
-                                        params.ngCompDef.ɵcmp[hookName](...params.facadeData);
+                                        params.ngCompDef.ɵcmp[hookName].call(params.targetInstance, ...params.facadeData);
                                     } else {
                                         params.targetInstance[facadeFnKey](...params.facadeData);
                                     }
                                 });
+
+                                if (isLifecycleEvent) {
+                                    spec.it("should register the Ivy hook function with the correct eventType", (params) => {
+                                        const hookName = AngularLifecycleType.hookNames[eventType as AngularLifecycleType];
+                                        expect(params.ngCompDef.ɵcmp[hookName].eventType).toEqual(eventType);
+                                    });
+                                }
         
                                 spec.it(`should update the Observable with the data passed to the function ('${facadeFnKey}')`, (params) => {
                                     return params.observable.pipe(

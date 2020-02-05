@@ -45,6 +45,21 @@ In the example above, an ```onButtonPress``` function is automatically created i
 
 ```EventSource``` can also be used to capture all Angular component lifecycles (i.e. ```OnInit```) as observables. Convenience decorators are provided for every lifecycle event. For more info, see the [full list](#lifecycle-event-decorators) of lifecycle event decorators.
 
+### Example
+
+```ts
+@Component({...})
+class Component {
+
+    @OnInit()
+    private readonly onInit$: Observable<void>;
+
+    constructor () {
+        this.onInit$.subscribe(() =>  console.log("Component is initialized."));
+    }
+}
+```
+
 ### Forwarding method decorators with EventSource
 
 Method decorators may be passed to ```EventSource``` and will be forwarded to the underlying facade function.

@@ -3,10 +3,12 @@ import { Metadata } from "./metadata";
 
 /**
  * @ClassDecoratorFactory
- * @deprecated
 */
 export function AutoPush(_options?: AutoPush.CdRefOptions): ClassDecorator {
 
+    /**
+     * @deprecated
+    */
     return function() {
         throw new Error(
 `

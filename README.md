@@ -6,7 +6,7 @@
 
 A decorator-based library for Angular that enables seamless reactive data binding using RxJS. Use Observables as first-class citizens in your view templates!
 
-Lithium now has experimental support for Ivy as of the [latest Angular 9 RC](https://github.com/angular/angular/releases/tag/9.0.0-rc.12)! [Read here](#does-lithium-support-ivy) for more info.
+Lithium now supports Ivy with Angular 9! [Read here](#does-lithium-support-ivy) for more info.
 
 * [**Introduction**](#introduction)
 * [**Installation**](#installation)
@@ -58,7 +58,7 @@ Lithium 3.x.x, the current stable version of Lithium, still supports ViewEngine.
 
 #### Does Lithium support Ivy?
 
-Yes, Lithium 5.x.x supports Ivy as of the [latest Angular 9 RC](https://github.com/angular/angular/releases/tag/9.0.0-rc.12). However, since Angular 9 is still in the RC phase and the Ivy API has not been finalized, Lithium's support for Ivy is still considered experimental. While most if not all features should be working, some features may stop working as the Ivy API changes.
+Yes, Lithium 5.x.x supports Ivy with Angular 9.0. However, Lithium uses features from the not-yet finialized Ivy API, so some features could stop working in later versions of Angular 9 before Lithium is updated to support it.
 
 #### Are there any known limitations with Lithium?
 

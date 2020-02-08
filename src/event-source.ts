@@ -63,15 +63,11 @@ export namespace EventSource {
         const targetInstance: any = this;
         
         if (isLifecycleEvent) {
-            // If this is a lifecycle event, register it to be handled by Ivy
-            registerIvyLifecycleEvent(targetInstance, eventType);  
+            // Register the lifecycle event handler for the target instance
+            registerLifecycleEvent(targetInstance, eventType);  
         } else {
-            // Assign the facade function for the given event type to the appropriate target class method
-            // This function gets called from the view template and triggers the associated Subject
-            Object.defineProperty(targetInstance, eventType, {
-                enumerable: true,
-                value: Facade.Create(eventType)
-            });
+            // Assign the facade function for the given event type to the target instance
+            Facade.CreateAndAssign(eventType, targetInstance);
         }
 
         function classSubjectTableMerged(merged?: boolean): boolean | undefined {
@@ -141,6 +137,15 @@ export namespace EventSource {
                 subjectInfoList.forEach(subjectInfo => subjectInfo.subject.next(valueToEmit));
             }, { eventType });
         }
+
+        export function CreateAndAssign(eventType: EventType, instance: any): void {
+            // Assign the facade function for the given event type to the appropriate target class method
+            // This function gets called from the view template and triggers the associated Subject
+            Object.defineProperty(instance, eventType, {
+                enumerable: true,
+                value: Create(eventType)
+            });
+        }
     }
 
     function createMetadata(options: EventMetadata.SubjectInfo, target: any, propertyKey: string) {
@@ -197,16 +202,17 @@ export namespace EventSource {
         }
     }
 
-    function registerIvyLifecycleEvent(instance: any, eventType: EventType) {
+    function registerLifecycleEvent(instance: any, eventType: EventType) {
         // Resolve the metadata for this component or directive
         const component: ComponentType<any> & DirectiveType<any> = instance.constructor;
-        const componentDef = (): any => component.ɵcmp || component.ɵdir;
+        const ivyComponentDef = (): any => component.ɵcmp || component.ɵdir;
 
-        if (componentDef()) {
+        // Check if the app is using Ivy
+        if (ivyComponentDef()) {
             // Get the name of the hook for this lifecycle event
             const hookName = AngularLifecycleType.hookNames[eventType as AngularLifecycleType];
             // Store a reference to the original hook function
-            const baseHook = componentDef()[hookName];
+            const baseHook = ivyComponentDef()[hookName];
 
             // If we haven't already replaced the hook function for this component target...
             if (!baseHook || !baseHook.eventType) {
@@ -214,7 +220,7 @@ export namespace EventSource {
                 const facadeFn = Facade.Create(eventType);
 
                 // Replace the hook function with a modified one that ensures the event source facade function is invoked
-                componentDef()[hookName] = Object.assign(function (...args: any[]) {
+                ivyComponentDef()[hookName] = Object.assign(function (...args: any[]) {
                     // Call the base hook function on the component instance if there is one
                     if (baseHook) {
                         baseHook.call(this, ...args);
@@ -225,7 +231,9 @@ export namespace EventSource {
                 }, { eventType });
             }
         } else {
-            throw new Error(`Failed to register ${eventType} handler.`);
+            // The app is using legacy ViewEngine, so just register a normal facade function
+            // TODO - Remove these when only supporting Ivy
+            Facade.CreateAndAssign(eventType, instance);
         }
     }
 

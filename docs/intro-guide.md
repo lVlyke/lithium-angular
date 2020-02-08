@@ -1,6 +1,6 @@
 # Quick Guide to Lithium for Angular
 
-This guide is designed to go over at a high level the core features of Lithium and examples of how to use them.
+This guide is designed to go over the core features of Lithium and examples of how to use them.
 
 * [EventSource](#eventsource)
 * [StateEmitter](#stateemitter)
@@ -14,7 +14,9 @@ This guide is designed to go over at a high level the core features of Lithium a
 
 ## EventSource
 
-```EventSource``` is the decorator used for reactive [event binding](https://angular.io/guide/template-syntax#event-binding). ```EventSource``` creates an ```Observable``` that can be used to react to component UI and lifecycle events. Subscriptions to EventSources are automatically cleaned up when the component is destroyed.
+```EventSource``` is the decorator used for reactive [event binding](https://angular.io/guide/template-syntax#event-binding). ```EventSource``` creates an ```Observable``` that can be used to react to component and lifecycle events. Subscriptions to EventSources are automatically cleaned up when the component is destroyed.
+
+**Note**: A component using ```EventSource``` must extend the [Lithium base class](/docs/limitations.md). The examples below assume your app is using Ivy. If your app still uses ViewEngine (Ivy opt-out or Angular pre-9), you must extend the [AotAware](/docs/api-reference.md#aotaware-deprecated) class instead.
 
 ### Template
 
@@ -43,7 +45,7 @@ In the example above, an ```onButtonPress``` function is automatically created i
 
 ### Using EventSource with Angular lifecycle events
 
-```EventSource``` can also be used to capture all Angular component lifecycles (i.e. ```OnInit```) as observables. Convenience decorators are provided for every lifecycle event. For more info, see the [full list](#lifecycle-event-decorators) of lifecycle event decorators.
+```EventSource``` can also be used to capture all Angular component lifecycles (i.e. ```OnInit```) as observables. Convenience decorators are provided for every lifecycle event.
 
 ### Example
 
@@ -55,31 +57,24 @@ class Component {
     private readonly onInit$: Observable<void>;
 
     constructor () {
+        // onInit$ emits when the component's ngOnInit() lifecycle hook is invoked
         this.onInit$.subscribe(() =>  console.log("Component is initialized."));
     }
 }
 ```
 
+For more info, see the [full list](#lifecycle-event-decorators) of lifecycle event decorators.
+
 ### Forwarding method decorators with EventSource
 
-Method decorators may be passed to ```EventSource``` and will be forwarded to the underlying facade function.
+Other method decorators may be passed to ```EventSource``` and will be forwarded to the underlying facade function.
 
 #### Example
 
 ```ts
-@Component({...})
-class Component extends LiComponent {
-
-    // Given "Throttle" is a method decorator factory:
-    @EventSource(Throttle(1000))
-    private readonly onButtonPress$: Observable<any>;
-
-    constructor () {
-        super();
-
-        this.onButtonPress$.subscribe(() =>  console.log("The button was pressed."));
-    }
-}
+// Given "Throttle" is a method decorator factory:
+@EventSource(Throttle(1000))
+private readonly onButtonPress$: Observable<any>;
 ```
 
 Angular decorators like `@HostListener` may also be used with `@EventSource`, however they **must** be applied to the ```EventSource``` property itself, as illustrated below:
@@ -102,11 +97,11 @@ class Component extends LiComponent {
 }
 ```
 
-See the [limitations section](/docs/limitations.md) for more info.
+[Read here](/docs/limitations.md) for more info.
 
 ### EventSource and inheritance
 
-```EventSource``` fully supports class and prototypical inheritance.
+```EventSource``` can be declared in a base class and be used by child classes.
 
 #### Example
 
@@ -147,6 +142,8 @@ Log output:
 
 ```StateEmitter``` is the decorator used for reactive [one-way in binding](https://angular.io/guide/template-syntax#one-way-in) and [two-way binding](https://angular.io/guide/template-syntax#two-way-binding---), allowing for state synchronization to and from the UI via a ```BehaviorSubject```. Subscriptions to StateEmitters are automatically cleaned up when the component is destroyed.
 
+**Note**: A component using ```StateEmitter``` must extend the [Lithium base class](/docs/limitations.md). The examples below assume your app is using Ivy. If your app still uses ViewEngine (Ivy opt-out or Angular pre-9), you must extend the [AotAware](/docs/api-reference.md#aotaware-deprecated) class instead.
+
 ### Template
 
 ```html
@@ -185,22 +182,9 @@ Property decorators may be passed to ```StateEmitter``` and will be forwarded to
 #### Example
 
 ```ts
-@Component({
-    selector: "component",
-    ...
-})
-class Component extends LiComponent {
-
-    // Given "NonNull" is a property decorator:
-    @StateEmitter(NonNull())
-    private readonly name$: Subject<string>;
-
-    constructor () {
-        super();
-
-        this.name$.subscribe(name =>  console.log(`Name: ${name}`));
-    }
-}
+// Given "NonNull" is a property decorator:
+@StateEmitter(NonNull())
+private readonly name$: Subject<string>;
 ```
 
 Angular decorators like `@Input` and `@ViewChild` may also be used with `@StateEmitter`, however they **must** be applied to the ```StateEmitter``` property itself, as illustrated below:
@@ -222,6 +206,7 @@ class Component extends LiComponent {
     constructor () {
         super();
 
+        // disabled$ will emit whenenver the `disabled` Input changes:
         this.disabled$.subscribe(disabled =>  console.log(`Disabled: ${disabled}`)); // Output: Disabled: true
     }
 }
@@ -249,7 +234,7 @@ For more information, see [self-proxying StateEmitters](#self-proxying-stateemit
 
 ### StateEmitter and inheritance
 
-```StateEmitter``` fully supports class and prototypical inheritance.
+```StateEmitter``` can be declared in a base class and be used by child classes.
 
 #### Example
 
@@ -322,7 +307,7 @@ class Component extends LiComponent {
 
 ### Static vs dynamic proxy property paths
 
-Proxy paths are considered either dynamic or static depending on the type of the properties within it. If a proxy path is dynamic, the resulting reference to the property will be an ```Observable```. If a path is static, the reference will be a ```Subject```.
+Proxy paths are considered either dynamic or static depending on the type of the properties within it. If a proxy path is dynamic, the resulting reference to the property will be an ```Observable```. If a path is static, the reference will be of the type of the final property in the proxy path.
 
 A proxy path is considered static only if all of the following conditions are met:
 

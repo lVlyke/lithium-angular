@@ -2,14 +2,14 @@
 
 While Lithium transparently integrates with Angular for the majority of cases, there are some limitations in certain cases that must be noted:
 
-## **1. Components that use Lithium must extend the ```LiComponent``` class, or declare extra properties.**
+## **1. Components that use Lithium must either extend the Lithium base class, or declare placeholder properties.**
 
-> _Note_: If your application only uses lifecycle event sources from Lithium (i.e. `@OnInit`), the following section does not apply.
+> _Note_: If your application only uses lifecycle event sources from Lithium (i.e. `@OnInit`) and Ivy, the following section does not apply.
 
-Lithium's ```StateEmitter``` and ```EventSource``` decorators dynamically create and manage the properties that a component's view template will access, it is incompatible with how the current Angular compiler handles template validation. To easily remedy this issue, your components can extend the provided [```LiComponent```](/docs/api-reference.md#licomponent) base class to enable less strict validation and still retain full compiler compliance:
+Lithium's ```StateEmitter``` and ```EventSource``` decorators dynamically create and manage the properties that a component's view template will access, it is incompatible with how the current Angular compiler handles template validation. To easily remedy this issue, your components can extend the provided base class [```LiComponent```](/docs/api-reference.md#licomponent) (if using Ivy) or [```AotAware```](/docs/api-reference.md#aotaware-deprecated) (if not using Ivy) to enable less strict validation and still retain full compiler compliance:
 
 ```ts
-import { LiComponente } from "@lithiumjs/angular";
+import { LiComponent } from "@lithiumjs/angular";
 
 // Lithium with LiComponent:
 @Component({...})
@@ -32,7 +32,7 @@ class Component extends LiComponent {
 }
 ```
 
-However, if using ```LiComponent``` is not possible or desired in your configuration, you **must** instead declare dummy properties, as illustrated in the example below:
+However, if extending the base class is not possible or desired in your configuration, you **must** instead declare dummy properties, as illustrated in the example below:
 
 ```ts
 // Lithium without LiComponent:

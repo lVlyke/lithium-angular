@@ -6,7 +6,7 @@
 
 A decorator-based library for Angular that enables seamless reactive data binding using RxJS. Use Observables as first-class citizens in your view templates!
 
-Lithium now supports Ivy with Angular 9! [Read here](#does-lithium-support-ivy) for more info.
+Lithium now supports Ivy as of Angular 9.0.0! [Read the FAQ](#faq) for more info.
 
 * [**Introduction**](#introduction)
 * [**Installation**](#installation)
@@ -54,11 +54,13 @@ npm install @lithiumjs/angular
 
 #### Does Lithium support ViewEngine (Ivy opt-out, Angular pre-9)
 
-Lithium 3.x.x, the current stable version of Lithium, still supports ViewEngine. Lithium 5.x.x no longer supports the ViewEngine renderer and will **only** work with Ivy.
+Lithium currently supports both ViewEngine and Ivy builds. Lithium will automatically detect which compiler is being used in your app.
 
-#### Does Lithium support Ivy?
+#### Does Lithium support Ivy (Angular 9 default compiler)?
 
-Yes, Lithium 5.x.x supports Ivy with Angular 9.0. However, Lithium uses features from the not-yet finialized Ivy API, so some features could stop working in later versions of Angular 9 before Lithium is updated to support it.
+Yes, Lithium fully supports Ivy as of Angular 9.0.0. However, Lithium uses features from the not-yet finialized Ivy API, so some features could stop working in later versions of Angular 9 before Lithium is updated to support them.
+
+If you are upgrading an existing Lithium-enabled app to Ivy, you should read the [Ivy upgrade guide](/docs/ivy-upgrade.md) for Lithium.
 
 #### Are there any known limitations with Lithium?
 
@@ -66,5 +68,6 @@ While Lithium integrates cleanly with Angular for the majority of cases, there a
 
 ### Other information
 
+* [Ivy upgrade guide](/docs/ivy-upgrade.md) for Lithium.
 * [@lithiumjs/ngx-material-theming](https://github.com/lVlyke/lithium-ngx-material-theming)
 * Lithium extensions for [Ionic](https://github.com/lVlyke/lithium-ionic).

@@ -134,7 +134,9 @@ export namespace EventSource {
                 }
                 
                 // Emit the given event value to each interested subject
-                subjectInfoList.forEach(subjectInfo => subjectInfo.subject.next(valueToEmit));
+                subjectInfoList
+                    .filter(subjectInfo => !!subjectInfo.subject)
+                    .forEach(subjectInfo => subjectInfo.subject.next(valueToEmit));
             }, { eventType });
         }
 

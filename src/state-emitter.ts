@@ -6,6 +6,7 @@ import { ManagedBehaviorSubject } from "./managed-observable";
 import { EventSource } from "./event-source";
 import { AutoPush } from "./autopush";
 import { AngularLifecycleType } from "./lifecycle-event";
+import { _LangUtils as LangUtils } from "./lang-utils";
 
 export function StateEmitter(): PropertyDecorator;
 export function StateEmitter(...propertyDecorators: PropertyDecorator[]): PropertyDecorator;
@@ -74,6 +75,11 @@ export namespace StateEmitter {
             // If a proxy mode was set but an empty proxy path was set, default to a self proxy
             if (params.proxyMode && typeof params.proxyPath === "string" && params.proxyPath.length === 0) {
                 params.proxyPath = propertyKey;
+            }
+
+            // Default merging of updated values in proxy aliases to true
+            if (LangUtils.isNil(params.proxyMergeUpdates)) {
+                params.proxyMergeUpdates = true;
             }
 
             // Apply any property decorators to the property
@@ -169,12 +175,8 @@ export namespace StateEmitter {
                 }
                 else {
                     try {
-                        // If value merging wasn't explicitly enabled or disabled then only enable it if the incoming value is an object
-                        let mergeUpdates = subjectInfo.proxyMergeUpdates;
-                        mergeUpdates = (mergeUpdates !== null && mergeUpdates !== undefined) ? mergeUpdates : typeof value === "object";
-
                         // Update the dynamic proxy value
-                        ObservableUtil.UpdateDynamicPropertyPathValue(this, subjectInfo.proxyPath, value, mergeUpdates);
+                        ObservableUtil.UpdateDynamicPropertyPathValue(this, subjectInfo.proxyPath, value, subjectInfo.proxyMergeUpdates);
                     }
                     catch (_e) {
                         console.error(`Unable to set value for proxy StateEmitter "${this.constructor.name}.${type}" with dynamic property path "${subjectInfo.proxyPath}" - Path does not contain a Subject.`);
@@ -261,8 +263,8 @@ export namespace StateEmitter {
 
         function makeEmitterSubject(): BehaviorSubject<any> {
             return subjectInfo.unmanaged
-                ? new BehaviorSubject<any>(subjectInfo.initialValue)
-                : new ManagedBehaviorSubject<any>(targetInstance, subjectInfo.initialValue);
+                ? new BehaviorSubject<any>(initialValue)
+                : new ManagedBehaviorSubject<any>(targetInstance, initialValue);
         }
 
         const metadataMap = EmitterMetadata.GetOwnMetadataMap(targetInstance);
@@ -274,6 +276,7 @@ export namespace StateEmitter {
         }
 
         const subjectInfo = metadataMap.get(emitterType);
+        const initialValue = resolveInitialValue.call(targetInstance, subjectInfo);
         // Get the initial value of the property being decorated
         const initialPropertyValue: any = initialPropertyDescriptor ? (initialPropertyDescriptor.value || initialPropertyDescriptor.get()) : undefined;
 
@@ -332,7 +335,7 @@ export namespace StateEmitter {
         }
 
         const facadeSetter = subjectInfo.readOnly ? undefined : Facade.CreateSetter(emitterType);
-        const facadeGetter = Facade.CreateGetter(emitterType, subjectInfo.initialValue);
+        const facadeGetter = Facade.CreateGetter(emitterType, initialValue);
         // Assign the facade getter and setter to the target instance for targetInstance EmitterType
         Object.defineProperty(targetInstance, emitterType, {
             enumerable: true,
@@ -398,5 +401,15 @@ export namespace StateEmitter {
                 this[type] = value;
             }
         });
+    }
+
+    function resolveInitialValue(subjectInfo: EmitterMetadata.SubjectInfo): any {
+        if (subjectInfo.initialValue !== undefined && !LangUtils.isNil(subjectInfo.initial)) {
+            throw new Error("[StateEmitter]: Both initialValue and initial cannot be defined on the same property.");
+        } else if (subjectInfo.initial) {
+            return subjectInfo.initial.call(this);
+        } else {
+            return subjectInfo.initialValue;
+        }
     }
 }

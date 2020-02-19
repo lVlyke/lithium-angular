@@ -30,6 +30,7 @@ export namespace EmitterMetadata {
     export namespace SubjectInfo {
 
         export interface CoreDetails {
+            initial?: () => any;
             initialValue?: any;
             readOnly?: boolean;
             writeOnly?: boolean;

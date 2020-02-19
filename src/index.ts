@@ -2,6 +2,7 @@ export * from "./aot";
 export * from "./autopush";
 export * from "./component";
 export * from "./event-source";
+export * from "./lang-utils";
 export * from "./lifecycle";
 export * from "./managed-observable";
 export * from "./observable-util";

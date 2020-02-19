@@ -62,6 +62,7 @@ Note: If the target property's name is of the format "```<emitterType>$```", ```
 interface DecoratorParams {
     propertyName?: EmitterType;
     initialValue?: any;
+    initial?: () => any;
     readOnly?: boolean;
     writeOnly?: boolean;
     unmanaged?: boolean;
@@ -75,6 +76,8 @@ interface DecoratorParams {
 
 **```initialValue```** - (Optional) The initial value to be emitted. Defaults to ```undefined```.
 
+**```initial```** - (Optional) A function that will be invoked on each component instance to resolve the initial value. Note: This cannot be used if ```initialValue``` is defined.
+
 **```readOnly```** - (Optional) Whether or not the underlying property being created should be read-only. Defaults to ```false```.
 
 **```writeOnly```** - (Optional) Whether or not the underlying property being created should be write-only. If set to ```true``` and the component/directive is using AutoPush, special care will be taken to ensure change detection is invoked even if the ```StateEmitter``` is never used in the template/binding (i.e. in a directive). Defaults to ```false```.
@@ -85,7 +88,7 @@ interface DecoratorParams {
 
 **```proxyPath```** - (Conditional) The path of the property to be proxied. Required if ```proxyMode``` is not set to ```None```.
 
-**```proxyMergeUpdates```** - (Optional) Whether or not newly emitted values via dynamic proxy property paths should be merged with the previously emitted value. Defaults to ```true``` if the emitted value is an instance of ```Object```, otherwise defaults to ```false```.
+**```proxyMergeUpdates```** - (Optional) Whether or not new values written to a dynamic proxy path alias should be merged with the current value. Defaults to ```true```. Note: This only has an effect if the given ```proxyPath``` is dynamic.
 
 ### ```StateEmitter.EmitterType```
 

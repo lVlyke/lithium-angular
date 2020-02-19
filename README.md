@@ -11,7 +11,7 @@ Lithium now supports Ivy as of Angular 9.0.0! [Read the FAQ](#faq) for more info
 * [**Introduction**](#introduction)
 * [**Installation**](#installation)
 * [**Quick Start Guide**](/docs/intro-guide.md)
-* [**Ivy Compiler Guide**](/docs/aot-guide.md)
+* [**Ivy/AoT Guide**](/docs/limitations.md)
 * [**API Reference**](/docs/api-reference.md)
 * [**FAQ and Other Information**](#other-information)
 

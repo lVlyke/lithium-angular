@@ -2,6 +2,7 @@
 
 This guide is designed to go over the core features of Lithium and examples of how to use them.
 
+* [Lithium vs `async`](#lithium-vs-asyncpipe)
 * [EventSource](#eventsource)
 * [StateEmitter](#stateemitter)
 * [Proxied StateEmitters](#proxied-stateemitters)
@@ -11,6 +12,21 @@ This guide is designed to go over the core features of Lithium and examples of h
 * [Further reading](#further-reading)
 
 (Also see the full [**API reference**](/docs/api-reference.md))
+
+## Lithium vs ```AsyncPipe```
+
+Angular has a built-in [async pipe](https://angular.io/api/common/AsyncPipe) that offers many similar features to Lithium. Lithium includes all of the benefits of ```async``` with additional features:
+
+* **No syntax overhead** - Lithium allows you to treat reactive variables just like normal variables inside templates. There's no pipes to use, and things like nested properties can be accessed easily without [ugly workarounds](https://coryrylan.com/blog/angular-async-data-binding-with-ng-if-and-ng-else).
+* **Reactive two-way binding support** - Lithium natively supports two-way binding of Subjects using ```[(ngModel)]``` and by direct template assignments (i.e. ```(click)="foo = 'bar'"```).
+* **Reactive event binding support** - Unlike ```async```, Lithium supports reactive event binding. Click events, [lifecycle events](#lifecycle-event-decorators), and more are Observables that can be subscribed to, instead of invoked as callback functions.
+* **Works with Angular component decorators (```@Input```, ```@Output```, ```@HostListener``` and more)** - Lithium can be used to make reactive component inputs as Subjects and respond to host events through subscriptions to Observables with no syntax overhead.
+* **Useful for components and directives** - Lithium's [AutoPush functionality](#autopush) can also be used for easily writing OnPush-friendly directives.
+
+Like ```async```, Lithium also has the following benefits:
+
+* **Automatic subscription management** - Lithium will automatically end subscriptions when components are destroyed.
+* **Simplified OnPush change detection** - Using AutoPush, Lithium makes writing [OnPush](https://angular.io/api/core/ChangeDetectionStrategy)-capable components trivial.
 
 ## EventSource
 

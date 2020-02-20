@@ -19,26 +19,42 @@ Lithium now supports Ivy as of Angular 9.0.0! [Read the FAQ](#faq) for more info
 
 ## Introduction
 
-Lithium is a decorator-based library for modern Angular applications that use reactive programming through RxJS. Lithium enables one-way and two-way binding of Observables and Subjects in view templates and allows them to be used just like regular synchronous variables. Lithium makes writing more performant components with [OnPush change detection](https://angular.io/api/core/ChangeDetectionStrategy) trivial with [AutoPush](/docs/intro-guide.md#autopush). Lithium is like ```async``` but better:
+* **Intuitive decorators**:
 
-### Lithium vs ```AsyncPipe```
+    Lithium is decorator-based and easy to use:
+```ts
+import { OnInit } from '@lithiumjs/angular';
 
-Angular has a built-in [async pipe](https://angular.io/api/common/AsyncPipe) that offers many similar features to Lithium. Lithium includes all of the benefits of ```async``` with additional features:
+@Component({...})
+class MyComponent {
 
-* **No syntax overhead** - Lithium allows you to treat reactive variables just like normal variables inside templates. There's no pipes to use, and things like nested properties can be accessed easily without [ugly workarounds](https://coryrylan.com/blog/angular-async-data-binding-with-ng-if-and-ng-else).
-* **Reactive two-way binding support** - Lithium natively supports [two-way binding](https://angular.io/guide/template-syntax#two-way-binding---) of Subjects using ```[(ngModel)]``` and by direct template assignments (i.e. ```(click)="foo = 'bar'"```).
-* **Reactive event binding support** - Unlike ```async```, Lithium supports reactive [event binding](https://angular.io/guide/template-syntax#event-binding). Click events, [lifecycle events](/docs/intro-guide.md#lifecycle-event-decorators), and more are Observables that can be subscribed to, instead of invoked as callback functions.
-* **Works with Angular component decorators (```@Input```, ```@Output```, ```@HostListener``` and more)** - Lithium can be used to make reactive component inputs as Subjects and respond to host events through subscriptions to Observables with no syntax overhead.
-* **Useful for components and directives** - Lithium's [AutoPush functionality](/docs/intro-guide.md#autopush) can also be used for easily writing OnPush-friendly directives.
+    @OnInit() 
+    private readonly onInit$: Observable<void>;
 
-Like ```async```, Lithium also has the following benefits:
+    constructor () {
+        this.onInit$.subscribe(() => console.log("Reactive ngOnInit!"));
+    }
+}
+```
+* **Full reactive template binding**:
 
-* **Automatic subscription management** - Lithium will automatically end subscriptions when components are destroyed.
-* **Simplified OnPush change detection** - Using AutoPush, Lithium makes writing [OnPush](https://angular.io/api/core/ChangeDetectionStrategy)-capable components trivial.
-* **Full Ivy compiler support** - Lithium supports Angular's new Ivy compiler. See [here](/docs/aot-guide.md) for more info.
-* **Can be used with other reactive libraries** - Lithium has full compatability with other decorator-based libraries like [NGXS](https://github.com/ngxs/store).
+    Lithium's `@StateEmitter` lets you pass Observables directly as inputs to any component and two-way bind Subjects directly to `ngModel`.
+* **Works with Angular component decorators**:
+    
+    You can use Angular's built-in component decorators with Lithium. Use an `@Input` as a Subject and listen to a `@HostListener` event as an Observable!
+* **OnPush components made easy**:
+
+    With Lithium, writing more performant components using [OnPush](https://angular.io/api/core/ChangeDetectionStrategy) change detection is simple; just enable [AutoPush](/docs/intro-guide.md#autopush)!
+* **Like `async`, but better**:
+
+    Lithium automatically manages subscription lifetimes just like Angular's [async pipe](https://angular.io/api/common/AsyncPipe), without its syntax overhead (and [ugly workarounds](https://coryrylan.com/blog/angular-async-data-binding-with-ng-if-and-ng-else)).
+* **Integrates with other reactive decorators**:
+
+    Lithium can be used in conjunction with other reactive decorator-based libraries like [NGXS](https://github.com/ngxs/store).
 
 Read through the [intro guide](/docs/intro-guide.md) to get to know Lithium's core features and view the [example app](https://github.com/lVlyke/lithium-angular-example-app) to see Lithium in action with real-world use-cases. Full [API](/docs/api-reference.md) documentation is also available.
+
+Lithium supports Angular's new Ivy compiler. Read [here](/docs/limitations.md) for more info.
 
 ## Installation
 

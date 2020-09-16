@@ -292,7 +292,7 @@ Log output:
 
 Angular components will often use information from services and other sources. Proxied ```StateEmitter```s can be used to represent extenal values from within a component, or even create aliases for existing values.
 
-```StateEmitter``` proxies create reactive references to properties within the component class and allow them to be used like any other ```StateEmitter``` reference. Dot path notation may be used to reference nested properties.
+```StateEmitter``` proxies create reactive references to properties within the component class and allow them to be used like any other ```StateEmitter``` reference. Nested properties may be accessed using the property access operator (`.`) or the conditional access operator (`?.`). Bracket notation (i.e. `object['property']`) is not currently supported.
 
 ### Example
 
@@ -326,9 +326,10 @@ class Component extends LiComponent {
 Proxy paths are considered either dynamic or static depending on the type of the properties within it. If a proxy path is dynamic, the resulting reference to the property will be an ```Observable```. If a path is static, the reference will be of the type of the final property in the proxy path.
 
 A proxy path is considered static only if all of the following conditions are met:
-
+ 
 * The last property in the path is a ```Subject```.
 * All other properties in the path are not of type ```Subject``` or ```Observable```.
+* None of the properties are conditionally accessed (i.e. using the `?.` operator).
 
 #### Example
 
@@ -352,9 +353,15 @@ class SettingsService {
 @Component({...})
 class FormComponent extends LiComponent {
 
+    // Static proxy path:
     @StateEmitter.Alias("settingsService.settings$")
     private readonly settings$: Subject<Settings>;
 
+    // Dynamic proxy path:
+    @StateEmitter.Alias("settingsService?.settings$")
+    private readonly settings$: Subject<Settings>;
+
+    // Dynamic proxy path:
     @StateEmitter.Alias("settings$.notificationsEnabled")
     private readonly notificationsEnabled$: Observable<boolean>;
 
@@ -364,7 +371,7 @@ class FormComponent extends LiComponent {
 }
 ```
 
-In the above example, the proxy path ```settingsService.settings$``` is considered static, because the last property is a ```Subject``` and the rest of the path does not contain any ```Observable```s or ```Subject```s. The proxy path ```settings$.notificationsEnabled``` is not static, because the last property is not a ```Subject```, and the first property in the path is a ```Subject```.
+In the above example, the proxy path ```settingsService.settings$``` is considered static, because the last property is a ```Subject``` and the rest of the path does not contain any ```Observable```s or ```Subject```s, which meets all three criteria. However, if we add a conditional access to the proxy path it becomes dynamic. The proxy path ```settings$.notificationsEnabled``` is also not static, because the last property is not a ```Subject``` and the first property in the path is a ```Subject```, which fails the first two criteria of static paths.
 
 ### Updating Subjects in dynamic proxy property paths
 

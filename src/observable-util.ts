@@ -34,15 +34,30 @@ export namespace ObservableUtil {
          * @description
          * Creates an observable chain from the property path and returns the value of the last property in the path.
          **/
-        return (function resolveProperty(target: any, propertyKeys: string[]): Observable<any> {
+        return (function resolveProperty(target: any, propertyKeys: string[], optional?: boolean): Observable<any> {
             if (!target) {
-                throw new Error(`@StateEmitter - Failed to deduce dynamic path "${path}": ${lastPropertyKey} is undefined.`);
+                // If this property is missing but is optional, just emit undefined
+                if (optional) {
+                    return of(undefined);
+                } else {
+                    // Otherwise, throw an error
+                    throw new Error(`@StateEmitter - Failed to deduce dynamic path "${path}": ${lastPropertyKey} is undefined or emitted undefined.`);
+                }
             }
 
             // Get the property key
-            let curPropertyKey = lastPropertyKey = propertyKeys[0];
+            let curPropertyKey = propertyKeys[0];
+            let curPropertyOptional = false;
+
+            // Mark the property as optional if it ends with a ? and adjust the property key
+            if (curPropertyKey.endsWith("?")) {
+                curPropertyKey = curPropertyKey.substring(0, curPropertyKey.length - 1);
+                curPropertyOptional = true;
+            }
+
+            lastPropertyKey = curPropertyKey;
             
-            // Create an observable from the properties value
+            // Create (or use) an observable from the property value
             return CreateFromProperty(target[curPropertyKey]).pipe(
                 flatMap((target) => {
                     // If it's the last property in the path...
@@ -52,7 +67,7 @@ export namespace ObservableUtil {
                     }
                     else {
                         // Otherwise, return the next property in the path
-                        return resolveProperty(target, propertyKeys.slice(1));
+                        return resolveProperty(target, propertyKeys.slice(1), curPropertyOptional);
                     }
             }));
         })(target, path.split("."));
@@ -66,12 +81,19 @@ export namespace ObservableUtil {
      * 
      * - It contains any Observables, or Subjects that are not the terminal property in the path.
      * - It does not terminate with a Subject.
+     * - It contains optional fields (those that are conditionally evaluated via the `?.` operator).
      */
     export function IsDynamicPropertyPath(target: any, path: string): boolean {
         // Get all property keys in the path
         let propertyKeys = path.split(".");
 
         return propertyKeys.some((propertyKey, index) => {
+
+            // If a property is optional, then the path is dynamic
+            if (propertyKey.endsWith("?")) {
+                return true;
+            }
+
             // Get the property value
             target = target[propertyKey];
 
@@ -120,8 +142,21 @@ export namespace ObservableUtil {
 
         // Iterate over each property key to find a Subject
         propertyKeys.every((propertyKey, index) => {
+
+            // Mark the property as optional if it ends with a ? and adjust the property key
+            if (propertyKey.endsWith("?")) {
+                propertyKey = propertyKey.substring(0, propertyKey.length - 1);
+            }
+
+            const value = target[propertyKey];
+
+            if (!value) {
+                // Can't continue search, so end it
+                return false;
+            }
+
             // If the current property is a Subject...
-            if (target[propertyKey] instanceof Subject) {
+            if (value instanceof Subject) {
                 // Record this subject
                 subject = target[propertyKey];
                 subjectIndex = index;
@@ -130,9 +165,8 @@ export namespace ObservableUtil {
                 return false;
             }
 
-            // Move to the next property
-            target = target[propertyKey];
-
+            // Move to the next property and keep looking
+            target = value;
             return true;
         });
 

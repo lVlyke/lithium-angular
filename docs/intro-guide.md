@@ -32,7 +32,7 @@ Like ```async```, Lithium also has the following benefits:
 
 ```EventSource``` is the decorator used for reactive [event binding](https://angular.io/guide/template-syntax#event-binding). ```EventSource``` creates an ```Observable``` that can be used to react to component and lifecycle events. Subscriptions to EventSources are automatically cleaned up when the component is destroyed.
 
-**Note**: A component using ```EventSource``` must extend the [Lithium base class](/docs/limitations.md). The examples below assume your app is using Ivy. If your app still uses ViewEngine (Ivy opt-out or Angular pre-9), you must extend the [AotAware](/docs/api-reference.md#aotaware-deprecated) class instead.
+**Note**: A component using ```EventSource``` must extend the [Lithium base class](/docs/limitations.md).
 
 ### Template
 
@@ -158,7 +158,7 @@ Log output:
 
 ```StateEmitter``` is the decorator used for reactive [one-way in binding](https://angular.io/guide/template-syntax#one-way-in) and [two-way binding](https://angular.io/guide/template-syntax#two-way-binding---), allowing for state synchronization to and from the UI via a ```BehaviorSubject```. Subscriptions to StateEmitters are automatically cleaned up when the component is destroyed.
 
-**Note**: A component using ```StateEmitter``` must extend the [Lithium base class](/docs/limitations.md). The examples below assume your app is using Ivy. If your app still uses ViewEngine (Ivy opt-out or Angular pre-9), you must extend the [AotAware](/docs/api-reference.md#aotaware-deprecated) class instead.
+**Note**: A component using ```StateEmitter``` must extend the [Lithium base class](/docs/limitations.md).
 
 ### Template
 

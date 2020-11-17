@@ -267,31 +267,10 @@ interface SelfProxyDecoratorParams {
 
 ## ```LiComponent```
 
-An abstract class that an Angular component class can extend to automatically allow dynamic template checking to enable use with Ivy-compiled builds.
-
-**Note**: If your app is not yet using Ivy (or is using an older version of Angular), you must instead extend the [```AotAware```](#aotaware) class.
+An abstract class that any Angular component class can extend to automatically allow `StateEmitter`s and `EventSource`s to be deduced for use in templates without explicit corresponding property declarations.
 
 ```ts
 abstract class LiComponent extends TemplateDynamic() {}
-```
-
-## ```AotAware``` (deprecated)
-
-An abstract class that an Angular component class can extend to automatically handle defining lifecycle event methods for the pre-Ivy AoT compiler, as well as allowing dynamic template checking with AoT.
-
-**Note**: If your app is using Ivy (the default renderer in Angular 9), you should now extend the [```LiComponent```](#licomponent) class.
-
-```ts
-abstract class AotAware extends TemplateDynamic() {
-    public ngOnChanges();
-    public ngOnInit();
-    public ngOnDestroy();
-    public ngDoCheck();
-    public ngAfterContentInit();
-    public ngAfterContentChecked();
-    public ngAfterViewInit();
-    public ngAfterViewChecked();
-}
 ```
 
 ## AutoPush

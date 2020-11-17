@@ -1,5 +1,5 @@
 
-import { ɵComponentType as ComponentType, ɵDirectiveType as DirectiveType } from "@angular/core";
+import { Type } from "@angular/core";
 import { Observable, Subject } from "rxjs";
 import { EventMetadata, EventType, Metadata, CommonMetadata } from "./metadata";
 import { ManagedSubject } from "./managed-observable";
@@ -62,10 +62,7 @@ export namespace EventSource {
     function bootstrapInstance(eventType: EventType, isLifecycleEvent: boolean) {
         const targetInstance: any = this;
         
-        if (isLifecycleEvent) {
-            // Register the lifecycle event handler for the target instance
-            registerLifecycleEvent(targetInstance, eventType);  
-        } else {
+        if (!isLifecycleEvent) {
             // Assign the facade function for the given event type to the target instance
             Facade.CreateAndAssign(eventType, targetInstance);
         }
@@ -169,6 +166,10 @@ export namespace EventSource {
         // Add ths EventSource definition to the class' metadata
         EventMetadata.GetOwnPropertySubjectMap(options.eventType, target.constructor).set(propertyKey, options);
 
+        if (isLifecycleEvent) {
+            registerLifecycleEvent(target.constructor, options.eventType);
+        }
+
         // Initialize the propertyKey on the target to a self-bootstrapper that will initialize an instance's EventSource when called
         Object.defineProperty(target, propertyKey, {
             configurable: true,
@@ -204,38 +205,34 @@ export namespace EventSource {
         }
     }
 
-    function registerLifecycleEvent(instance: any, eventType: EventType) {
-        // Resolve the metadata for this component or directive
-        const component: ComponentType<any> & DirectiveType<any> = instance.constructor;
-        const ivyComponentDef = (): any => component.ɵcmp || component.ɵdir;
+    /**
+     * @description Registers a lifecycle event handler for use with `registerPreOrderHooks`/`registerPostOrderHooks`
+     */
+    function registerLifecycleEvent(targetClass: Type<any>, eventType: EventType) {
+        // Ensure a valid prototype exists for this component
+        if (!targetClass.prototype) {
+            targetClass.prototype = Object.create({});
+        }
+        // Get the name of the hook for this lifecycle event
+        const hookName = eventType as AngularLifecycleType;
+        // Store a reference to the original hook function
+        const baseHook = targetClass.prototype[hookName];
 
-        // Check if the app is using Ivy
-        if (ivyComponentDef()) {
-            // Get the name of the hook for this lifecycle event
-            const hookName = AngularLifecycleType.hookNames[eventType as AngularLifecycleType];
-            // Store a reference to the original hook function
-            const baseHook = ivyComponentDef()[hookName];
+        // If we haven't already replaced the hook function for this component target...
+        if (!baseHook || !baseHook.eventType) {
+            // Create the facade function for this event
+            const facadeFn = Facade.Create(eventType);
 
-            // If we haven't already replaced the hook function for this component target...
-            if (!baseHook || !baseHook.eventType) {
-                // Create the facade function for this event
-                const facadeFn = Facade.Create(eventType);
+            // Replace the hook function with a modified one that ensures the event source facade function is invoked
+            targetClass.prototype[hookName] = Object.assign(function (...args: any[]) {
+                // Call the base hook function on the component instance if there is one
+                if (baseHook) {
+                    baseHook.call(this, ...args);
+                }
 
-                // Replace the hook function with a modified one that ensures the event source facade function is invoked
-                ivyComponentDef()[hookName] = Object.assign(function (...args: any[]) {
-                    // Call the base hook function on the component instance if there is one
-                    if (baseHook) {
-                        baseHook.call(this, ...args);
-                    }
-
-                    // Call the facade function associated with this event type on the component instance
-                    facadeFn.call(this, ...args);
-                }, { eventType });
-            }
-        } else {
-            // The app is using legacy ViewEngine, so just register a normal facade function
-            // TODO - Remove these when only supporting Ivy
-            Facade.CreateAndAssign(eventType, instance);
+                // Call the facade function associated with this event type on the component instance
+                facadeFn.call(this, ...args);
+            }, { eventType });
         }
     }
 

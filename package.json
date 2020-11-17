@@ -1,6 +1,6 @@
 {
   "name": "@lithiumjs/angular",
-  "version": "5.1.1",
+  "version": "6.0.0-beta.0",
   "description": "A decorator-based library that allows you to fully use RxJS with Angular. Use Observables as first-class citizens in your view templates! Listen to component lifecycle events with Observables! Lithium makes your components highly reactive.",
   "author": "Mychal Thompson <mychal.r.thompson@gmail.com>",
   "repository": "https://github.com/lVlyke/lithium-angular",
@@ -37,13 +37,13 @@
     "test": "node ./scripts/test.js"
   },
   "peerDependencies": {
-    "@angular/core": ">=6.0.0 <10.0.0",
+    "@angular/core": ">=10.0.0 <12.0.0",
     "rxjs": "6.x.x"
   },
   "devDependencies": {
-    "@angular/compiler": "9.0.0",
-    "@angular/compiler-cli": "9.0.0",
-    "@angular/core": "9.0.0",
+    "@angular/compiler": "11.0.0",
+    "@angular/compiler-cli": "11.0.0",
+    "@angular/core": "11.0.0",
     "@types/jasmine": "^3.3.13",
     "@types/node": "^12.6.9",
     "detest-bdd": "^1.1.1",
@@ -51,12 +51,12 @@
     "istanbul": "^0.4.5",
     "istanbul-cobertura-badger": "^1.3.1",
     "jasmine": "^3.4.0",
-    "ng-packagr": "^9.0.0",
+    "ng-packagr": "^11.0.0",
     "rxjs": "^6.5.3",
     "source-map-support": "^0.5.12",
-    "tslib": "^1.10.0",
-    "typescript": "~3.7.4",
-    "zone.js": "^0.10.2"
+    "tslib": "^2.0.0",
+    "typescript": "~4.0.2",
+    "zone.js": "^0.10.3"
   },
   "dependencies": {},
   "ngPackage": {

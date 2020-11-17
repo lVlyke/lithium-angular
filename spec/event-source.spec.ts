@@ -80,15 +80,9 @@ describe("An EventSource decorator", () => {
                 if (options && options.eventType) {
                     describe("when an eventType is specified", () => {
 
-                        if (isLifecycleEvent) {
-                            spec.it("should NOT create a facade function for the eventType", (params) => {
-                                expect(params.targetPrototype[options.eventType]).not.toBeDefined();
-                            });
-                        } else {
-                            spec.it("should create a facade function for the eventType", (params) => {
-                                expect(params.targetPrototype[options.eventType]).toEqual(jasmine.any(Function));
-                            });
-                        }
+                        spec.it("should create a facade function for the eventType", (params) => {
+                            expect(params.targetPrototype[options.eventType]).toEqual(jasmine.any(Function));
+                        });
 
                         spec.it("should NOT create a facade function for the property key", (params) => {
                             expect(params.targetPrototype[propertyKey.slice(0, -1)]).not.toBeDefined();
@@ -98,15 +92,9 @@ describe("An EventSource decorator", () => {
                 else {
                     describe("when an eventType is NOT specified", () => {
 
-                        if (isLifecycleEvent) {
-                            spec.it("should NOT create a facade function for the property key", (params) => {
-                                expect(params.targetPrototype[propertyKey.slice(0, -1)]).not.toBeDefined();
-                            });
-                        } else {
-                            spec.it("should create a facade function for the property key", (params) => {
-                                expect(params.targetPrototype[propertyKey.slice(0, -1)]).toEqual(jasmine.any(Function));
-                            });
-                        }
+                        spec.it("should create a facade function for the property key", (params) => {
+                            expect(params.targetPrototype[propertyKey.slice(0, -1)]).toEqual(jasmine.any(Function));
+                        });
                     });
                 }
             });
@@ -121,15 +109,9 @@ describe("An EventSource decorator", () => {
                             createEventSource()(params.targetPrototype, propertyKey);
                         }));
 
-                        if (isLifecycleEvent) {
-                            spec.it("should NOT create a facade function for the eventType", (params) => {
-                                expect(params.targetPrototype[options.eventType]).not.toBeDefined();
-                            });
-                        } else {
-                            spec.it("should create a facade function for the eventType", (params) => {
-                                expect(params.targetPrototype[options.eventType]).toEqual(jasmine.any(Function));
-                            });
-                        }
+                        spec.it("should create a facade function for the eventType", (params) => {
+                            expect(params.targetPrototype[options.eventType]).toEqual(jasmine.any(Function));
+                        });
                         
                     });
                 }
@@ -218,19 +200,15 @@ describe("An EventSource decorator", () => {
                     // TODO - Test copying of inheritted metadata
 
                     if (isLifecycleEvent) {
-                        spec.it("should NOT create the expected eventType facade function on the instance", (params) => {
-                            expect(params.targetInstance[eventType]).not.toBeDefined();
-                        });
-
                         spec.it("should register the lifecycle event with Ivy", (params) => {
-                            const hookName = AngularLifecycleType.hookNames[eventType as AngularLifecycleType];
-                            expect(params.ngCompDef.ɵcmp[hookName]).toEqual(jasmine.any(Function));
-                        });
-                    } else {
-                        spec.it("should create the expected eventType facade function on the instance", (params) => {
-                            expect(params.targetInstance[eventType]).toEqual(jasmine.any(Function));
+                            const hookName = eventType as AngularLifecycleType;
+                            expect(params.targetClass.prototype[hookName]).toEqual(jasmine.any(Function));
                         });
                     }
+
+                    spec.it("should create the expected eventType facade function on the instance", (params) => {
+                        expect(params.targetInstance[eventType]).toEqual(jasmine.any(Function));
+                    });
 
                     spec.it("should create the expected propertyKey facade function on the instance for AoT", (params) => {
                         expect(params.targetInstance[propertyKey]).toEqual(jasmine.any(Function));
@@ -276,8 +254,8 @@ describe("An EventSource decorator", () => {
         
                                     // Invoke the facade function with the input
                                     if (isLifecycleEvent) {
-                                        const hookName = AngularLifecycleType.hookNames[eventType as AngularLifecycleType];
-                                        params.ngCompDef.ɵcmp[hookName].call(params.targetInstance, ...params.facadeData);
+                                        const hookName = eventType as AngularLifecycleType;
+                                        params.targetClass.prototype[hookName].call(params.targetInstance, ...params.facadeData);
                                     } else {
                                         params.targetInstance[facadeFnKey](...params.facadeData);
                                     }
@@ -285,8 +263,8 @@ describe("An EventSource decorator", () => {
 
                                 if (isLifecycleEvent) {
                                     spec.it("should register the Ivy hook function with the correct eventType", (params) => {
-                                        const hookName = AngularLifecycleType.hookNames[eventType as AngularLifecycleType];
-                                        expect(params.ngCompDef.ɵcmp[hookName].eventType).toEqual(eventType);
+                                        const hookName = eventType as AngularLifecycleType;
+                                        expect(params.targetClass.prototype[hookName].eventType).toEqual(eventType);
                                     });
                                 }
         

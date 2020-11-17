@@ -6,7 +6,7 @@ While Lithium transparently integrates with Angular for the majority of cases, t
 
 > _Note_: If your application only uses lifecycle event sources from Lithium (i.e. `@OnInit`) and Ivy, the following section does not apply.
 
-Lithium's ```StateEmitter``` and ```EventSource``` decorators dynamically create and manage the properties that a component's view template will access, it is incompatible with how the current Angular compiler handles template validation. To easily remedy this issue, your components can extend the provided base class [```LiComponent```](/docs/api-reference.md#licomponent) (if using Ivy) or [```AotAware```](/docs/api-reference.md#aotaware-deprecated) (if not using Ivy) to enable less strict validation and still retain full compiler compliance:
+Lithium's ```StateEmitter``` and ```EventSource``` decorators dynamically create and manage the properties that a component's view template will access, it is incompatible with how the current Angular compiler handles template validation. To easily remedy this issue, your components can extend the provided base class [```LiComponent```](/docs/api-reference.md#licomponent) to enable less strict validation and still retain full compiler compliance:
 
 ```ts
 import { LiComponent } from "@lithiumjs/angular";

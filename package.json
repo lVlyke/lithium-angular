@@ -1,6 +1,6 @@
 {
   "name": "@lithiumjs/angular",
-  "version": "6.0.0-beta.0",
+  "version": "6.0.0",
   "description": "A decorator-based library that allows you to fully use RxJS with Angular. Use Observables as first-class citizens in your view templates! Listen to component lifecycle events with Observables! Lithium makes your components highly reactive.",
   "author": "Mychal Thompson <mychal.r.thompson@gmail.com>",
   "repository": "https://github.com/lVlyke/lithium-angular",

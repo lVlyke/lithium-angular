@@ -7,6 +7,7 @@ export namespace EventMetadata {
 
     export const SUBJECT_TABLE_MERGED_KEY = "$$EVENTSOURCE_SUBJECT_TABLE_MERGED";
     export const BOOTSTRAPPED_KEY = "$$EVENTSOURCE_BOOTSTRAPPED";
+    export const LIFECYCLE_REGISTRATION_KEY = "$$EVENTSOURCE_LIFECYCLE_REGISTRATION";
 
     export interface ConfigOptions {
         eventType: EventType;
@@ -21,9 +22,11 @@ export namespace EventMetadata {
     export type PropertySubjectMap = Map<string, SubjectInfo>;
     export type EventSubjectTable = Map<EventType, PropertySubjectMap>;
     export type InstanceBootstrapMap = Map<EventType, boolean>;
+    export type LifecycleRegistrationMap = Map<EventType, boolean>;
 
     const EventSubjectTableSymbol = Symbol("EventSubjectTableSymbol");
     const InstanceBootstrapMapSymbol = Symbol("InstanceBootstrapMapSymbol");
+    const LifecycleRegistrationMapSymbol = Symbol("LifecycleRegistrationMapSymbol");
 
     /** @description Gets the metadata map object for the given target class (or its inheritted classes). */
     export function GetEventSubjectTable(target: Object): EventSubjectTable {
@@ -37,6 +40,10 @@ export namespace EventMetadata {
 
     export function GetInstanceBootstrapMap(target: Object): InstanceBootstrapMap {
         return Metadata.requireMetadata<InstanceBootstrapMap>(InstanceBootstrapMapSymbol, target, new Map());
+    }
+
+    export function GetLifecycleRegistrationMap(target: Object): LifecycleRegistrationMap {
+        return Metadata.requireMetadata<LifecycleRegistrationMap>(LifecycleRegistrationMapSymbol, target, new Map());
     }
 
     /** @description

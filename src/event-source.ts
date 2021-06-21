@@ -117,7 +117,7 @@ export namespace EventSource {
         /** @description
          *  Creates an event facade function (the function that is invoked during an event) for the given event type.
          */
-        export function Create(eventType: EventType): Function & { eventType: EventType } {
+        export function Create(eventType: EventType): ((...value: any[]) => void) & { eventType: EventType } {
             return Object.assign(function (...values: any[]) {
                 // Get the list of subjects to notify for this `eventType`
                 const subjectInfoList = Array.from(EventMetadata.GetPropertySubjectMap(eventType, this).values());
@@ -167,7 +167,7 @@ export namespace EventSource {
         EventMetadata.GetOwnPropertySubjectMap(options.eventType, target.constructor).set(propertyKey, options);
 
         if (isLifecycleEvent) {
-            registerLifecycleEvent(target.constructor, options.eventType);
+            registerLifecycleEventFacade(target.constructor, options.eventType);
         }
 
         // Initialize the propertyKey on the target to a self-bootstrapper that will initialize an instance's EventSource when called
@@ -205,10 +205,20 @@ export namespace EventSource {
         }
     }
 
+    function registerLifecycleEventFacade(targetClass: Type<any>, eventType: EventType) {
+        const registrationState = EventMetadata.GetLifecycleRegistrationMap(targetClass);
+
+        // Register the facade function for this component lifecycle target if we haven't already
+        if (!registrationState.get(eventType)) {
+            registerLifecycleEvent(targetClass, eventType, Facade.Create(eventType));
+            registrationState.set(eventType, true);
+        }
+    }
+
     /**
      * @description Registers a lifecycle event handler for use with `registerPreOrderHooks`/`registerPostOrderHooks`
      */
-    function registerLifecycleEvent(targetClass: Type<any>, eventType: EventType) {
+    export function registerLifecycleEvent(targetClass: Type<any>, eventType: EventType, hookFn: (...args: any[]) => void) {
         // Ensure a valid prototype exists for this component
         if (!targetClass.prototype) {
             targetClass.prototype = Object.create({});
@@ -216,24 +226,18 @@ export namespace EventSource {
         // Get the name of the hook for this lifecycle event
         const hookName = eventType as AngularLifecycleType;
         // Store a reference to the original hook function
-        const baseHook = targetClass.prototype[hookName];
+        const prevLifecycleHook = targetClass.prototype[hookName];
 
-        // If we haven't already replaced the hook function for this component target...
-        if (!baseHook || !baseHook.eventType) {
-            // Create the facade function for this event
-            const facadeFn = Facade.Create(eventType);
+        // Replace the hook function with a modified one that ensures the event source facade function is invoked
+        targetClass.prototype[hookName] = Object.assign(function (...args: any[]) {
+            // Call the previous hook function on the component instance if there is one
+            if (prevLifecycleHook) {
+                prevLifecycleHook.call(this, ...args);
+            }
 
-            // Replace the hook function with a modified one that ensures the event source facade function is invoked
-            targetClass.prototype[hookName] = Object.assign(function (...args: any[]) {
-                // Call the base hook function on the component instance if there is one
-                if (baseHook) {
-                    baseHook.call(this, ...args);
-                }
-
-                // Call the facade function associated with this event type on the component instance
-                facadeFn.call(this, ...args);
-            }, { eventType });
-        }
+            // Call the hook function associated with this lifeycle event on the current component instance
+            hookFn.call(this, ...args);
+        }, { eventType });
     }
 
     function isBootstrapped(eventType: EventType): boolean {

@@ -1,6 +1,6 @@
 import { Metadata } from "./metadata";
 
-export namespace AsyncStateMetadata {
+export namespace ComponentStateMetadata {
 
     export const ASYNC_PROPERTY_LIST_KEY = "ASYNC_PROPERTY_LIST_KEY";
 

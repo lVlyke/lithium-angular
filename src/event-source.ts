@@ -219,25 +219,35 @@ export namespace EventSource {
      * @description Registers a lifecycle event handler for use with `registerPreOrderHooks`/`registerPostOrderHooks`
      */
     export function registerLifecycleEvent(targetClass: Type<any>, eventType: EventType, hookFn: (...args: any[]) => void) {
+        EventMetadata.AddLifecycleCallback(targetClass, eventType, hookFn);
+
         // Ensure a valid prototype exists for this component
         if (!targetClass.prototype) {
             targetClass.prototype = Object.create({});
         }
+
         // Get the name of the hook for this lifecycle event
         const hookName = eventType as AngularLifecycleType;
         // Store a reference to the original hook function
         const prevLifecycleHook = targetClass.prototype[hookName];
 
-        // Replace the hook function with a modified one that ensures the event source facade function is invoked
-        targetClass.prototype[hookName] = Object.assign(function (...args: any[]) {
-            // Call the previous hook function on the component instance if there is one
-            if (prevLifecycleHook) {
-                prevLifecycleHook.call(this, ...args);
-            }
+        // Replace the default lifecycle hook with a modified one that ensures the given hook fns are invoked
+        if (!prevLifecycleHook?.eventType) {
+            targetClass.prototype[hookName] = Object.assign(function (...args: any[]) {
+                // Call the previous hook function on the component instance if there is one
+                if (prevLifecycleHook) {
+                    prevLifecycleHook.call(this, ...args);
+                }
 
-            // Call the hook function associated with this lifeycle event on the current component instance
-            hookFn.call(this, ...args);
-        }, { eventType });
+                // Invoke all of the hook functions associated with this lifeycle event for the current component instance
+                const hookFns = EventMetadata.GetLifecycleCallbackList(targetClass, eventType);
+                hookFns.forEach(hookFn => hookFn.call(this, ...args));
+            }, { eventType });
+        }
+    }
+
+    export function unregisterLifecycleEvent(targetClass: Type<any>, eventType: EventType, hookFn: (...args: any[]) => void) {
+        EventMetadata.RemoveLifecycleCallback(targetClass, eventType, hookFn);
     }
 
     function isBootstrapped(eventType: EventType): boolean {

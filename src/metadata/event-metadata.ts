@@ -23,10 +23,12 @@ export namespace EventMetadata {
     export type EventSubjectTable = Map<EventType, PropertySubjectMap>;
     export type InstanceBootstrapMap = Map<EventType, boolean>;
     export type LifecycleRegistrationMap = Map<EventType, boolean>;
+    export type LifecycleCallbackMap = Map<EventType, Array<(...args: any[]) => void>>;
 
     const EventSubjectTableSymbol = Symbol("EventSubjectTableSymbol");
     const InstanceBootstrapMapSymbol = Symbol("InstanceBootstrapMapSymbol");
     const LifecycleRegistrationMapSymbol = Symbol("LifecycleRegistrationMapSymbol");
+    const LifecycleCallbackMapSymbol = Symbol("LifecycleCallbackMapSymbol");
 
     /** @description Gets the metadata map object for the given target class (or its inheritted classes). */
     export function GetEventSubjectTable(target: Object): EventSubjectTable {
@@ -44,6 +46,10 @@ export namespace EventMetadata {
 
     export function GetLifecycleRegistrationMap(target: Object): LifecycleRegistrationMap {
         return Metadata.requireMetadata<LifecycleRegistrationMap>(LifecycleRegistrationMapSymbol, target, new Map());
+    }
+
+    export function GetLifecycleCallbackMap(target: Object): LifecycleCallbackMap {
+        return Metadata.requireMetadata<LifecycleCallbackMap>(LifecycleCallbackMapSymbol, target, new Map());
     }
 
     /** @description
@@ -76,12 +82,47 @@ export namespace EventMetadata {
         return subjectMap;
     }
 
+    export function GetLifecycleCallbackList(target: Object, type: EventType): Array<(...args: any[]) => void> {
+        const map = GetLifecycleCallbackMap(target);
+
+        if (!map.has(type)) {
+            map.set(type, []);
+        }
+
+        Metadata.setMetadata(LifecycleCallbackMapSymbol, target, map);
+        return map.get(type);
+    }
+
     export function HasOwnEventSubjectTable(target: Object): boolean {
         return Metadata.hasOwnMetadata(EventSubjectTableSymbol, target);
     }
 
     export function SetEventSubjectTable(target: Object, map: EventSubjectTable) {
         Metadata.setMetadata(EventSubjectTableSymbol, target, map);
+    }
+
+    export function AddLifecycleCallback(target: Object, type: EventType, callback: (...args: any[]) => void) {
+        const map = GetLifecycleCallbackMap(target);
+
+        if (!map.has(type)) {
+            map.set(type, []);
+        }
+
+        const callbacks = map.get(type);
+        callbacks.push(callback);
+        Metadata.setMetadata(LifecycleCallbackMapSymbol, target, map);
+    }
+
+    export function RemoveLifecycleCallback(target: Object, type: EventType, callback: (...args: any[]) => void) {
+        const map = GetLifecycleCallbackMap(target);
+
+        if (!map.has(type)) {
+            return;
+        }
+
+        const callbacks = map.get(type);
+        map.set(type, callbacks.filter(curCallback => curCallback !== callback));
+        Metadata.setMetadata(LifecycleCallbackMapSymbol, target, map);
     }
 
     /** @description Copy all metadata from the source map to the target map.

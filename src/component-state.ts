@@ -5,7 +5,7 @@ import { AutoPush } from "./autopush";
 import { ManagedBehaviorSubject } from "./managed-observable";
 import { EventSource } from "./event-source";
 import { AngularLifecycleType } from "./lifecycle-event";
-import { AsyncStateMetadata, CommonMetadata } from "./metadata";
+import { ComponentStateMetadata, CommonMetadata } from "./metadata";
 
 const COMPONENT_IDENTITY = Symbol("COMPONENT_IDENTITY");
 
@@ -106,7 +106,7 @@ export namespace ComponentState {
 
         return function (): ComponentStateRef<ComponentT> {
             const stateRef = new ComponentStateRef<ComponentT>((resolve) => {
-                EventSource.registerLifecycleEvent($class, AngularLifecycleType.OnInit, function() {
+                EventSource.registerLifecycleEvent($class, AngularLifecycleType.OnInit, function componentOnInit() {
                     const instance = this;
                     const instanceProps = getAllAccessibleKeys(instance);
                     const instanceAsyncStates = getOwnAsyncKeys(instance);
@@ -122,6 +122,8 @@ export namespace ComponentState {
 
                     state[COMPONENT_IDENTITY] = instance;
                     resolve(state);
+
+                    EventSource.unregisterLifecycleEvent($class, AngularLifecycleType.OnInit, componentOnInit);
                 });
             });
             return stateRef;
@@ -145,7 +147,7 @@ export namespace ComponentState {
         if (typeof classProp === "string" && !classProp.endsWith("$")) {
             let lastValue: ComponentT[K] = instance[classProp];
 
-            if (!propDescriptor || (propDescriptor.configurable && propDescriptor.writable)) {
+            if (!propDescriptor || (propDescriptor.configurable && (propDescriptor.writable || propDescriptor.set))) {
                 const propSubject$ = componentState[stateSubjectProp] = new ManagedBehaviorSubject<ComponentT[K]>(instance, lastValue);
 
                 // Monitor the property subject for value changes
@@ -171,7 +173,7 @@ export namespace ComponentState {
                 try {
                     // Override the existing instance property with a getter/setter that synchronize with `propSubject$`
                     Object.defineProperty(instance, classProp, {
-                        configurable: false,
+                        configurable: true,
                         enumerable: true,
                         get: () => lastValue,
                         set: (newValue: ComponentT[K]): void => propSubject$.next(newValue)
@@ -202,6 +204,6 @@ export namespace ComponentState {
     }
 
     function getOwnAsyncKeys<T>(instance: T): Array<keyof T> {
-        return AsyncStateMetadata.GetAsyncPropertyList(instance.constructor) as Array<keyof T>;
+        return ComponentStateMetadata.GetAsyncPropertyList(instance.constructor) as Array<keyof T>;
     }
 }

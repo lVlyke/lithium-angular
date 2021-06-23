@@ -1,5 +1,5 @@
 import { Provider, Type } from "@angular/core";
-import { from, Observable, of, Subject, Subscription } from "rxjs";
+import { from, Observable, of, ReplaySubject, Subject, Subscription, throwError } from "rxjs";
 import { mergeMap, skip, take, tap } from "rxjs/operators";
 import { AutoPush } from "./autopush";
 import { ManagedBehaviorSubject } from "./managed-observable";
@@ -15,13 +15,30 @@ export type ComponentState<ComponentT> = ComponentState.Of<ComponentT>;
 
 export class ComponentStateRef<ComponentT> extends Promise<ComponentStateWithIdentity<ComponentT>> {
 
+    public _pendingState: Partial<ComponentState<ComponentT>> = {};
+
     public state(): Observable<ComponentState<ComponentT>> {
         return from(this);
     }
 
     public get<K extends keyof ComponentT>(stateProp: ComponentState.ReadableKey<ComponentT, K>): Observable<ComponentT[K]> {
+        const stateKey = ComponentState.stateKey<ComponentT, K>(stateProp);
+        const pendingSource$ = this._pendingState[stateKey] as unknown as Observable<ComponentT[K]>;
+
+        if (pendingSource$) {
+            return pendingSource$;
+        }
+        
         return from(this).pipe(
-            mergeMap((state: ComponentState<ComponentT>) => state[ComponentState.stateKey<ComponentT, K>(stateProp)])
+            mergeMap((state: ComponentState<ComponentT>) => {
+                if (!state[stateKey]) {
+                    return throwError(
+`[ComponentStateRef] Failed to get state for component property "${stateProp}". Ensure that this property is explicitly initialized (or declare it with @DeclareState()).`
+                    );
+                }
+
+                return state[stateKey];
+            })
         ) as Observable<ComponentT[K]>;
     }
 
@@ -29,11 +46,32 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentStateWithIde
         return stateProps.map(stateProp => this.get(stateProp)) as ComponentState.StateSelector<ComponentT, K>;
     }
 
-    public set<K extends keyof ComponentT>(stateProp: ComponentState.WritableKey<ComponentT, K>, value: ComponentT[K]): void {
-        from(this).subscribe((state: ComponentState<ComponentT>) => {
-            const stateSubject$ = state[ComponentState.stateKey<ComponentT, K>(stateProp)] as any as Subject<ComponentT[K]>;
-            stateSubject$.next(value);
-        });
+    public set<K extends keyof ComponentT>(stateProp: ComponentState.WritableKey<ComponentT, K>, value: ComponentT[K]): Observable<void> {
+        const stateKey = ComponentState.stateKey<ComponentT, K>(stateProp);
+        const result$ = new ReplaySubject<void>(1);
+        const pendingSource$ = this._pendingState[stateKey] as unknown as Subject<ComponentT[K]>;
+
+        if (pendingSource$) {
+            pendingSource$.next(value);
+            result$.next();
+            result$.complete();
+        } else {
+            from(this).subscribe((state: ComponentState<ComponentT>) => {
+                const stateSubject$ = state[ComponentState.stateKey<ComponentT, K>(stateProp)] as any as Subject<ComponentT[K]>;
+    
+                if (!stateSubject$) {
+                    throw new Error(
+    `[ComponentStateRef] Failed to set state for component property "${stateProp}". Ensure that this property is explicitly initialized (or declare it with @DeclareState()).`
+                    );
+                }
+    
+                stateSubject$.next(value);
+                result$.next();
+                result$.complete();
+            });
+        }
+
+        return result$;
     }
 
     public subscribeTo<K extends keyof ComponentT>(
@@ -106,41 +144,80 @@ export namespace ComponentState {
 
         return function (): ComponentStateRef<ComponentT> {
             const stateRef = new ComponentStateRef<ComponentT>((resolve) => {
-                EventSource.registerLifecycleEvent($class, AngularLifecycleType.OnInit, function componentOnInit() {
-                    const instance = this;
-                    const instanceProps = getAllAccessibleKeys(instance);
-                    const instanceAsyncStates = getOwnAsyncKeys(instance);
-                    const state = instanceProps.reduce<any>((state, classProp) => {
-                        return updateStateForProperty(
-                            stateRef,
-                            state,
-                            instance,
-                            classProp,
-                            { asyncState: instanceAsyncStates.includes(classProp) }
-                        );
-                    }, {});
+                const stateSelector = () => stateRef;
 
-                    state[COMPONENT_IDENTITY] = instance;
+                // Generate initial component state on ngOnInit
+                updateStateOnEvent($class, AngularLifecycleType.OnInit, stateSelector);
+
+                // Update the component state on afterViewInit and afterContentInit to capture dynamically initialized properties
+                updateStateOnEvent($class, AngularLifecycleType.AfterViewInit, stateSelector);
+                updateStateOnEvent($class, AngularLifecycleType.AfterContentInit, stateSelector, (state) => {
+                    // Resolve the finalized state
                     resolve(state);
-
-                    EventSource.unregisterLifecycleEvent($class, AngularLifecycleType.OnInit, componentOnInit);
                 });
             });
             return stateRef;
         }
     }
 
-    export function stateKey<ComponentT, K extends keyof ComponentT>(key: K): StateKey<ComponentT, K> {
+    export function stateKey<ComponentT, K extends keyof ComponentT = keyof ComponentT>(key: K): StateKey<ComponentT, K> {
         return `${key}$` as any;
+    }
+
+    function updateStateOnEvent<ComponentT>(
+        $class: Type<any>,
+        event: AngularLifecycleType,
+        stateRefSelector: () => ComponentStateRef<ComponentT>,
+        onComplete?: (state: ComponentStateWithIdentity<ComponentT>) => void
+    ): void {
+        // Register a lifecycle event listener for the given event
+        EventSource.registerLifecycleEvent($class, event, function onEvent() {
+            const instance = this;
+            const stateRef = stateRefSelector();
+            const state: any = updateState(stateRef, stateRef._pendingState, instance, false);
+
+            state[COMPONENT_IDENTITY] = instance;
+
+            EventSource.unregisterLifecycleEvent($class, event, onEvent);
+
+            if (onComplete) {
+                onComplete(state);
+            }
+        });
+    }
+
+    function updateState<ComponentT>(
+        componentStateRef: ComponentStateRef<ComponentT>,
+        componentState: Partial<StateRecord<ComponentT>>,
+        instance: ComponentT,
+        overwriteExistingProperties: boolean
+    ): Partial<StateRecord<ComponentT>> {
+        const instanceProps = getAllAccessibleKeys(instance);
+        const instanceAsyncStates = getOwnAsyncKeys(instance);
+
+        // Create a managed reactive state wrapper for each component property
+        instanceProps.forEach((classProp: keyof ComponentT) => {
+            if (overwriteExistingProperties || !componentState[ComponentState.stateKey<ComponentT>(classProp)]) {
+                updateStateForProperty(
+                    componentStateRef,
+                    componentState,
+                    instance,
+                    classProp,
+                    { asyncState: instanceAsyncStates.includes(classProp) }
+                );
+            }
+        });
+
+        return componentState;
     }
 
     function updateStateForProperty<ComponentT, K extends keyof ComponentT>(
         componentStateRef: ComponentStateRef<ComponentT>,
-        componentState: StateRecord<ComponentT, K>,
+        componentState: Partial<StateRecord<ComponentT, K>>,
         instance: ComponentT,
         classProp: K,
         options: PropertyUpdateOptions
-    ): StateRecord<ComponentT, K> {
+    ): Partial<StateRecord<ComponentT, K>> {
         const propDescriptor = Object.getOwnPropertyDescriptor(instance, classProp);
         const stateSubjectProp = stateKey<ComponentT, K>(classProp);
 
@@ -166,7 +243,7 @@ export namespace ComponentState {
                     // If `classProp` is an AsyncState and and there's an equivalent `${classProp}$` on the instance, subscribe to it
                     if (reactiveSource$ && reactiveSource$ instanceof Observable) {
                         componentStateRef.subscribeTo<K>(classProp as WritableKey<ComponentT, K>, reactiveSource$);
-                        reactiveSource$.pipe(take(1)).subscribe(initialValue => lastValue = initialValue);
+                        reactiveSource$.pipe(take(1)).subscribe(initialValue => propSubject$.next(initialValue));
                     }
                 }
 

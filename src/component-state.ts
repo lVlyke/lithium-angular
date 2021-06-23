@@ -1,5 +1,5 @@
 import type { IfReadonly } from "./lang-utils";
-import { Provider, Type } from "@angular/core";
+import { InjectFlags, Injector, Provider, Type } from "@angular/core";
 import { from, Observable, of, ReplaySubject, Subject, Subscription, throwError } from "rxjs";
 import { mergeMap, skip, take, tap } from "rxjs/operators";
 import { AutoPush } from "./autopush";
@@ -127,24 +127,24 @@ export namespace ComponentState {
         return {
             provide: ComponentStateRef,
             useFactory: createFactory<ComponentT>($class),
-            deps: []
+            deps: [Injector]
         };
     }
 
-    export function createFactory<ComponentT>($class: Type<any>): () => ComponentStateRef<ComponentT> {
+    export function createFactory<ComponentT>($class: Type<any>): (injector: Injector) => ComponentStateRef<ComponentT> {
         // Ensure that we create a OnDestroy EventSource on the target for managing subscriptions
         EventSource({ eventType: AngularLifecycleType.OnDestroy })($class.prototype, CommonMetadata.MANAGED_ONDESTROY_KEY);
 
-        return function (): ComponentStateRef<ComponentT> {
+        return function (injector: Injector): ComponentStateRef<ComponentT> {
             const stateRef = new ComponentStateRef<ComponentT>((resolve) => {
                 const stateSelector = () => stateRef;
 
                 // Generate initial component state on ngOnInit
-                updateStateOnEvent($class, AngularLifecycleType.OnInit, stateSelector);
+                updateStateOnEvent($class, injector, AngularLifecycleType.OnInit, stateSelector);
 
                 // Update the component state on afterViewInit and afterContentInit to capture dynamically initialized properties
-                updateStateOnEvent($class, AngularLifecycleType.AfterViewInit, stateSelector);
-                updateStateOnEvent($class, AngularLifecycleType.AfterContentInit, stateSelector, (state) => {
+                updateStateOnEvent($class, injector, AngularLifecycleType.AfterViewInit, stateSelector);
+                updateStateOnEvent($class, injector, AngularLifecycleType.AfterContentInit, stateSelector, (state) => {
                     // Resolve the finalized state
                     resolve(state);
                 });
@@ -161,22 +161,26 @@ export namespace ComponentState {
 
     function updateStateOnEvent<ComponentT>(
         $class: Type<any>,
+        injector: Injector,
         event: AngularLifecycleType,
         stateRefSelector: () => ComponentStateRef<ComponentT>,
         onComplete?: (state: ComponentStateWithIdentity<ComponentT>) => void
     ): void {
         // Register a lifecycle event listener for the given event
         EventSource.registerLifecycleEvent($class, event, function onEvent() {
-            const instance = this;
-            const stateRef = stateRefSelector();
-            const state: any = updateState(stateRef, stateRef._pendingState, instance);
+            const instance = injector.get($class, undefined, InjectFlags.Self);
 
-            state[COMPONENT_IDENTITY] = instance;
+            if (instance === this) {
+                const stateRef = stateRefSelector();
+                const state: any = updateState(stateRef, stateRef._pendingState, instance);
 
-            EventSource.unregisterLifecycleEvent($class, event, onEvent);
+                state[COMPONENT_IDENTITY] = instance;
 
-            if (onComplete) {
-                onComplete(state);
+                EventSource.unregisterLifecycleEvent($class, event, onEvent);
+
+                if (onComplete) {
+                    onComplete(state);
+                }
             }
         });
     }

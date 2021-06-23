@@ -2,21 +2,26 @@ import { Metadata } from "./metadata";
 
 export namespace ComponentStateMetadata {
 
-    export const ASYNC_PROPERTY_LIST_KEY = "ASYNC_PROPERTY_LIST_KEY";
+    export const MANAGED_PROPERTY_LIST_KEY = "MANAGED_PROPERTY_LIST_KEY";
 
-    export type AsyncPropertyList = string[];
-
-    const AsyncPropertyListSymbol = Symbol("AsyncPropertyList");
-
-    export function GetAsyncPropertyList(target: Object): AsyncPropertyList {
-        return Metadata.requireMetadata<AsyncPropertyList>(AsyncPropertyListSymbol, target, []);
+    export interface ManagedProperty<T, K extends keyof T = keyof T> {
+        key: K;
+        async: boolean;
     }
 
-    export function SetAsyncPropertyList(target: Object, list: AsyncPropertyList) {
-        Metadata.setMetadata(AsyncPropertyListSymbol, target, list);
+    export type ManagedPropertyList<T> = ManagedProperty<T>[];
+
+    const ManagedPropertyListSymbol = Symbol("ManagedPropertyList");
+
+    export function GetManagedPropertyList<T>(target: Object): ManagedPropertyList<T> {
+        return Metadata.requireMetadata<ManagedPropertyList<T>>(ManagedPropertyListSymbol, target, []);
     }
 
-    export function AddAsyncProperty(target: Object, property: string) {
-        SetAsyncPropertyList(target, GetAsyncPropertyList(target).concat([property]));
+    export function SetManagedPropertyList<T>(target: Object, list: ManagedPropertyList<T>) {
+        Metadata.setMetadata(ManagedPropertyListSymbol, target, list);
+    }
+
+    export function AddManagedProperty<T>(target: Object, property: ManagedProperty<T>) {
+        SetManagedPropertyList<T>(target, GetManagedPropertyList<T>(target).concat([property]));
     }
 }

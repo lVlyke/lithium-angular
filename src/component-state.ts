@@ -1,3 +1,4 @@
+import type { IfReadonly } from "./lang-utils";
 import { Provider, Type } from "@angular/core";
 import { from, Observable, of, ReplaySubject, Subject, Subscription, throwError } from "rxjs";
 import { mergeMap, skip, take, tap } from "rxjs/operators";
@@ -100,35 +101,27 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentStateWithIde
 
 export namespace ComponentState {
 
-    type IfEquals<X, Y, A, B> =
-        (<T>() => T extends X ? 1 : 2) extends
-        (<T>() => T extends Y ? 1 : 2) ? A : B;
+    type ReactiveStateKey<ComponentT, K extends keyof ComponentT = keyof ComponentT> =
+        K extends string ? `${K}$` : never;
 
-    type IfReadonly<T, K extends keyof T, A, B> =
-        IfEquals<{ [P in K]: T[P] }, { readonly [P in K]: T[P] }, A, B>;
+    type QualifiedStateKey<ComponentT, K extends keyof ComponentT = keyof ComponentT> = 
+        K extends string ? (K extends ReactiveStateKey<any, K> ? never : ReactiveStateKey<ComponentT, K>) : never;
 
     export type Of<ComponentT> = {
-        readonly [K in keyof ComponentT as (K extends string ? (K extends `${infer _K}$` ? never : `${K}$`) : never)]-?:
-            IfReadonly<ComponentT, K, Observable<ComponentT[K]>, Subject<ComponentT[K]>>;
+        readonly [K in keyof ComponentT as QualifiedStateKey<ComponentT, K>]-?:
+            IfReadonly<ComponentT, K> extends never ? Subject<ComponentT[K]> : Observable<ComponentT[K]>;
     };
 
     export type ReadableKey<ComponentT, K extends keyof ComponentT = keyof ComponentT> =
-        K extends `${infer _K}$` ? never : K;
+        ReactiveStateKey<ComponentT, K> extends keyof Of<ComponentT> ? K : never;
 
     export type WritableKey<ComponentT, K extends keyof ComponentT = keyof ComponentT> =
-        IfReadonly<ComponentT, K, never, ReadableKey<ComponentT, K>>;
-
-    export type StateKey<ComponentT, K extends keyof ComponentT = keyof ComponentT> =
-        K extends string ? `${K}$` & keyof Of<ComponentT> : never;
+        IfReadonly<ComponentT, K> extends never ? ReadableKey<ComponentT, K> : never;
 
     export type StateSelector<ComponentT, K extends Array<ReadableKey<ComponentT>>> = 
         { [I in keyof K]: K[I] extends ReadableKey<ComponentT> ? Observable<ComponentT[K[I]]> : never };
 
-    type StateRecord<ComponentT, K extends keyof ComponentT = keyof ComponentT> = Record<StateKey<ComponentT, K>, Observable<ComponentT[K]>>;
-
-    interface PropertyUpdateOptions {
-        asyncState?: boolean;
-    }
+    type StateRecord<ComponentT, K extends keyof ComponentT = keyof ComponentT> = Record<ReactiveStateKey<ComponentT, K>, Observable<ComponentT[K]>>;
 
     export function create<ComponentT>($class: Type<any>): Provider {
         return {
@@ -160,7 +153,9 @@ export namespace ComponentState {
         }
     }
 
-    export function stateKey<ComponentT, K extends keyof ComponentT = keyof ComponentT>(key: K): StateKey<ComponentT, K> {
+    export function stateKey<ComponentT, K extends keyof ComponentT = keyof ComponentT>(
+        key: K
+    ): ReactiveStateKey<ComponentT, K> & keyof Of<ComponentT> {
         return `${key}$` as any;
     }
 
@@ -174,7 +169,7 @@ export namespace ComponentState {
         EventSource.registerLifecycleEvent($class, event, function onEvent() {
             const instance = this;
             const stateRef = stateRefSelector();
-            const state: any = updateState(stateRef, stateRef._pendingState, instance, false);
+            const state: any = updateState(stateRef, stateRef._pendingState, instance);
 
             state[COMPONENT_IDENTITY] = instance;
 
@@ -189,21 +184,19 @@ export namespace ComponentState {
     function updateState<ComponentT>(
         componentStateRef: ComponentStateRef<ComponentT>,
         componentState: Partial<StateRecord<ComponentT>>,
-        instance: ComponentT,
-        overwriteExistingProperties: boolean
+        instance: ComponentT
     ): Partial<StateRecord<ComponentT>> {
-        const instanceProps = getAllAccessibleKeys(instance);
-        const instanceAsyncStates = getOwnAsyncKeys(instance);
+        const instanceProps = getAllAccessibleKeys<ComponentT>(instance);
 
         // Create a managed reactive state wrapper for each component property
-        instanceProps.forEach((classProp: keyof ComponentT) => {
-            if (overwriteExistingProperties || !componentState[ComponentState.stateKey<ComponentT>(classProp)]) {
+        instanceProps.forEach((prop) => {
+            // Only update an entry if it hasn't yet been defined
+            if (!componentState[ComponentState.stateKey<ComponentT>(prop.key)]) {
                 updateStateForProperty(
                     componentStateRef,
                     componentState,
                     instance,
-                    classProp,
-                    { asyncState: instanceAsyncStates.includes(classProp) }
+                    prop
                 );
             }
         });
@@ -215,14 +208,13 @@ export namespace ComponentState {
         componentStateRef: ComponentStateRef<ComponentT>,
         componentState: Partial<StateRecord<ComponentT, K>>,
         instance: ComponentT,
-        classProp: K,
-        options: PropertyUpdateOptions
+        prop: ComponentStateMetadata.ManagedProperty<ComponentT, K>
     ): Partial<StateRecord<ComponentT, K>> {
-        const propDescriptor = Object.getOwnPropertyDescriptor(instance, classProp);
-        const stateSubjectProp = stateKey<ComponentT, K>(classProp);
+        const propDescriptor = Object.getOwnPropertyDescriptor(instance, prop.key);
+        const stateSubjectProp = stateKey<ComponentT, K>(prop.key);
 
-        if (typeof classProp === "string" && !classProp.endsWith("$")) {
-            let lastValue: ComponentT[K] = instance[classProp];
+        if (typeof prop.key === "string" && !prop.key.endsWith("$")) {
+            let lastValue: ComponentT[K] = instance[prop.key];
 
             if (!propDescriptor || (propDescriptor.configurable && (propDescriptor.writable || propDescriptor.set))) {
                 const propSubject$ = componentState[stateSubjectProp] = new ManagedBehaviorSubject<ComponentT[K]>(instance, lastValue);
@@ -236,31 +228,31 @@ export namespace ComponentState {
                     AutoPush.notifyChanges(instance);
                 });
 
-                if (options.asyncState) {
-                    const classReactiveStateProp = `${classProp}$` as keyof ComponentT;
+                if (prop.async) {
+                    const classReactiveStateProp = `${prop.key}$` as keyof ComponentT;
                     const reactiveSource$ = instance[classReactiveStateProp];
 
                     // If `classProp` is an AsyncState and and there's an equivalent `${classProp}$` on the instance, subscribe to it
                     if (reactiveSource$ && reactiveSource$ instanceof Observable) {
-                        componentStateRef.subscribeTo<K>(classProp as WritableKey<ComponentT, K>, reactiveSource$);
+                        componentStateRef.subscribeTo<K>(prop.key as WritableKey<ComponentT, K>, reactiveSource$);
                         reactiveSource$.pipe(take(1)).subscribe(initialValue => propSubject$.next(initialValue));
                     }
                 }
 
                 try {
                     // Override the existing instance property with a getter/setter that synchronize with `propSubject$`
-                    Object.defineProperty(instance, classProp, {
+                    Object.defineProperty(instance, prop.key, {
                         configurable: true,
                         enumerable: true,
                         get: () => lastValue,
                         set: (newValue: ComponentT[K]): void => propSubject$.next(newValue)
                     });
                 } catch (e) {
-                    console.error(`Failed to create state Subject for property ${instance.constructor.name}.${classProp}`, e);
+                    console.error(`Failed to create state Subject for property ${instance.constructor.name}.${prop.key}`, e);
                 }
             } else {
                 if (!propDescriptor.configurable && propDescriptor.writable) {
-                    console.warn(`[ComponentState] Property "${instance.constructor.name}.${classProp}" is not configurable and will be treated as readonly.`);
+                    console.warn(`[ComponentState] Property "${instance.constructor.name}.${prop.key}" is not configurable and will be treated as readonly.`);
                 }
 
                 // Property is readonly, so just use a static Observable that emits the initial state
@@ -271,16 +263,15 @@ export namespace ComponentState {
         return componentState;
     }
 
-    function getAllAccessibleKeys<T extends Record<string, any>>(instance: T): Array<keyof T> {
-        return getOwnPublicKeys<T>(instance)
-            .concat(getOwnAsyncKeys<T>(instance));
+    function getAllAccessibleKeys<T extends Record<string, any>>(instance: T): ComponentStateMetadata.ManagedPropertyList<T> {
+        return getOwnPublicKeys<T>(instance).concat(getOwnManagedKeys<T>(instance));
     }
 
-    function getOwnPublicKeys<T>(instance: T): Array<keyof T> {
-        return Object.keys(instance) as Array<keyof T>;
+    function getOwnPublicKeys<T>(instance: T): ComponentStateMetadata.ManagedPropertyList<T> {
+        return (Object.keys(instance) as Array<keyof T>).map(key => ({ key, async: false }));
     }
 
-    function getOwnAsyncKeys<T>(instance: T): Array<keyof T> {
-        return ComponentStateMetadata.GetAsyncPropertyList(instance.constructor) as Array<keyof T>;
+    function getOwnManagedKeys<T>(instance: T): ComponentStateMetadata.ManagedPropertyList<T> {
+        return ComponentStateMetadata.GetManagedPropertyList<T>(instance.constructor);
     }
 }

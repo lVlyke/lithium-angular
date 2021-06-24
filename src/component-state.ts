@@ -168,7 +168,7 @@ export namespace ComponentState {
     ): void {
         // Register a lifecycle event listener for the given event
         EventSource.registerLifecycleEvent($class, event, function onEvent() {
-            const instance = injector.get($class, undefined, InjectFlags.Self);
+            const instance = injector.get($class, null, InjectFlags.Self);
 
             if (instance === this) {
                 const stateRef = stateRefSelector();

@@ -1,5 +1,5 @@
 import type { IfReadonly } from "./lang-utils";
-import { InjectFlags, Injector, Provider, Type } from "@angular/core";
+import { FactoryProvider, InjectFlags, Injector, resolveForwardRef, Type } from "@angular/core";
 import { from, Observable, of, ReplaySubject, Subject, Subscription, throwError } from "rxjs";
 import { mergeMap, skip, take, tap } from "rxjs/operators";
 import { AutoPush } from "./autopush";
@@ -123,7 +123,9 @@ export namespace ComponentState {
 
     type StateRecord<ComponentT, K extends keyof ComponentT = keyof ComponentT> = Record<ReactiveStateKey<ComponentT, K>, Observable<ComponentT[K]>>;
 
-    export function create<ComponentT>($class: Type<any>): Provider {
+    type ComponentClassProvider<ComponentT> = Type<ComponentT> | Type<unknown>;
+
+    export function create<ComponentT>($class: ComponentClassProvider<ComponentT>): FactoryProvider {
         return {
             provide: ComponentStateRef,
             useFactory: createFactory<ComponentT>($class),
@@ -131,26 +133,32 @@ export namespace ComponentState {
         };
     }
 
-    export function createFactory<ComponentT>($class: Type<any>): (injector: Injector) => ComponentStateRef<ComponentT> {
-        // Ensure that we create a OnDestroy EventSource on the target for managing subscriptions
-        EventSource({ eventType: AngularLifecycleType.OnDestroy })($class.prototype, CommonMetadata.MANAGED_ONDESTROY_KEY);
-
+    export function createFactory<ComponentT>($class: ComponentClassProvider<ComponentT>): (injector: Injector) => ComponentStateRef<ComponentT> {
         return function (injector: Injector): ComponentStateRef<ComponentT> {
+            const resolvedClass = resolveClass<ComponentT>($class);
+
+            // Ensure that we create a OnDestroy EventSource on the target for managing subscriptions
+            EventSource({ eventType: AngularLifecycleType.OnDestroy })(resolvedClass.prototype, CommonMetadata.MANAGED_ONDESTROY_KEY);
+
             const stateRef = new ComponentStateRef<ComponentT>((resolve) => {
                 const stateSelector = () => stateRef;
-
+                
                 // Generate initial component state on ngOnInit
-                updateStateOnEvent($class, injector, AngularLifecycleType.OnInit, stateSelector);
+                updateStateOnEvent(resolvedClass, injector, AngularLifecycleType.OnInit, stateSelector);
 
                 // Update the component state on afterViewInit and afterContentInit to capture dynamically initialized properties
-                updateStateOnEvent($class, injector, AngularLifecycleType.AfterViewInit, stateSelector);
-                updateStateOnEvent($class, injector, AngularLifecycleType.AfterContentInit, stateSelector, (state) => {
+                updateStateOnEvent(resolvedClass, injector, AngularLifecycleType.AfterViewInit, stateSelector);
+                updateStateOnEvent(resolvedClass, injector, AngularLifecycleType.AfterContentInit, stateSelector, (state) => {
                     // Resolve the finalized state
                     resolve(state);
                 });
             });
             return stateRef;
         }
+    }
+
+    export function tokenFor(provider: FactoryProvider): any {
+        return provider.provide;
     }
 
     export function stateKey<ComponentT, K extends keyof ComponentT = keyof ComponentT>(
@@ -160,7 +168,7 @@ export namespace ComponentState {
     }
 
     function updateStateOnEvent<ComponentT>(
-        $class: Type<any>,
+        $class: Type<ComponentT>,
         injector: Injector,
         event: AngularLifecycleType,
         stateRefSelector: () => ComponentStateRef<ComponentT>,
@@ -168,7 +176,7 @@ export namespace ComponentState {
     ): void {
         // Register a lifecycle event listener for the given event
         EventSource.registerLifecycleEvent($class, event, function onEvent() {
-            const instance = injector.get($class, null, InjectFlags.Self);
+            const instance: any = injector.get($class, null, InjectFlags.Self);
 
             if (instance === this) {
                 const stateRef = stateRefSelector();
@@ -265,6 +273,10 @@ export namespace ComponentState {
         }
 
         return componentState;
+    }
+
+    function resolveClass<ComponentT>($class: Type<any>): Type<ComponentT> {
+        return resolveForwardRef<Type<ComponentT>>($class);
     }
 
     function getAllAccessibleKeys<T extends Record<string, any>>(instance: T): ComponentStateMetadata.ManagedPropertyList<T> {

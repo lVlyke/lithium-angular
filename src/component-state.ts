@@ -268,14 +268,14 @@ export namespace ComponentState {
     }
 
     function getAllAccessibleKeys<T extends Record<string, any>>(instance: T): ComponentStateMetadata.ManagedPropertyList<T> {
-        return getOwnPublicKeys<T>(instance).concat(getOwnManagedKeys<T>(instance));
+        return getPublicKeys<T>(instance).concat(getManagedKeys<T>(instance));
     }
 
-    function getOwnPublicKeys<T>(instance: T): ComponentStateMetadata.ManagedPropertyList<T> {
+    function getPublicKeys<T>(instance: T): ComponentStateMetadata.ManagedPropertyList<T> {
         return (Object.keys(instance) as Array<keyof T>).map(key => ({ key, async: false }));
     }
 
-    function getOwnManagedKeys<T>(instance: T): ComponentStateMetadata.ManagedPropertyList<T> {
-        return ComponentStateMetadata.GetManagedPropertyList<T>(instance.constructor);
+    function getManagedKeys<T>(instance: T): ComponentStateMetadata.ManagedPropertyList<T> {
+        return ComponentStateMetadata.GetInheritedManagedPropertyList<T>(instance.constructor);
     }
 }

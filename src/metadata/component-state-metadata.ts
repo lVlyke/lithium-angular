@@ -17,6 +17,17 @@ export namespace ComponentStateMetadata {
         return Metadata.requireMetadata<ManagedPropertyList<T>>(ManagedPropertyListSymbol, target, []);
     }
 
+    export function GetInheritedManagedPropertyList<T>(target: Object): ManagedPropertyList<T> {
+        const targetMetadata = GetManagedPropertyList<T>(target);
+        const targetPrototype = Object.getPrototypeOf(target);
+        
+        if (targetPrototype) {
+            targetMetadata.push(...GetInheritedManagedPropertyList(targetPrototype));
+        }
+
+        return targetMetadata;
+    }
+
     export function SetManagedPropertyList<T>(target: Object, list: ManagedPropertyList<T>) {
         Metadata.setMetadata(ManagedPropertyListSymbol, target, list);
     }

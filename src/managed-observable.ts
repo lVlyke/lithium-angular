@@ -1,4 +1,4 @@
-import { Subscription, Observable, Subject, BehaviorSubject, Subscriber, TeardownLogic, empty } from "rxjs";
+import { Subscription, Observable, Subject, BehaviorSubject, Subscriber, TeardownLogic, EMPTY } from "rxjs";
 import { CommonMetadata, Metadata } from "./metadata";
 
 export type Constructor<T> = new (...args: any[]) => T;
@@ -36,7 +36,7 @@ export function ManagedObservableWrapper/*<T, BaseObservable extends Observable<
                 this.subscriptions.push(subscription);
                 return subscription;
             } else {
-                return empty().subscribe();
+                return EMPTY.subscribe();
             }
         }
     };

@@ -6,7 +6,8 @@ export namespace ComponentStateMetadata {
 
     export interface ManagedProperty<T, K extends keyof T = keyof T> {
         key: K;
-        async: boolean;
+        publicKey?: keyof T;
+        async?: boolean;
     }
 
     export type ManagedPropertyList<T> = ManagedProperty<T>[];

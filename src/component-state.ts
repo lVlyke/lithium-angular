@@ -1,9 +1,9 @@
-import type { IfReadonly } from "./lang-utils";
+import type { IfEquals, IfReadonly } from "./lang-utils";
 import { FactoryProvider, InjectFlags, Injector, resolveForwardRef, Type } from "@angular/core";
-import { from, Observable, of, ReplaySubject, Subject, Subscription, throwError } from "rxjs";
-import { mergeMap, skip, take, tap } from "rxjs/operators";
+import { from, Observable, ReplaySubject, Subject, Subscription, throwError } from "rxjs";
+import { distinctUntilChanged, mergeMap, skip, take, tap } from "rxjs/operators";
 import { AutoPush } from "./autopush";
-import { ManagedBehaviorSubject } from "./managed-observable";
+import { ManagedBehaviorSubject, ManagedObservable } from "./managed-observable";
 import { EventSource } from "./event-source";
 import { AngularLifecycleType } from "./lifecycle-event";
 import { ComponentStateMetadata, CommonMetadata } from "./metadata";
@@ -75,16 +75,16 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentStateWithIde
         return result$;
     }
 
-    public subscribeTo<K extends keyof ComponentT>(
+    public subscribeTo<K extends keyof ComponentT, V extends ComponentT[K]>(
         stateProp: ComponentState.WritableKey<ComponentT, K>,
-        source$: Observable<ComponentT[K]>,
+        source$: Observable<V>,
         managed: boolean = true
     ): Subscription {
-        let managedSource$: Observable<ComponentT[K]>;
+        let managedSource$: Observable<V>;
         if (managed) {
             managedSource$ = from(this).pipe(
                 mergeMap(state => {
-                    const managedSource$ = new ManagedBehaviorSubject<ComponentT[K]>(state[COMPONENT_IDENTITY], undefined);
+                    const managedSource$ = new ManagedBehaviorSubject<V>(state[COMPONENT_IDENTITY], undefined);
                     source$.subscribe(managedSource$);
                     return managedSource$;
                 })
@@ -96,6 +96,24 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentStateWithIde
         return managedSource$.pipe(
             tap(sourceValue => this.set<K>(stateProp, sourceValue))
         ).subscribe();
+    }
+
+    /**
+     * @description Synchronizes the state of `statePropA` and `statePropB` such that any changes from `statePropA` will be propagated to `statePropB`
+     * and vice versa. The initial state value of `statePropA` is used.
+     * @param statePropA - A writable state property.
+     * @param statePropB - A writable state property.
+     */
+    public sync<
+        K1 extends keyof ComponentT,
+        K2 extends keyof ComponentT,
+        V extends IfEquals<ComponentT[K1], ComponentT[K2]> extends never ? never : ComponentT[K1] & ComponentT[K2]
+    >(
+        statePropA: V extends never ? never : ComponentState.WritableKey<ComponentT, K1>,
+        statePropB: V extends never ? never : ComponentState.WritableKey<ComponentT, K2>
+    ): void {
+        this.subscribeTo<K2, V>(statePropB, this.get<K1>(statePropA).pipe(distinctUntilChanged()) as Observable<V>, false);
+        this.subscribeTo<K1, V>(statePropA, this.get<K2>(statePropB).pipe(distinctUntilChanged()) as Observable<V>, false);
     }
 }
 
@@ -117,6 +135,13 @@ export namespace ComponentState {
 
     export type WritableKey<ComponentT, K extends keyof ComponentT = keyof ComponentT> =
         IfReadonly<ComponentT, K> extends never ? ReadableKey<ComponentT, K> : never;
+
+    export type EqualKeyTypes<
+        ComponentT,
+        K extends keyof ComponentT = keyof ComponentT,
+        KComp extends keyof ComponentT = K,
+        KResult extends keyof ComponentT = K
+    > = IfEquals<ComponentT[K], ComponentT[KComp]> extends never ? never : KResult;
 
     export type StateSelector<ComponentT, K extends Array<ReadableKey<ComponentT>>> = 
         { [I in keyof K]: K[I] extends ReadableKey<ComponentT> ? Observable<ComponentT[K[I]]> : never };
@@ -147,8 +172,8 @@ export namespace ComponentState {
                 updateStateOnEvent(resolvedClass, injector, AngularLifecycleType.OnInit, stateSelector);
 
                 // Update the component state on afterViewInit and afterContentInit to capture dynamically initialized properties
-                updateStateOnEvent(resolvedClass, injector, AngularLifecycleType.AfterViewInit, stateSelector);
-                updateStateOnEvent(resolvedClass, injector, AngularLifecycleType.AfterContentInit, stateSelector, (state) => {
+                updateStateOnEvent(resolvedClass, injector, AngularLifecycleType.AfterContentInit, stateSelector);
+                updateStateOnEvent(resolvedClass, injector, AngularLifecycleType.AfterViewInit, stateSelector, (state) => {
                     // Resolve the finalized state
                     resolve(state);
                 });
@@ -218,18 +243,35 @@ export namespace ComponentState {
 
     function updateStateForProperty<ComponentT, K extends keyof ComponentT>(
         componentStateRef: ComponentStateRef<ComponentT>,
-        componentState: Partial<StateRecord<ComponentT, K>>,
+        componentState: Partial<StateRecord<ComponentT>>,
         instance: ComponentT,
         prop: ComponentStateMetadata.ManagedProperty<ComponentT, K>
-    ): Partial<StateRecord<ComponentT, K>> {
+    ): Partial<StateRecord<ComponentT>> {
         const propDescriptor = Object.getOwnPropertyDescriptor(instance, prop.key);
         const stateSubjectProp = stateKey<ComponentT, K>(prop.key);
 
         if (typeof prop.key === "string" && !prop.key.endsWith("$")) {
-            let lastValue: ComponentT[K] = instance[prop.key];
 
-            if (!propDescriptor || (propDescriptor.configurable && (propDescriptor.writable || propDescriptor.set))) {
-                const propSubject$ = componentState[stateSubjectProp] = new ManagedBehaviorSubject<ComponentT[K]>(instance, lastValue);
+            if (!propDescriptor || propDescriptor.configurable) {
+                let lastValue: ComponentT[K] = instance[prop.key];
+                const propSubject$ = new ManagedBehaviorSubject<ComponentT[K]>(instance, lastValue);
+
+                function manageProperty<_K extends keyof ComponentT>(
+                    instance: ComponentT,
+                    property: _K,
+                    enumerable: boolean
+                ): PropertyDescriptor {
+                    const stateProp = stateKey<ComponentT, _K>(property);
+                    componentState[stateProp] = propSubject$;
+
+                    // Override the instance property with a getter/setter that synchronizes with `propSubject$`
+                    return Object.defineProperty(instance, property, {
+                        configurable: true,
+                        enumerable: enumerable,
+                        get: () => lastValue,
+                        set: isReadonlyProperty(instance, property) ? undefined : (newValue: ComponentT[K]): void => propSubject$.next(newValue)
+                    });
+                }
 
                 // Monitor the property subject for value changes
                 propSubject$.pipe(skip(1)).subscribe(value => {
@@ -246,33 +288,40 @@ export namespace ComponentState {
 
                     // If `classProp` is an AsyncState and and there's an equivalent `${classProp}$` on the instance, subscribe to it
                     if (reactiveSource$ && reactiveSource$ instanceof Observable) {
-                        componentStateRef.subscribeTo<K>(prop.key as WritableKey<ComponentT, K>, reactiveSource$);
+                        componentStateRef.subscribeTo(prop.key as WritableKey<ComponentT, K>, reactiveSource$);
                         reactiveSource$.pipe(take(1)).subscribe(initialValue => propSubject$.next(initialValue));
                     }
                 }
 
+                // Set up the property wrapper that exposes the backing subject
                 try {
-                    // Override the existing instance property with a getter/setter that synchronize with `propSubject$`
-                    Object.defineProperty(instance, prop.key, {
-                        configurable: true,
-                        enumerable: true,
-                        get: () => lastValue,
-                        set: (newValue: ComponentT[K]): void => propSubject$.next(newValue)
-                    });
+                    manageProperty(instance, prop.key, !propDescriptor || propDescriptor.enumerable);
+
+                    // If a separate publicKey was defined, also map it to the backing subject
+                    if (prop.publicKey && prop.publicKey !== prop.key) {
+                        manageProperty(instance, prop.publicKey, true);
+                    }
                 } catch (e) {
                     console.error(`Failed to create state Subject for property ${instance.constructor.name}.${prop.key}`, e);
                 }
             } else {
-                if (!propDescriptor.configurable && propDescriptor.writable) {
+                if (!propDescriptor.configurable && !isReadonlyProperty(instance, prop.key)) {
                     console.warn(`[ComponentState] Property "${instance.constructor.name}.${prop.key}" is not configurable and will be treated as readonly.`);
                 }
 
-                // Property is readonly, so just use a static Observable that emits the initial state
-                componentState[stateSubjectProp] = of(lastValue);
+                // Property is readonly, so just use an Observable that emits the underlying state on subscription
+                componentState[stateSubjectProp] = new ManagedObservable(instance, observer => {
+                    observer.next(propDescriptor.get ? propDescriptor.get() : propDescriptor.value);
+                });
             }
         }
 
         return componentState;
+    }
+
+    function isReadonlyProperty<T, K extends keyof T>(instance: T, key: K): boolean {
+        const publicPropDescriptor = Object.getOwnPropertyDescriptor(instance, key);
+        return publicPropDescriptor && !publicPropDescriptor.writable && !publicPropDescriptor.set;
     }
 
     function resolveClass<ComponentT>($class: Type<any>): Type<ComponentT> {
@@ -280,7 +329,8 @@ export namespace ComponentState {
     }
 
     function getAllAccessibleKeys<T extends Record<string, any>>(instance: T): ComponentStateMetadata.ManagedPropertyList<T> {
-        return getPublicKeys<T>(instance).concat(getManagedKeys<T>(instance));
+        // Ensure managed keys are processed first
+        return getManagedKeys(instance).concat(getPublicKeys(instance));
     }
 
     function getPublicKeys<T>(instance: T): ComponentStateMetadata.ManagedPropertyList<T> {

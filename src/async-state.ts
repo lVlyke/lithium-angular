@@ -1,10 +1,26 @@
-import { ComponentStateMetadata } from "./metadata"
+import type { Observable } from "rxjs";
+import type { StringKey } from "./lang-utils";
+import type { AsyncSourceKey, ValidAsyncSourceKey } from "./metadata";
+import { ComponentStateMetadata, asyncStateKey } from "./metadata"
+
+type ValidateAsyncSource<
+    T,
+    K extends StringKey<T>,
+    Source extends string = AsyncSourceKey<T, K>
+> = Source extends StringKey<T>
+    ? (T[Source] extends Observable<T[K]> ? T[Source] : never)
+    : never;
 
 /** @PropertyDecoratorFactory */
-export function AsyncState(): PropertyDecorator {
+export function AsyncState<Source extends string = undefined>(asyncSource?: Source) {
 
-     /** @PropertyDecorator */
-     return function (target: any, key: string) {
-        ComponentStateMetadata.AddManagedProperty(target.constructor, { key, async: true });
-     }
+    /** @PropertyDecorator */
+    return function<ComponentT, K extends StringKey<ComponentT>>(
+        target: Source extends undefined ? ComponentT : (ValidateAsyncSource<ComponentT, K, Source> extends never ? never : ComponentT),
+        key: Source extends undefined ? (ValidateAsyncSource<ComponentT, K> extends never ? never : K) : K
+    ) {
+        const asyncKey = (asyncSource ?? asyncStateKey<ComponentT, K>(key)) as ValidAsyncSourceKey<ComponentT>;
+
+        ComponentStateMetadata.AddManagedProperty<ComponentT>(target.constructor, { key, asyncSource: asyncKey });
+    }
 }

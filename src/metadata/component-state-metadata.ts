@@ -1,16 +1,19 @@
+import type { StringKey } from "../lang-utils";
 import { Metadata } from "./metadata";
 
+export type AsyncSourceKey<T, K extends StringKey<T> = StringKey<T>> = `${K}$`;
+
+export type ValidAsyncSourceKey<T, K extends StringKey<T> = StringKey<T>> = AsyncSourceKey<T, K> & StringKey<T>;
 export namespace ComponentStateMetadata {
-
-    export const MANAGED_PROPERTY_LIST_KEY = "MANAGED_PROPERTY_LIST_KEY";
-
-    export interface ManagedProperty<T, K extends keyof T = keyof T> {
+    export interface ManagedProperty<T, K extends StringKey<T> = StringKey<T>> {
         key: K;
-        publicKey?: keyof T;
-        async?: boolean;
+        publicKey?: StringKey<T>;
+        asyncSource?: ValidAsyncSourceKey<T>;
     }
 
     export type ManagedPropertyList<T> = ManagedProperty<T>[];
+
+    export const MANAGED_PROPERTY_LIST_KEY = "MANAGED_PROPERTY_LIST_KEY";
 
     const ManagedPropertyListSymbol = Symbol("ManagedPropertyList");
 
@@ -36,4 +39,10 @@ export namespace ComponentStateMetadata {
     export function AddManagedProperty<T>(target: Object, property: ManagedProperty<T>) {
         SetManagedPropertyList<T>(target, GetManagedPropertyList<T>(target).concat([property]));
     }
+}
+
+export function asyncStateKey<ComponentT, K extends StringKey<ComponentT> = StringKey<ComponentT>>(
+    key: K
+): AsyncSourceKey<ComponentT, K> {
+    return `${key}$` as any;
 }

@@ -1,4 +1,5 @@
-import type { IfEquals, IfReadonly } from "./lang-utils";
+import type { IfEquals, IfReadonly, StringKey } from "./lang-utils";
+import type { AsyncSourceKey } from "./metadata";
 import { FactoryProvider, InjectFlags, Injector, resolveForwardRef, Type } from "@angular/core";
 import { from, Observable, ReplaySubject, Subject, Subscription, throwError } from "rxjs";
 import { distinctUntilChanged, mergeMap, skip, take, tap } from "rxjs/operators";
@@ -6,7 +7,7 @@ import { AutoPush } from "./autopush";
 import { ManagedBehaviorSubject, ManagedObservable } from "./managed-observable";
 import { EventSource } from "./event-source";
 import { AngularLifecycleType } from "./lifecycle-event";
-import { ComponentStateMetadata, CommonMetadata } from "./metadata";
+import { ComponentStateMetadata, CommonMetadata, asyncStateKey } from "./metadata";
 
 const COMPONENT_IDENTITY = Symbol("COMPONENT_IDENTITY");
 
@@ -22,7 +23,7 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentStateWithIde
         return from(this);
     }
 
-    public get<K extends keyof ComponentT>(stateProp: ComponentState.ReadableKey<ComponentT, K>): Observable<ComponentT[K]> {
+    public get<K extends StringKey<ComponentT>>(stateProp: ComponentState.ReadableKey<ComponentT, K>): Observable<ComponentT[K]> {
         const stateKey = ComponentState.stateKey<ComponentT, K>(stateProp);
         const pendingSource$ = this._pendingState[stateKey] as unknown as Observable<ComponentT[K]>;
 
@@ -47,7 +48,7 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentStateWithIde
         return stateProps.map(stateProp => this.get(stateProp)) as ComponentState.StateSelector<ComponentT, K>;
     }
 
-    public set<K extends keyof ComponentT>(stateProp: ComponentState.WritableKey<ComponentT, K>, value: ComponentT[K]): Observable<void> {
+    public set<K extends StringKey<ComponentT>>(stateProp: ComponentState.WritableKey<ComponentT, K>, value: ComponentT[K]): Observable<void> {
         const stateKey = ComponentState.stateKey<ComponentT, K>(stateProp);
         const result$ = new ReplaySubject<void>(1);
         const pendingSource$ = this._pendingState[stateKey] as unknown as Subject<ComponentT[K]>;
@@ -75,7 +76,7 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentStateWithIde
         return result$;
     }
 
-    public subscribeTo<K extends keyof ComponentT, V extends ComponentT[K]>(
+    public subscribeTo<K extends StringKey<ComponentT>, V extends ComponentT[K]>(
         stateProp: ComponentState.WritableKey<ComponentT, K>,
         source$: Observable<V>,
         managed: boolean = true
@@ -105,8 +106,8 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentStateWithIde
      * @param statePropB - A writable state property.
      */
     public sync<
-        K1 extends keyof ComponentT,
-        K2 extends keyof ComponentT,
+        K1 extends StringKey<ComponentT>,
+        K2 extends StringKey<ComponentT>,
         V extends IfEquals<ComponentT[K1], ComponentT[K2]> extends never ? never : ComponentT[K1] & ComponentT[K2]
     >(
         statePropA: V extends never ? never : ComponentState.WritableKey<ComponentT, K1>,
@@ -119,34 +120,34 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentStateWithIde
 
 export namespace ComponentState {
 
-    type ReactiveStateKey<ComponentT, K extends keyof ComponentT = keyof ComponentT> =
-        K extends string ? `${K}$` : never;
+    export type ReactiveStateKey<ComponentT, K extends StringKey<ComponentT> = StringKey<ComponentT>> =
+    K extends string ? AsyncSourceKey<ComponentT, K> : never;
 
-    type QualifiedStateKey<ComponentT, K extends keyof ComponentT = keyof ComponentT> = 
+    type QualifiedStateKey<ComponentT, K extends StringKey<ComponentT> = StringKey<ComponentT>> = 
         K extends string ? (K extends ReactiveStateKey<any, K> ? never : ReactiveStateKey<ComponentT, K>) : never;
 
     export type Of<ComponentT> = {
-        readonly [K in keyof ComponentT as QualifiedStateKey<ComponentT, K>]-?:
+        readonly [K in StringKey<ComponentT> as QualifiedStateKey<ComponentT, K>]-?:
             IfReadonly<ComponentT, K> extends never ? Subject<ComponentT[K]> : Observable<ComponentT[K]>;
     };
 
-    export type ReadableKey<ComponentT, K extends keyof ComponentT = keyof ComponentT> =
+    export type ReadableKey<ComponentT, K extends StringKey<ComponentT> = StringKey<ComponentT>> =
         ReactiveStateKey<ComponentT, K> extends keyof Of<ComponentT> ? K : never;
 
-    export type WritableKey<ComponentT, K extends keyof ComponentT = keyof ComponentT> =
+    export type WritableKey<ComponentT, K extends StringKey<ComponentT> = StringKey<ComponentT>> =
         IfReadonly<ComponentT, K> extends never ? ReadableKey<ComponentT, K> : never;
 
     export type EqualKeyTypes<
         ComponentT,
-        K extends keyof ComponentT = keyof ComponentT,
-        KComp extends keyof ComponentT = K,
-        KResult extends keyof ComponentT = K
+        K extends StringKey<ComponentT> = StringKey<ComponentT>,
+        KComp extends StringKey<ComponentT> = K,
+        KResult extends StringKey<ComponentT> = K
     > = IfEquals<ComponentT[K], ComponentT[KComp]> extends never ? never : KResult;
 
     export type StateSelector<ComponentT, K extends Array<ReadableKey<ComponentT>>> = 
         { [I in keyof K]: K[I] extends ReadableKey<ComponentT> ? Observable<ComponentT[K[I]]> : never };
 
-    type StateRecord<ComponentT, K extends keyof ComponentT = keyof ComponentT> = Record<ReactiveStateKey<ComponentT, K>, Observable<ComponentT[K]>>;
+    type StateRecord<ComponentT, K extends StringKey<ComponentT> = StringKey<ComponentT>> = Record<ReactiveStateKey<ComponentT, K>, Observable<ComponentT[K]>>;
 
     type ComponentClassProvider<ComponentT> = Type<ComponentT> | Type<unknown>;
 
@@ -186,10 +187,10 @@ export namespace ComponentState {
         return provider.provide;
     }
 
-    export function stateKey<ComponentT, K extends keyof ComponentT = keyof ComponentT>(
+    export function stateKey<ComponentT, K extends StringKey<ComponentT> = StringKey<ComponentT>>(
         key: K
     ): ReactiveStateKey<ComponentT, K> & keyof Of<ComponentT> {
-        return `${key}$` as any;
+        return asyncStateKey<ComponentT, K>(key) as any;
     }
 
     function updateStateOnEvent<ComponentT>(
@@ -241,7 +242,7 @@ export namespace ComponentState {
         return componentState;
     }
 
-    function updateStateForProperty<ComponentT, K extends keyof ComponentT>(
+    function updateStateForProperty<ComponentT, K extends StringKey<ComponentT>>(
         componentStateRef: ComponentStateRef<ComponentT>,
         componentState: Partial<StateRecord<ComponentT>>,
         instance: ComponentT,
@@ -256,7 +257,7 @@ export namespace ComponentState {
                 let lastValue: ComponentT[K] = instance[prop.key];
                 const propSubject$ = new ManagedBehaviorSubject<ComponentT[K]>(instance, lastValue);
 
-                function manageProperty<_K extends keyof ComponentT>(
+                function manageProperty<_K extends StringKey<ComponentT>>(
                     instance: ComponentT,
                     property: _K,
                     enumerable: boolean
@@ -282,11 +283,10 @@ export namespace ComponentState {
                     AutoPush.notifyChanges(instance);
                 });
 
-                if (prop.async) {
-                    const classReactiveStateProp = `${prop.key}$` as keyof ComponentT;
-                    const reactiveSource$ = instance[classReactiveStateProp];
+                if (prop.asyncSource) {
+                    const reactiveSource$ = instance[prop.asyncSource];
 
-                    // If `classProp` is an AsyncState and and there's an equivalent `${classProp}$` on the instance, subscribe to it
+                    // If the property has a valid async source, subscribe to it
                     if (reactiveSource$ && reactiveSource$ instanceof Observable) {
                         componentStateRef.subscribeTo(prop.key as WritableKey<ComponentT, K>, reactiveSource$);
                         reactiveSource$.pipe(take(1)).subscribe(initialValue => propSubject$.next(initialValue));
@@ -334,7 +334,7 @@ export namespace ComponentState {
     }
 
     function getPublicKeys<T>(instance: T): ComponentStateMetadata.ManagedPropertyList<T> {
-        return (Object.keys(instance) as Array<keyof T>).map(key => ({ key, async: false }));
+        return (Object.keys(instance) as Array<StringKey<T>>).map(key => ({ key }));
     }
 
     function getManagedKeys<T>(instance: T): ComponentStateMetadata.ManagedPropertyList<T> {

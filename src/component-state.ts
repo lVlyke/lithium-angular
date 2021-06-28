@@ -23,7 +23,9 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentStateWithIde
         return from(this);
     }
 
-    public get<K extends StringKey<ComponentT>>(stateProp: ComponentState.ReadableKey<ComponentT, K>): Observable<ComponentT[K]> {
+    public get<K extends StringKey<ComponentT>>(
+        stateProp: ComponentState.ReadableKey<ComponentT, K>
+    ): Observable<ComponentT[K]> {
         const stateKey = ComponentState.stateKey<ComponentT, K>(stateProp);
         const pendingSource$ = this._pendingState[stateKey] as unknown as Observable<ComponentT[K]>;
 
@@ -44,11 +46,16 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentStateWithIde
         ) as Observable<ComponentT[K]>;
     }
 
-    public getAll<K extends Array<ComponentState.ReadableKey<ComponentT>>>(...stateProps: K): ComponentState.StateSelector<ComponentT, K> {
+    public getAll<
+        K extends Array<ComponentState.ReadableKey<ComponentT, StringKey<ComponentT>>>
+    >(...stateProps: K): ComponentState.StateSelector<ComponentT, K> {
         return stateProps.map(stateProp => this.get(stateProp)) as ComponentState.StateSelector<ComponentT, K>;
     }
 
-    public set<K extends StringKey<ComponentT>>(stateProp: ComponentState.WritableKey<ComponentT, K>, value: ComponentT[K]): Observable<void> {
+    public set<K extends StringKey<ComponentT>>(
+        stateProp: ComponentState.WritableKey<ComponentT, K>,
+        value: ComponentT[K]
+    ): Observable<void> {
         const stateKey = ComponentState.stateKey<ComponentT, K>(stateProp);
         const result$ = new ReplaySubject<void>(1);
         const pendingSource$ = this._pendingState[stateKey] as unknown as Subject<ComponentT[K]>;
@@ -120,34 +127,34 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentStateWithIde
 
 export namespace ComponentState {
 
-    export type ReactiveStateKey<ComponentT, K extends StringKey<ComponentT> = StringKey<ComponentT>> =
+    export type ReactiveStateKey<ComponentT, K extends keyof ComponentT = keyof ComponentT> =
     K extends string ? AsyncSourceKey<ComponentT, K> : never;
 
-    type QualifiedStateKey<ComponentT, K extends StringKey<ComponentT> = StringKey<ComponentT>> = 
+    type QualifiedStateKey<ComponentT, K extends keyof ComponentT = keyof ComponentT> = 
         K extends string ? (K extends ReactiveStateKey<any, K> ? never : ReactiveStateKey<ComponentT, K>) : never;
 
     export type Of<ComponentT> = {
-        readonly [K in StringKey<ComponentT> as QualifiedStateKey<ComponentT, K>]-?:
+        readonly [K in keyof ComponentT as QualifiedStateKey<ComponentT, K>]-?:
             IfReadonly<ComponentT, K> extends never ? Subject<ComponentT[K]> : Observable<ComponentT[K]>;
     };
 
-    export type ReadableKey<ComponentT, K extends StringKey<ComponentT> = StringKey<ComponentT>> =
+    export type ReadableKey<ComponentT, K extends keyof ComponentT = keyof ComponentT> =
         ReactiveStateKey<ComponentT, K> extends keyof Of<ComponentT> ? K : never;
 
-    export type WritableKey<ComponentT, K extends StringKey<ComponentT> = StringKey<ComponentT>> =
+    export type WritableKey<ComponentT, K extends keyof ComponentT = keyof ComponentT> =
         IfReadonly<ComponentT, K> extends never ? ReadableKey<ComponentT, K> : never;
 
     export type EqualKeyTypes<
         ComponentT,
-        K extends StringKey<ComponentT> = StringKey<ComponentT>,
-        KComp extends StringKey<ComponentT> = K,
-        KResult extends StringKey<ComponentT> = K
+        K extends keyof ComponentT = keyof ComponentT,
+        KComp extends keyof ComponentT = K,
+        KResult extends keyof ComponentT = K
     > = IfEquals<ComponentT[K], ComponentT[KComp]> extends never ? never : KResult;
 
     export type StateSelector<ComponentT, K extends Array<ReadableKey<ComponentT>>> = 
         { [I in keyof K]: K[I] extends ReadableKey<ComponentT> ? Observable<ComponentT[K[I]]> : never };
 
-    type StateRecord<ComponentT, K extends StringKey<ComponentT> = StringKey<ComponentT>> = Record<ReactiveStateKey<ComponentT, K>, Observable<ComponentT[K]>>;
+    type StateRecord<ComponentT, K extends keyof ComponentT = keyof ComponentT> = Record<ReactiveStateKey<ComponentT, K>, Observable<ComponentT[K]>>;
 
     type ComponentClassProvider<ComponentT> = Type<ComponentT> | Type<unknown>;
 

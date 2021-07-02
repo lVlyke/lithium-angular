@@ -6,7 +6,7 @@ import { ComponentStateMetadata } from "./metadata";
  */
 type ValidateName<T, K extends string, Name extends string> = 
    Name extends keyof T
-      ? (IfEquals<T[Name], Publicize<T, K>[K]> extends never ? never : Name)
+      ? (IfEquals<T[Name], Publicize<T, K>[K]> extends true ? Name : never)
       : never
 
 /** @PropertyDecoratorFactory

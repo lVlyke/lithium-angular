@@ -115,7 +115,7 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentStateWithIde
     public sync<
         K1 extends StringKey<ComponentT>,
         K2 extends StringKey<ComponentT>,
-        V extends IfEquals<ComponentT[K1], ComponentT[K2]> extends never ? never : ComponentT[K1] & ComponentT[K2]
+        V extends IfEquals<ComponentT[K1], ComponentT[K2]> extends true ? ComponentT[K1] & ComponentT[K2] : never
     >(
         statePropA: V extends never ? never : ComponentState.WritableKey<ComponentT, K1>,
         statePropB: V extends never ? never : ComponentState.WritableKey<ComponentT, K2>
@@ -131,7 +131,7 @@ export namespace ComponentState {
         K extends string ? AsyncSourceKey<ComponentT, K> : never;
 
     type QualifiedStateKey<ComponentT, K extends keyof ComponentT = keyof ComponentT> =
-        ComponentT[K] extends Observable<unknown> ? never : K;
+        K extends `${infer _K}$` ? (ComponentT[K] extends Observable<unknown> ? never : K) : K;
 
     export type StateKey<ComponentT> = keyof {
         [K in keyof ComponentT as QualifiedStateKey<ComponentT, K>]: never
@@ -139,21 +139,14 @@ export namespace ComponentState {
 
     export type Of<ComponentT> = {
         readonly [K in keyof ComponentT as ReactiveStateKey<ComponentT, QualifiedStateKey<ComponentT, K>>]-?:
-            IfReadonly<ComponentT, K> extends never ? Subject<ComponentT[K]> : Observable<ComponentT[K]>;
+            IfReadonly<ComponentT, K> extends true ? Observable<ComponentT[K]> : Subject<ComponentT[K]>;
     };
 
     export type ReadableKey<ComponentT, K extends keyof ComponentT = keyof ComponentT> =
         K extends StateKey<ComponentT> ? K : never;
 
     export type WritableKey<ComponentT, K extends keyof ComponentT = keyof ComponentT> =
-        IfReadonly<ComponentT, K> extends never ? ReadableKey<ComponentT, K> : never;
-
-    export type EqualKeyTypes<
-        ComponentT,
-        K extends keyof ComponentT = keyof ComponentT,
-        KComp extends keyof ComponentT = K,
-        KResult extends keyof ComponentT = K
-    > = IfEquals<ComponentT[K], ComponentT[KComp]> extends never ? never : KResult;
+        IfReadonly<ComponentT, K> extends true ? never : ReadableKey<ComponentT, K>;
 
     export type StateSelector<ComponentT, K extends Array<ReadableKey<ComponentT>>> = 
         { [I in keyof K]: K[I] extends ReadableKey<ComponentT> ? Observable<ComponentT[K[I]]> : never };

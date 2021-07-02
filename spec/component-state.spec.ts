@@ -364,13 +364,13 @@ describe("Given the ComponentState.create function", () => {
     }
 });
 
-xdescribe("The ComponentStateRef class", () => {
+describe("The ComponentStateRef class", () => {
 
     interface SpecParams {
         stateRef: ComponentStateRef<ITestComponent>;
         expectedComponentState: ITestComponentState;
         expectedComponentStateProperty: ComponentState.StateKey<ITestComponent> & (keyof ITestComponentState);
-        resolveStateRef: (state: ITestComponentState) => void;
+        resolveStateRef: (state: ComponentState<ITestComponentState>) => void;
         rejectStateRef: (e: any) => void;
         getResponse$: Observable<any>;
     }
@@ -378,7 +378,7 @@ xdescribe("The ComponentStateRef class", () => {
     const spec = Spec.create<SpecParams>();
 
     spec.beforeEach((params) => {
-        params.expectedComponentState = Object.assign(_initComponentState({}), generateComponentState());
+        params.expectedComponentState = generateComponentState();
         params.expectedComponentStateProperty = "initializedNumberA"; // TODO
         params.stateRef = new ComponentStateRef<ITestComponent>((resolve, reject) => {
             params.resolveStateRef = resolve as any;
@@ -393,7 +393,20 @@ xdescribe("The ComponentStateRef class", () => {
         describe("when the component state has been resolved", () => {
 
             spec.beforeEach((params) => {
-                params.resolveStateRef(params.expectedComponentState);
+                params.resolveStateRef(Object.assign(_initComponentState({}),  {
+                    initializedNumberA$: new BehaviorSubject(params.expectedComponentState.initializedNumberA),
+                    readonlyInitializedNumberA$: new BehaviorSubject(params.expectedComponentState.readonlyInitializedNumberA),
+                    readonlyInitializedNumberB$: new BehaviorSubject(params.expectedComponentState.readonlyInitializedNumberB),
+                    publicNamedStringA$: new BehaviorSubject(params.expectedComponentState.publicNamedStringA),
+                    publicNamedStringB$: new BehaviorSubject(params.expectedComponentState.publicNamedStringB),
+                    asyncSourceA$: params.expectedComponentState.asyncSourceA$,
+                    asyncSourceB$: params.expectedComponentState.asyncSourceB$,
+                    namedAsyncSource$:  params.expectedComponentState.asyncSourceA$,
+                    uninitializedAndDeclaredNumberA$: new BehaviorSubject(params.expectedComponentState.uninitializedAndDeclaredNumberA),
+                    publicNamedGenericA$: new BehaviorSubject(params.expectedComponentState.publicNamedGenericA),
+                    publicNamedGenericB$: new BehaviorSubject(params.expectedComponentState.publicNamedGenericB),
+                    uninitializedNumberA$: new BehaviorSubject(params.expectedComponentState.uninitializedNumberA)
+                }));
             });
 
             describe("when called with a known component state property", () => {

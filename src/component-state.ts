@@ -128,18 +128,22 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentStateWithIde
 export namespace ComponentState {
 
     export type ReactiveStateKey<ComponentT, K extends keyof ComponentT = keyof ComponentT> =
-    K extends string ? AsyncSourceKey<ComponentT, K> : never;
+        K extends string ? AsyncSourceKey<ComponentT, K> : never;
 
-    type QualifiedStateKey<ComponentT, K extends keyof ComponentT = keyof ComponentT> = 
-        K extends string ? (K extends ReactiveStateKey<any, K> ? never : ReactiveStateKey<ComponentT, K>) : never;
+    type QualifiedStateKey<ComponentT, K extends keyof ComponentT = keyof ComponentT> =
+        ComponentT[K] extends Observable<unknown> ? never : K;
+
+    export type StateKey<ComponentT> = keyof {
+        [K in keyof ComponentT as QualifiedStateKey<ComponentT, K>]: never
+    };
 
     export type Of<ComponentT> = {
-        readonly [K in keyof ComponentT as QualifiedStateKey<ComponentT, K>]-?:
+        readonly [K in keyof ComponentT as ReactiveStateKey<ComponentT, QualifiedStateKey<ComponentT, K>>]-?:
             IfReadonly<ComponentT, K> extends never ? Subject<ComponentT[K]> : Observable<ComponentT[K]>;
     };
 
     export type ReadableKey<ComponentT, K extends keyof ComponentT = keyof ComponentT> =
-        ReactiveStateKey<ComponentT, K> extends keyof Of<ComponentT> ? K : never;
+        K extends StateKey<ComponentT> ? K : never;
 
     export type WritableKey<ComponentT, K extends keyof ComponentT = keyof ComponentT> =
         IfReadonly<ComponentT, K> extends never ? ReadableKey<ComponentT, K> : never;

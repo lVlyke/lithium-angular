@@ -1,3 +1,8 @@
 import "source-map-support/register";
+import "zone.js";
+import "zone.js/testing";
 
-jasmine.DEFAULT_TIMEOUT_INTERVAL = 10;
+import "./dom";
+import "./angular-init";
+
+jasmine.DEFAULT_TIMEOUT_INTERVAL = 100;

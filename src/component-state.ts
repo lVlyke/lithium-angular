@@ -345,3 +345,9 @@ export namespace ComponentState {
         return ComponentStateMetadata.GetInheritedManagedPropertyList<T>(instance.constructor);
     }
 }
+
+export function _initComponentState<T>(instance: T): { [COMPONENT_IDENTITY]: T } {
+    return {
+        [COMPONENT_IDENTITY]: instance
+    };
+}

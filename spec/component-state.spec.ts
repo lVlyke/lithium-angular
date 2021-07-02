@@ -3,12 +3,12 @@ import { TestBed } from "@angular/core/testing";
 import { Random, Spec } from "detest-bdd";
 import { BehaviorSubject, Observable, Subject } from "rxjs";
 import { first } from "rxjs/operators";
-import { ComponentState, ComponentStateRef } from "../src/component-state";
+import { ComponentState, ComponentStateRef, _initComponentState } from "../src/component-state";
 import { DeclareState } from "../src/declare-state";
 import { AsyncState } from "../src/async-state";
 import { asyncStateKey } from "../src/metadata/component-state-metadata";
 
-interface ITestComponentState {
+interface ITestComponentState<T = any> {
     readonly asyncSourceA$: Subject<number>;
     readonly asyncSourceB$: Subject<number>;
 
@@ -26,25 +26,28 @@ interface ITestComponentState {
     asyncSourceA: number;
     asyncSourceB: number;
     namedAsyncSource: number;
+
+    readonly publicNamedGenericA: T;
+    publicNamedGenericB: T;
 }
 
-interface ITestComponent extends ITestComponentState {
-    readonly stateRef: ComponentStateRef<ITestComponent>;
+interface ITestComponent<T = any> extends ITestComponentState<T> {
+    readonly stateRef: ComponentStateRef<ITestComponent<T>>;
 }
 
 namespace ITestComponentState {
 
-    export type Watchers = Record<
-        ComponentState.StateKey<ITestComponentState>,
-        Observable<ITestComponentState[ComponentState.StateKey<ITestComponentState>]>
+    export type Watchers<T = any> = Record<
+        ComponentState.StateKey<ITestComponentState<T>>,
+        Observable<ITestComponentState<T>[ComponentState.StateKey<ITestComponentState<T>>]>
     >;
 
-    export type WritableKeys = Array<keyof {
-        [K in keyof ITestComponentState as K extends ComponentState.WritableKey<ITestComponentState, K> ? K : never]: never;
+    export type WritableKeys<T = any> = Array<keyof {
+        [K in keyof ITestComponentState<T> as K extends ComponentState.WritableKey<ITestComponentState<T>, K> ? K : never]: never;
     }>;
 
-    export type AsyncKey = keyof {
-        [K in keyof ITestComponent as ITestComponent[K] extends Subject<any> ? K : never]: never;
+    export type AsyncKey<T = any> = keyof {
+        [K in keyof ITestComponent<T> as ITestComponent<T>[K] extends Subject<any> ? K : never]: never;
     };
 }
 
@@ -80,7 +83,9 @@ describe("Given the ComponentState.create function", () => {
             asyncSourceA: initialAsyncSourceA,
             asyncSourceB: initialAsyncSourceB,
             namedAsyncSource: initialAsyncSourceA,
-            uninitializedAndDeclaredNumberA: undefined as number
+            uninitializedAndDeclaredNumberA: undefined as number,
+            publicNamedGenericA: Random.string(),
+            publicNamedGenericB: Random.string(),
         } as const;
 
         params.expectedComponentState = {
@@ -122,7 +127,7 @@ describe("Given the ComponentState.create function", () => {
                 providers: [params.createResult],
                 template: ""
             })
-            class TestComponent implements ITestComponent {
+            class TestComponent<T> implements ITestComponent<T> {
                 
                 public readonly asyncSourceA$ = params.expectedComponentState.asyncSourceA$;
                 public readonly asyncSourceB$ = params.expectedComponentState.asyncSourceB$;
@@ -132,6 +137,8 @@ describe("Given the ComponentState.create function", () => {
                 public initializedNumberA = params.expectedComponentState.initializedNumberA;
 
                 public publicNamedStringB!: string;
+
+                public publicNamedGenericB!: T;
 
                 public uninitializedNumberA?: number;
 
@@ -153,8 +160,14 @@ describe("Given the ComponentState.create function", () => {
                 @DeclareState('publicNamedStringB')
                 private _namedStringB = params.expectedComponentState.publicNamedStringB;
 
+                @DeclareState('publicNamedGenericA')
+                private _namedGenericA: T = params.expectedComponentState.publicNamedGenericA;
+
+                @DeclareState('publicNamedGenericB')
+                private  _namedGenericB: T = params.expectedComponentState.publicNamedGenericB;
+
                 constructor (
-                    public readonly stateRef: ComponentStateRef<TestComponent>
+                    public readonly stateRef: ComponentStateRef<TestComponent<T>>
                 ) {}
 
                 @DeclareState()
@@ -166,8 +179,18 @@ describe("Given the ComponentState.create function", () => {
                     return this._namedStringA;
                 }
 
+                public get publicNamedGenericA(): T {
+                    return this._namedGenericA;
+                }
+
+                /** @private */
                 public get __namedStringB(): string {
                     return this._namedStringB;
+                }
+
+                /** @private */
+                public get __namedGenericB(): T {
+                    return this._namedGenericB;
                 }
             }
 
@@ -341,13 +364,85 @@ describe("Given the ComponentState.create function", () => {
     }
 });
 
-describe("Given the ComponentStateRef class", () => {
+xdescribe("The ComponentStateRef class", () => {
 
-    // interface SpecParams {
-    //     stateRef: ComponentStateRef<ITestComponent>;
-    // }
+    interface SpecParams {
+        stateRef: ComponentStateRef<ITestComponent>;
+        expectedComponentState: ITestComponentState;
+        expectedComponentStateProperty: ComponentState.StateKey<ITestComponent> & (keyof ITestComponentState);
+        resolveStateRef: (state: ITestComponentState) => void;
+        rejectStateRef: (e: any) => void;
+        getResponse$: Observable<any>;
+    }
 
-    // const spec = Spec.create<SpecParams>();
+    const spec = Spec.create<SpecParams>();
+
+    spec.beforeEach((params) => {
+        params.expectedComponentState = Object.assign(_initComponentState({}), generateComponentState());
+        params.expectedComponentStateProperty = "initializedNumberA"; // TODO
+        params.stateRef = new ComponentStateRef<ITestComponent>((resolve, reject) => {
+            params.resolveStateRef = resolve as any;
+            params.rejectStateRef = reject;
+        });
+    });
 
     // TODO - ComponentStateRef methods
+
+    describe("has a get method", () => {
+
+        describe("when the component state has been resolved", () => {
+
+            spec.beforeEach((params) => {
+                params.resolveStateRef(params.expectedComponentState);
+            });
+
+            describe("when called with a known component state property", () => {
+
+                spec.beforeEach((params) => {
+                    params.getResponse$ = params.stateRef.get(params.expectedComponentStateProperty);
+                });
+
+                spec.it("should resolve with the expected value", async (params) => {
+                    const resolvedValue = await params.getResponse$
+                        .pipe(first())
+                        .toPromise();
+
+                    expect(resolvedValue).toBe(params.expectedComponentState[params.expectedComponentStateProperty]);
+                });
+            });
+
+            describe("when called with an unknown component state property", () => {
+
+            });
+        });
+
+        describe("when the component state has NOT been resolved", () => {
+
+        });
+    });
 });
+
+function generateComponentState(): ITestComponentState {
+    const initialAsyncSourceA = Random.number();
+    const initialAsyncSourceB = Random.number();
+
+    const baseComponentState = {
+        initializedNumberA: Random.number(),
+        readonlyInitializedNumberA: Random.number(),
+        readonlyInitializedNumberB: Random.number(),
+        publicNamedStringA: Random.string(),
+        publicNamedStringB: Random.string(),
+        asyncSourceA: initialAsyncSourceA,
+        asyncSourceB: initialAsyncSourceB,
+        namedAsyncSource: initialAsyncSourceA,
+        uninitializedAndDeclaredNumberA: undefined as number,
+        publicNamedGenericA: Random.string(),
+        publicNamedGenericB: Random.string(),
+    } as const;
+
+    return {
+        asyncSourceA$: new BehaviorSubject(initialAsyncSourceA),
+        asyncSourceB$: new BehaviorSubject(initialAsyncSourceB),
+        ...baseComponentState
+    };
+}

@@ -1,8 +1,8 @@
 import type { IfEquals, IfReadonly, StringKey } from "./lang-utils";
 import type { AsyncSourceKey } from "./metadata";
 import { FactoryProvider, InjectFlags, Injector, resolveForwardRef, Type } from "@angular/core";
-import { from, Observable, ReplaySubject, Subject, Subscription, throwError } from "rxjs";
-import { distinctUntilChanged, mergeMap, skip, take, tap } from "rxjs/operators";
+import { combineLatest, from, merge, Observable, ReplaySubject, Subject, Subscription, throwError } from "rxjs";
+import { distinctUntilChanged, filter, map, mergeMap, skip, take, tap } from "rxjs/operators";
 import { AutoPush } from "./autopush";
 import { ManagedBehaviorSubject, ManagedObservable } from "./managed-observable";
 import { EventSource } from "./event-source";
@@ -52,32 +52,39 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentStateWithIde
         return stateProps.map(stateProp => this.get(stateProp)) as ComponentState.StateSelector<ComponentT, K>;
     }
 
-    public set<K extends StringKey<ComponentT>>(
+    public set<K extends StringKey<ComponentT>, V extends ComponentT[K]>(
         stateProp: ComponentState.WritableKey<ComponentT, K>,
-        value: ComponentT[K]
+        value: V
     ): Observable<void> {
         const stateKey = ComponentState.stateKey<ComponentT, K>(stateProp);
         const result$ = new ReplaySubject<void>(1);
-        const pendingSource$ = this._pendingState[stateKey] as unknown as Subject<ComponentT[K]>;
+        const pendingSource$ = this._pendingState[stateKey] as unknown as Subject<V>;
 
         if (pendingSource$) {
             pendingSource$.next(value);
             result$.next();
             result$.complete();
         } else {
-            from(this).subscribe((state: ComponentState<ComponentT>) => {
-                const stateSubject$ = state[ComponentState.stateKey<ComponentT, K>(stateProp)] as any as Subject<ComponentT[K]>;
+            from(this).pipe(
+                map((state) => {
+                    const stateSubject$ = state[ComponentState.stateKey<ComponentT, K>(stateProp)] as any as Subject<V>;
     
-                if (!stateSubject$) {
-                    throw new Error(
-    `[ComponentStateRef] Failed to set state for component property "${stateProp}". Ensure that this property is explicitly initialized (or declare it with @DeclareState()).`
-                    );
-                }
-    
+                    if (!stateSubject$) {
+                        throw new Error(
+`[ComponentStateRef] Failed to set state for component property "${stateProp}". Ensure that this property is explicitly initialized (or declare it with @DeclareState()).`
+                        );
+                    }
+
+                    return stateSubject$;
+                })
+            ).subscribe((stateSubject$) => {
                 stateSubject$.next(value);
                 result$.next();
                 result$.complete();
-            });
+            }, (e) => {
+                result$.error(e);
+                result$.complete();
+            }, () => result$.complete());
         }
 
         return result$;
@@ -102,7 +109,7 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentStateWithIde
         }
 
         return managedSource$.pipe(
-            tap(sourceValue => this.set<K>(stateProp, sourceValue))
+            tap(sourceValue => this.set<K, V>(stateProp, sourceValue))
         ).subscribe();
     }
 
@@ -120,8 +127,19 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentStateWithIde
         statePropA: V extends never ? never : ComponentState.WritableKey<ComponentT, K1>,
         statePropB: V extends never ? never : ComponentState.WritableKey<ComponentT, K2>
     ): void {
-        this.subscribeTo<K2, V>(statePropB, this.get<K1>(statePropA).pipe(distinctUntilChanged()) as Observable<V>, false);
-        this.subscribeTo<K1, V>(statePropA, this.get<K2>(statePropB).pipe(distinctUntilChanged()) as Observable<V>, false);
+        let syncing = false;
+        
+        merge(this.get(statePropB), this.get(statePropA)).pipe(
+            skip(1),
+            distinctUntilChanged(),
+            filter(() => !syncing),
+            tap(() => syncing = true),
+            mergeMap((value: V) => combineLatest([
+                this.set<K1, V>(statePropA, value),
+                this.set<K2, V>(statePropB, value)
+            ])),
+            tap(() => syncing = false)
+        ).subscribe();
     }
 }
 

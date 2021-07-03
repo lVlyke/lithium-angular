@@ -1,12 +1,14 @@
 import { Component, FactoryProvider, forwardRef, Injector, Type } from "@angular/core";
 import { TestBed } from "@angular/core/testing";
 import { Random, Spec } from "detest-bdd";
-import { BehaviorSubject, Observable, Subject } from "rxjs";
-import { first } from "rxjs/operators";
+import { BehaviorSubject, combineLatest, Observable, Subject } from "rxjs";
+import { first, isEmpty } from "rxjs/operators";
+import { firstSync } from "./utils/first-sync";
 import { ComponentState, ComponentStateRef, _initComponentState } from "../src/component-state";
 import { DeclareState } from "../src/declare-state";
 import { AsyncState } from "../src/async-state";
 import { asyncStateKey } from "../src/metadata/component-state-metadata";
+import { OnDestroy } from "../src/lifecycle";
 
 interface ITestComponentState<T = any> {
     readonly asyncSourceA$: Subject<number>;
@@ -123,6 +125,7 @@ describe("Given the ComponentState.create function", () => {
         spec.beforeEach((params) => {
             params.createResult = ComponentState.create(forwardRef(() => TestComponent));
 
+            // TODO - Test inherited state from base class
             @Component({
                 providers: [params.createResult],
                 template: ""
@@ -368,45 +371,79 @@ describe("The ComponentStateRef class", () => {
 
     interface SpecParams {
         stateRef: ComponentStateRef<ITestComponent>;
+        componentInstance: ITestComponent;
+        expectedBaseComponentState: Partial<ITestComponentState>;
         expectedComponentState: ITestComponentState;
-        expectedComponentStateProperty: ComponentState.StateKey<ITestComponent> & (keyof ITestComponentState);
+        expectedComponentStateProperty: keyof ITestComponentState & ComponentState.StateKey<ITestComponentState>;
+        expectedComponentStateProperty2: keyof ITestComponentState & ComponentState.StateKey<ITestComponentState>;
+        expectedComponentStateObject: ComponentState<ITestComponent>;
+        expectedSetValue: any;
+        expectedInitialSyncValue: any;
         resolveStateRef: (state: ComponentState<ITestComponentState>) => void;
         rejectStateRef: (e: any) => void;
+        subscribeToSource$: Subject<any>;
         getResponse$: Observable<any>;
+        getAllResponse$: Observable<any>[];
+        setResponse$: Observable<void>;
     }
 
     const spec = Spec.create<SpecParams>();
 
     spec.beforeEach((params) => {
-        params.expectedComponentState = generateComponentState();
-        params.expectedComponentStateProperty = "initializedNumberA"; // TODO
+
+        class FakeComponentInstance {
+
+            @OnDestroy()
+            public readonly onDestroy$: Observable<void>;
+        }
+
+        params.componentInstance = new FakeComponentInstance() as any;
+        params.expectedBaseComponentState = generateBaseComponentState();
+        params.expectedComponentState = generateComponentState(params.expectedBaseComponentState);
+        params.expectedComponentStateObject = createComponentState(params, params.componentInstance);
         params.stateRef = new ComponentStateRef<ITestComponent>((resolve, reject) => {
             params.resolveStateRef = resolve as any;
             params.rejectStateRef = reject;
         });
+
+        // TODO - Pick these randomly
+        params.expectedComponentStateProperty = "initializedNumberA";
+        params.expectedComponentStateProperty2 = "uninitializedNumberA";
     });
 
-    // TODO - ComponentStateRef methods
+    describe("has a state method", () => {
+
+        describe("when the component state has been resolved", () => {
+
+            spec.beforeEach((params) => {
+                params.resolveStateRef(params.expectedComponentStateObject);
+            });
+
+            spec.it("should resolve with the expected value", async (params) => {
+                expect(
+                    await params.stateRef.state().toPromise()
+                ).toBe(params.expectedComponentStateObject);
+            });
+        });
+
+        describe("when the component state has not been resolved", () => {
+
+            spec.it("should not resolve", async (params) => {
+                const empty = await params.stateRef.state()
+                    .pipe(firstSync(false), isEmpty())
+                    .toPromise();
+
+                expect(empty).toBeTruthy();
+            });
+        });
+    });
 
     describe("has a get method", () => {
 
         describe("when the component state has been resolved", () => {
 
             spec.beforeEach((params) => {
-                params.resolveStateRef(Object.assign(_initComponentState({}),  {
-                    initializedNumberA$: new BehaviorSubject(params.expectedComponentState.initializedNumberA),
-                    readonlyInitializedNumberA$: new BehaviorSubject(params.expectedComponentState.readonlyInitializedNumberA),
-                    readonlyInitializedNumberB$: new BehaviorSubject(params.expectedComponentState.readonlyInitializedNumberB),
-                    publicNamedStringA$: new BehaviorSubject(params.expectedComponentState.publicNamedStringA),
-                    publicNamedStringB$: new BehaviorSubject(params.expectedComponentState.publicNamedStringB),
-                    asyncSourceA$: params.expectedComponentState.asyncSourceA$,
-                    asyncSourceB$: params.expectedComponentState.asyncSourceB$,
-                    namedAsyncSource$:  params.expectedComponentState.asyncSourceA$,
-                    uninitializedAndDeclaredNumberA$: new BehaviorSubject(params.expectedComponentState.uninitializedAndDeclaredNumberA),
-                    publicNamedGenericA$: new BehaviorSubject(params.expectedComponentState.publicNamedGenericA),
-                    publicNamedGenericB$: new BehaviorSubject(params.expectedComponentState.publicNamedGenericB),
-                    uninitializedNumberA$: new BehaviorSubject(params.expectedComponentState.uninitializedNumberA)
-                }));
+                params.resolveStateRef(params.expectedComponentStateObject);
             });
 
             describe("when called with a known component state property", () => {
@@ -426,20 +463,388 @@ describe("The ComponentStateRef class", () => {
 
             describe("when called with an unknown component state property", () => {
 
+                spec.it("should throw an error", async (params) => {
+                    try {
+                        await params.stateRef.get(params.expectedComponentStateProperty + Random.string(10) as any)
+                            .pipe(first())
+                            .toPromise();
+                    } catch(e) {
+                        return;
+                    }
+
+                    throw new Error("get should throw");
+                });
             });
         });
 
         describe("when the component state has NOT been resolved", () => {
 
+            describe("when called with a known component state property", () => {
+
+                spec.beforeEach((params) => {
+                    params.getResponse$ = params.stateRef.get(params.expectedComponentStateProperty);
+                });
+
+                spec.it("should not resolve", async (params) => {
+                    const empty = await params.getResponse$
+                        .pipe(firstSync(false), isEmpty())
+                        .toPromise();
+
+                    expect(empty).toBeTruthy();
+                });
+            });
+
+            describe("when called with an unknown component state property", () => {
+
+                spec.beforeEach((params) => {
+                    params.getResponse$ = params.stateRef.get(params.expectedComponentStateProperty + Random.string(10) as any);
+                });
+
+                spec.it("should not resolve", async (params) => {
+                    const empty = await params.getResponse$
+                        .pipe(firstSync(false), isEmpty())
+                        .toPromise();
+
+                    expect(empty).toBeTruthy();
+                });
+            });
         });
     });
+
+    describe("has a getAll method", () => {
+
+        describe("when the component state has been resolved", () => {
+
+            spec.beforeEach((params) => {
+                params.resolveStateRef(params.expectedComponentStateObject);
+            });
+
+            describe("when called with known component state properties", () => {
+
+                spec.beforeEach((params) => {
+                    params.getAllResponse$ = params.stateRef.getAll(...Object.keys(params.expectedBaseComponentState) as any[]);
+                });
+
+                spec.it("should resolve with the expected values", async (params) => {
+                    const resolvedValues = await combineLatest(params.getAllResponse$)
+                        .pipe(first())
+                        .toPromise();
+
+                    expect(resolvedValues).toEqual(jasmine.arrayWithExactContents(Object.values(params.expectedBaseComponentState)));
+                });
+            });
+
+            describe("when called with unknown component state properties", () => {
+
+                spec.it("should throw an error", async (params) => {
+                    try {
+                        await combineLatest(params.stateRef.getAll(params.expectedComponentStateProperty + Random.string(10) as any))
+                            .pipe(first())
+                            .toPromise();
+                    } catch(e) {
+                        return;
+                    }
+
+                    throw new Error("getAll should throw");
+                });
+            });
+        });
+
+        describe("when the component state has NOT been resolved", () => {
+
+            describe("when called with known component state properties", () => {
+
+                spec.beforeEach((params) => {
+                    params.getAllResponse$ = params.stateRef.getAll(...Object.keys(params.expectedBaseComponentState) as any[]);
+                });
+
+                spec.it("should not resolve", async (params) => {
+                    const empty = await combineLatest(params.getAllResponse$)
+                        .pipe(firstSync(false), isEmpty())
+                        .toPromise();
+
+                    expect(empty).toBeTruthy();
+                });
+            });
+
+            describe("when called with unknown component state properties", () => {
+
+                spec.beforeEach((params) => {
+                    params.getAllResponse$ = params.stateRef.getAll(params.expectedComponentStateProperty + Random.string(10) as any);
+                });
+
+                spec.it("should not resolve", async (params) => {
+                    const empty = await combineLatest(params.getAllResponse$)
+                        .pipe(firstSync(false), isEmpty())
+                        .toPromise();
+
+                    expect(empty).toBeTruthy();
+                });
+            });
+        });
+    });
+
+    describe("has a set method", () => {
+
+        describe("when the component state has been resolved", () => {
+
+            spec.beforeEach((params) => {
+                params.resolveStateRef(params.expectedComponentStateObject);
+            });
+            
+            describe("when called with a known component state property", () => {
+
+                spec.beforeEach((params) => {
+                    params.expectedSetValue = Random.string(15);
+
+                    params.setResponse$ = params.stateRef.set(params.expectedComponentStateProperty, params.expectedSetValue);
+                });
+
+                spec.it("should set the state to the expected value", async (params) => {
+                    await params.setResponse$;
+
+                    const stateValue = await params.stateRef.get(params.expectedComponentStateProperty)
+                        .pipe(first())
+                        .toPromise();
+
+                    expect(stateValue).toBe(params.expectedSetValue);
+                });
+
+                spec.it("should resolve", async (params) => {
+                    const empty = await params.setResponse$
+                        .pipe(isEmpty())
+                        .toPromise();
+
+                    expect(empty).toBeFalsy();
+                });
+            });
+
+            describe("when called with an unknown component state property", () => {
+
+                spec.it("should throw an error", async (params) => {
+                    try {
+                        await params.stateRef.set(params.expectedComponentStateProperty + Random.string(10) as any, null)
+                            .toPromise();
+                    } catch(e) {
+                        return;
+                    }
+
+                    throw new Error("set should throw");
+                });
+            });
+        });
+
+        describe("when the component state has NOT been resolved", () => {
+            
+            describe("when called with a known component state property", () => {
+
+                spec.beforeEach((params) => {
+                    params.expectedSetValue = Random.string(15);
+
+                    params.setResponse$ = params.stateRef.set(params.expectedComponentStateProperty, params.expectedSetValue);
+                });
+
+                spec.it("should not resolve", async (params) => {
+                    const empty = await params.setResponse$
+                        .pipe(firstSync(false), isEmpty())
+                        .toPromise();
+
+                    expect(empty).toBeTruthy();
+                });
+            });
+
+            describe("when called with an unknown component state property", () => {
+
+                spec.beforeEach((params) => {
+                    params.setResponse$ = params.stateRef.set(params.expectedComponentStateProperty + Random.string(10) as any, null);
+                });
+
+                spec.it("should not resolve", async (params) => {
+                    const empty = await params.setResponse$
+                        .pipe(firstSync(false), isEmpty())
+                        .toPromise();
+
+                    expect(empty).toBeTruthy();
+                });
+            });
+        });
+    });
+
+    describe("has a subscribeTo method", () => {
+
+        describe("when the component state has been resolved", () => {
+
+            spec.beforeEach((params) => {
+                params.resolveStateRef(params.expectedComponentStateObject);
+            });
+
+            describe("when called with a given source observable", () => {
+
+                spec.beforeEach((params) => {
+                    params.subscribeToSource$ = new BehaviorSubject(Random.string(10));
+                    params.stateRef.subscribeTo(params.expectedComponentStateProperty, params.subscribeToSource$);
+                });
+
+                spec.it("should set the component state to the initial source value", async (params) => {
+                    const expectedValue = await params.subscribeToSource$
+                        .pipe(first())
+                        .toPromise();
+
+                    const stateValue = await params.stateRef.get(params.expectedComponentStateProperty)
+                        .pipe(first())
+                        .toPromise();
+
+                    expect(stateValue).toBe(expectedValue);
+                });
+
+                describe("when the source observable emits a new value", () => {
+
+                    spec.beforeEach((params) => {
+                        params.subscribeToSource$.next(Random.string(15));
+                    });
+
+                    spec.it("should update the component state to the newly emitted value", async (params) => {
+                        const expectedValue = await params.subscribeToSource$
+                            .pipe(first())
+                            .toPromise();
+    
+                        const stateValue = await params.stateRef.get(params.expectedComponentStateProperty)
+                            .pipe(first())
+                            .toPromise();
+    
+                        expect(stateValue).toBe(expectedValue);
+                    });
+                });
+            });
+
+            
+        });
+
+        describe("when the component state has not been resolved", () => {
+
+            describe("when called with a given source observable", () => {
+
+                spec.beforeEach((params) => {
+                    params.subscribeToSource$ = new BehaviorSubject(Random.string(10));
+                    params.stateRef.subscribeTo(params.expectedComponentStateProperty, params.subscribeToSource$);
+                });
+
+                spec.it("should NOT set the component state to the initial source value", async (params) => {
+                    const expectedValue = await params.subscribeToSource$
+                        .pipe(first())
+                        .toPromise();
+    
+                    const stateValue = await params.stateRef.get(params.expectedComponentStateProperty)
+                        .pipe(firstSync(false))
+                        .toPromise();
+    
+                    expect(stateValue).not.toBe(expectedValue);
+                });
+            });
+        });
+
+        // TODO - Test managed behavior
+    });
+
+    describe("has a sync method", () => {
+
+        describe("when the component state has been resolved", () => {
+
+            spec.beforeEach((params) => {
+                params.resolveStateRef(params.expectedComponentStateObject);
+            });
+
+            describe("when called with the given properties to sync", () => {
+
+                spec.beforeEach(async (params) => {
+                    params.expectedInitialSyncValue = await params.stateRef.get(params.expectedComponentStateProperty)
+                        .pipe(firstSync())
+                        .toPromise();
+
+                    params.stateRef.sync(
+                        params.expectedComponentStateProperty,
+                        params.expectedComponentStateProperty2
+                    );
+                });
+
+                spec.it("should initialize both given properties to the value of the first specified property", async (params) => {
+                    const currentValueA = await params.stateRef.get(params.expectedComponentStateProperty)
+                        .pipe(firstSync())
+                        .toPromise();
+
+                    const currentValueB = await params.stateRef.get(params.expectedComponentStateProperty2)
+                        .pipe(firstSync())
+                        .toPromise();
+
+                    expect(currentValueA).toBe(params.expectedInitialSyncValue);
+                    expect(currentValueB).toBe(params.expectedInitialSyncValue);
+                });
+
+                describe("when the first property value is updated", () => {
+
+                    spec.beforeEach(async (params) => {
+                        params.stateRef.set(params.expectedComponentStateProperty, Random.string(10));
+                    });
+
+                    spec.it("should set both given properties to the new value", async (params) => {
+                        const currentValueA = await params.stateRef.get(params.expectedComponentStateProperty)
+                            .pipe(firstSync())
+                            .toPromise();
+    
+                        const currentValueB = await params.stateRef.get(params.expectedComponentStateProperty2)
+                            .pipe(firstSync())
+                            .toPromise();
+    
+                        expect(currentValueB).toBe(currentValueA);
+                    });
+                });
+
+                describe("when the second property value is updated", () => {
+
+                    spec.beforeEach(async (params) => {
+                        params.stateRef.set(params.expectedComponentStateProperty2, Random.string(10));
+                    });
+
+                    spec.it("should set both given properties to the new value", async (params) => {
+                        const currentValueA = await params.stateRef.get(params.expectedComponentStateProperty)
+                            .pipe(firstSync())
+                            .toPromise();
+    
+                        const currentValueB = await params.stateRef.get(params.expectedComponentStateProperty2)
+                            .pipe(firstSync())
+                            .toPromise();
+    
+                        expect(currentValueA).toBe(currentValueB);
+                    });
+                });
+            });
+        });
+    });
+
+    function createComponentState(params: SpecParams, instance: ITestComponent): ComponentState<ITestComponent> {
+        return Object.assign(_initComponentState(instance),  {
+            initializedNumberA$: new BehaviorSubject(params.expectedComponentState.initializedNumberA),
+            readonlyInitializedNumberA$: new BehaviorSubject(params.expectedComponentState.readonlyInitializedNumberA),
+            readonlyInitializedNumberB$: new BehaviorSubject(params.expectedComponentState.readonlyInitializedNumberB),
+            publicNamedStringA$: new BehaviorSubject(params.expectedComponentState.publicNamedStringA),
+            publicNamedStringB$: new BehaviorSubject(params.expectedComponentState.publicNamedStringB),
+            asyncSourceA$: params.expectedComponentState.asyncSourceA$,
+            asyncSourceB$: params.expectedComponentState.asyncSourceB$,
+            namedAsyncSource$:  params.expectedComponentState.asyncSourceA$,
+            uninitializedAndDeclaredNumberA$: new BehaviorSubject(params.expectedComponentState.uninitializedAndDeclaredNumberA),
+            publicNamedGenericA$: new BehaviorSubject(params.expectedComponentState.publicNamedGenericA),
+            publicNamedGenericB$: new BehaviorSubject(params.expectedComponentState.publicNamedGenericB),
+            uninitializedNumberA$: new BehaviorSubject(params.expectedComponentState.uninitializedNumberA),
+            stateRef$: new BehaviorSubject(undefined)
+        });
+    }
 });
 
-function generateComponentState(): ITestComponentState {
+function generateBaseComponentState(): Partial<ITestComponentState> {
     const initialAsyncSourceA = Random.number();
     const initialAsyncSourceB = Random.number();
 
-    const baseComponentState = {
+    return {
         initializedNumberA: Random.number(),
         readonlyInitializedNumberA: Random.number(),
         readonlyInitializedNumberB: Random.number(),
@@ -451,11 +856,13 @@ function generateComponentState(): ITestComponentState {
         uninitializedAndDeclaredNumberA: undefined as number,
         publicNamedGenericA: Random.string(),
         publicNamedGenericB: Random.string(),
-    } as const;
-
-    return {
-        asyncSourceA$: new BehaviorSubject(initialAsyncSourceA),
-        asyncSourceB$: new BehaviorSubject(initialAsyncSourceB),
-        ...baseComponentState
     };
+}
+
+function generateComponentState(base: Partial<ITestComponentState>): ITestComponentState {
+    return {
+        asyncSourceA$: new BehaviorSubject(base.asyncSourceA),
+        asyncSourceB$: new BehaviorSubject(base.asyncSourceB),
+        ...base
+    } as ITestComponentState;
 }

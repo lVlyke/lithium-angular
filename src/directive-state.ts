@@ -18,3 +18,5 @@ export namespace DirectiveState {
         return ComponentState.tokenFor(provider);
     }
 }
+
+export const stateTokenFor = DirectiveState.tokenFor;

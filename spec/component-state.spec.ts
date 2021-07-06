@@ -35,6 +35,8 @@ interface ITestComponentState<T = any> {
 
 interface ITestComponent<T = any> extends ITestComponentState<T> {
     readonly stateRef: ComponentStateRef<ITestComponent<T>>;
+
+    ngOnDestroy(): void;
 }
 
 namespace ITestComponentState {
@@ -120,6 +122,8 @@ describe("Given the ComponentState.create function", () => {
         }) as ITestComponentState.WritableKeys;
     });
 
+    spec.afterEach(params => params.componentInstance?.ngOnDestroy?.());
+
     describe("when called with a component class", () => {
 
         spec.beforeEach((params) => {
@@ -195,6 +199,8 @@ describe("Given the ComponentState.create function", () => {
                 public get __namedGenericB(): T {
                     return this._namedGenericB;
                 }
+
+                ngOnDestroy!: () => void;
             }
 
             params.$class = TestComponent;
@@ -379,6 +385,7 @@ describe("The ComponentStateRef class", () => {
         expectedComponentStateObject: ComponentState<ITestComponent>;
         expectedSetValue: any;
         expectedInitialSyncValue: any;
+        expectedSyncWithSubject: Subject<any>;
         resolveStateRef: (state: ComponentState<ITestComponentState>) => void;
         rejectStateRef: (e: any) => void;
         subscribeToSource$: Subject<any>;
@@ -402,7 +409,10 @@ describe("The ComponentStateRef class", () => {
         params.expectedComponentState = generateComponentState(params.expectedBaseComponentState);
         params.expectedComponentStateObject = createComponentState(params, params.componentInstance);
         params.stateRef = new ComponentStateRef<ITestComponent>((resolve, reject) => {
-            params.resolveStateRef = resolve as any;
+            params.resolveStateRef = (v) => {
+                params.stateRef._pendingState = v;
+                resolve(v as any);
+            };
             params.rejectStateRef = reject;
         });
 
@@ -758,7 +768,7 @@ describe("The ComponentStateRef class", () => {
 
                 spec.beforeEach(async (params) => {
                     params.expectedInitialSyncValue = await params.stateRef.get(params.expectedComponentStateProperty)
-                        .pipe(firstSync())
+                        .pipe(first())
                         .toPromise();
 
                     params.stateRef.sync(
@@ -769,11 +779,11 @@ describe("The ComponentStateRef class", () => {
 
                 spec.it("should initialize both given properties to the value of the first specified property", async (params) => {
                     const currentValueA = await params.stateRef.get(params.expectedComponentStateProperty)
-                        .pipe(firstSync())
+                        .pipe(first())
                         .toPromise();
 
                     const currentValueB = await params.stateRef.get(params.expectedComponentStateProperty2)
-                        .pipe(firstSync())
+                        .pipe(first())
                         .toPromise();
 
                     expect(currentValueA).toBe(params.expectedInitialSyncValue);
@@ -788,11 +798,11 @@ describe("The ComponentStateRef class", () => {
 
                     spec.it("should set both given properties to the new value", async (params) => {
                         const currentValueA = await params.stateRef.get(params.expectedComponentStateProperty)
-                            .pipe(firstSync())
+                            .pipe(first())
                             .toPromise();
     
                         const currentValueB = await params.stateRef.get(params.expectedComponentStateProperty2)
-                            .pipe(firstSync())
+                            .pipe(first())
                             .toPromise();
     
                         expect(currentValueB).toBe(currentValueA);
@@ -807,11 +817,85 @@ describe("The ComponentStateRef class", () => {
 
                     spec.it("should set both given properties to the new value", async (params) => {
                         const currentValueA = await params.stateRef.get(params.expectedComponentStateProperty)
-                            .pipe(firstSync())
+                            .pipe(first())
                             .toPromise();
     
                         const currentValueB = await params.stateRef.get(params.expectedComponentStateProperty2)
-                            .pipe(firstSync())
+                            .pipe(first())
+                            .toPromise();
+    
+                        expect(currentValueA).toBe(currentValueB);
+                    });
+                });
+            });
+        });
+    });
+
+    describe("has a syncWith method", () => {
+
+        describe("when the component state has been resolved", () => {
+
+            spec.beforeEach((params) => {
+                params.resolveStateRef(params.expectedComponentStateObject);
+            });
+
+            describe("when called with the given property and source Subject to sync", () => {
+
+                spec.beforeEach(async (params) => {
+                    params.expectedInitialSyncValue = Random.string(10);
+                    params.expectedSyncWithSubject = new BehaviorSubject(params.expectedInitialSyncValue);
+
+                    params.stateRef.syncWith(
+                        params.expectedComponentStateProperty,
+                        params.expectedSyncWithSubject
+                    );
+                });
+
+                spec.it("should initialize the given property and the source Subject to the value of the source Subject", async (params) => {
+                    const currentValueA = await params.stateRef.get(params.expectedComponentStateProperty)
+                        .pipe(first())
+                        .toPromise();
+
+                    const currentValueB = await params.expectedSyncWithSubject
+                        .pipe(first())
+                        .toPromise();
+
+                    expect(currentValueA).toBe(params.expectedInitialSyncValue);
+                    expect(currentValueB).toBe(params.expectedInitialSyncValue);
+                });
+
+                describe("when the property value is updated", () => {
+
+                    spec.beforeEach(async (params) => {
+                        params.stateRef.set(params.expectedComponentStateProperty, Random.string(10));
+                    });
+
+                    spec.it("should set the given property and the source Subject to the new value", async (params) => {
+                        const currentValueA = await params.stateRef.get(params.expectedComponentStateProperty)
+                            .pipe(first())
+                            .toPromise();
+    
+                        const currentValueB = await params.expectedSyncWithSubject
+                            .pipe(first())
+                            .toPromise();
+    
+                        expect(currentValueB).toBe(currentValueA);
+                    });
+                });
+
+                describe("when the source Subject emits a new value", () => {
+
+                    spec.beforeEach((params) => {
+                        params.expectedSyncWithSubject.next(Random.string(15));
+                    });
+
+                    spec.it("should set the given property and the source Subject to the new value", async (params) => {
+                        const currentValueA = await params.stateRef.get(params.expectedComponentStateProperty)
+                            .pipe(first())
+                            .toPromise();
+    
+                        const currentValueB = await params.expectedSyncWithSubject
+                            .pipe(first())
                             .toPromise();
     
                         expect(currentValueA).toBe(currentValueB);
@@ -835,7 +919,8 @@ describe("The ComponentStateRef class", () => {
             publicNamedGenericA$: new BehaviorSubject(params.expectedComponentState.publicNamedGenericA),
             publicNamedGenericB$: new BehaviorSubject(params.expectedComponentState.publicNamedGenericB),
             uninitializedNumberA$: new BehaviorSubject(params.expectedComponentState.uninitializedNumberA),
-            stateRef$: new BehaviorSubject(undefined)
+            stateRef$: new BehaviorSubject(undefined),
+            ngOnDestroy$: undefined
         });
     }
 });

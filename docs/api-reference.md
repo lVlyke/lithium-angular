@@ -1,8 +1,317 @@
 # Lithium for Angular API Reference
 
+- [**`ComponentState`**](#componentstate)
+- [**`ComponentStateRef`**](#componentstateref)
+- [**`DeclareState`**](#declarestate)
+- [**`AsyncState`**](#asyncstate)
+- [**`DirectiveState`**](#directivestate)
+- [**`DirectiveStateRef`**](#directivestateref)
+- [**`AutoPush`**](#autopush)
+- [**`EventSource`**](#eventsource)
+- [**Lifecycle decorators**](#lifecycle-decorators)
+- [**`StateEmitter`**](#stateemitter)
+- [**`LiComponent`**](#licomponent)
+
+## `ComponentState`
+
+`ComponentState` is a type that represents the reactive state of a given component type. All writable properties are assigned a `Subject`, while readonly properties are assigned an `Observable`.
+
+```ts
+type ComponentState<ComponentT> = {
+    readonly [K in keyof ComponentT as ReactiveStateKey<ComponentT, QualifiedStateKey<ComponentT, K>>]-?:
+        IfReadonly<ComponentT, K> extends true ? Observable<ComponentT[K]> : Subject<ComponentT[K]>;
+};
+```
+
+### `ComponentState.create`
+
+Creates a new `FactoryProvider` that provides a [`ComponentStateRef`](#componentstateref) service for the given component class, which allows for reactive component state interactions.
+
+```ts
+function create<ComponentT>($class: ComponentClassProvider<ComponentT>): FactoryProvider;
+```
+
+**`$class`** - The component class to create the `FactoryProvider` for.
+
+Returns a `FactoryProvider` instance to be provided on the given component class.
+
+## `ComponentStateRef`
+
+An injected service that contains a [`ComponentState`](#componentstate) instance used to reactively interact with a component's state.
+
+`ComponentStateRef` extends `Promise`, which allows for resolving the underlying `ComponentState` directly from the class.
+
+```ts
+class ComponentStateRef<ComponentT> extends Promise<ComponentState<ComponentT>> {
+
+    public state(): Observable<ComponentState<ComponentT>>;
+
+    public get<K extends StringKey<ComponentT>>(
+        stateProp: ComponentState.ReadableKey<ComponentT, K>
+    ): Observable<ComponentT[K]>;
+
+    public getAll<
+        K extends Array<ComponentState.ReadableKey<ComponentT, StringKey<ComponentT>>>
+    >(...stateProps: K): ComponentState.StateSelector<ComponentT, K>;
+
+    public set<K extends StringKey<ComponentT>, V extends ComponentT[K]>(
+        stateProp: ComponentState.WritableKey<ComponentT, K>,
+        value: V
+    ): Observable<void>;
+
+    public subscribeTo<K extends StringKey<ComponentT>, V extends ComponentT[K]>(
+        stateProp: ComponentState.WritableKey<ComponentT, K>,
+        source$: Observable<V>,
+        managed: boolean = true
+    ): Subscription;
+
+    public sync<
+        K1 extends StringKey<ComponentT>,
+        K2 extends StringKey<ComponentT>,
+        V extends IfEquals<ComponentT[K1], ComponentT[K2]> extends true ? ComponentT[K1] & ComponentT[K2] : never
+    >(
+        statePropA: V extends never ? never : ComponentState.WritableKey<ComponentT, K1>,
+        statePropB: V extends never ? never : ComponentState.WritableKey<ComponentT, K2>
+    ): void;
+
+    public syncWith<K extends StringKey<ComponentT>>(
+        stateProp: ComponentState.WritableKey<ComponentT, K>,
+        source$: Subject<ComponentT[K]>
+    ): void;
+}
+```
+
+### `ComponentStateRef.state`
+
+Resolves the `ComponentState` instance for this reference. Equivalent to resolving the `ComponentStateRef` promise using RxJS `from`.
+
+```ts
+    function state(): Observable<ComponentState<ComponentT>>;
+```
+
+### `ComponentStateRef.get`
+
+Returns an `Observable` that represents the current value of the given state property and emits whenever the value of the given state property is changed. 
+
+```ts
+function get<K extends StringKey<ComponentT>>(
+    stateProp: ComponentState.ReadableKey<ComponentT, K>
+): Observable<ComponentT[K]>;
+```
+
+**`stateProp`** - The state property to observe.
+
+### `ComponentStateRef.getAll`
+
+Returns an array of `Observable`s that represents the current value for each given state property. Each `Observable` emits whenever a value of the corresponding given state property is changed.
+
+```ts
+function getAll<
+    K extends Array<ComponentState.ReadableKey<ComponentT, StringKey<ComponentT>>>
+>(...stateProps: K): ComponentState.StateSelector<ComponentT, K>;
+```
+
+**`stateProps`** - The state properties to observe.
+
+### `ComponentStateRef.set`
+
+Updates the value of the given state property with the given value. Equivalent to assigning to the component state property directly.
+
+```ts
+function set<K extends StringKey<ComponentT>, V extends ComponentT[K]>(
+    stateProp: ComponentState.WritableKey<ComponentT, K>,
+    value: V
+): Observable<void>;
+```
+
+**`stateProp`** - The state property to update. This property must not be readonly.
+**`value`** - The new value to update to.
+
+Returns an `Observable` that emits and completes when the value has been updated.
+
+### `ComponentStateRef.subscribeTo`
+
+Subscribes the given state property to the given source `Observable`. If `managed` is set to true, the lifetime of the subscription will be managed and cleaned up when the component is destroyed.
+
+```ts
+function subscribeTo<K extends StringKey<ComponentT>, V extends ComponentT[K]>(
+    stateProp: ComponentState.WritableKey<ComponentT, K>,
+    source$: Observable<V>,
+    managed: boolean = true
+): Subscription;
+```
+
+**`stateProp`** - The state property to receive source updates. This property must not be readonly.
+**`source$`** - The source `Observable` to subscribe to.
+**`managed`** - Whether or not the subscription lifetime should be managed. Defaults to `true`.
+
+Returns a `Subscription` representing the subscription to the source.
+
+### `ComponentStateRef.sync`
+
+Synchronizes the values of the given state properties such that any changes from one state property will be propagated to the other state property. The initial value of the first given state property is used.
+
+```ts
+function sync<
+    K1 extends StringKey<ComponentT>,
+    K2 extends StringKey<ComponentT>,
+    V extends IfEquals<ComponentT[K1], ComponentT[K2]> extends true ? ComponentT[K1] & ComponentT[K2] : never
+>(
+    statePropA: V extends never ? never : ComponentState.WritableKey<ComponentT, K1>,
+    statePropB: V extends never ? never : ComponentState.WritableKey<ComponentT, K2>
+): void;
+```
+
+**`statePropA`** - The first state property to synchronize. This property must not be readonly.
+**`statePropB`** - The second state property to synchronize. This property must not be readonly.
+
+### `ComponentStateRef.syncWith`
+
+Synchronizes the values of the given state property and source `Subject` such that any changes from the state property will be propagated to the source `Subject` and vice versa. The initial value of the source `Subject` is used.
+
+```ts
+function syncWith<K extends StringKey<ComponentT>>(
+    stateProp: ComponentState.WritableKey<ComponentT, K>,
+    source$: Subject<ComponentT[K]>
+): void;
+```
+
+**`stateProp`** - The state property to synchronize. This property must not be readonly.
+**`source$`** - The source `Subject` to synchronize.
+
+## `DeclareState`
+
+Decorator used to explicitly declare a specific property as part of the component state.
+
+`DeclareState` can also be used to associate private component state properties to public properties.
+
+```ts
+function DeclareState<Name extends string = undefined>(publicName?: Name);
+```
+
+**`publicName`** - (Optional) The name of the public property to associate this property to. If given, both this property and the named property will be bound to the same value. This property must be a public class member and must be of the same type as the property being decorated.
+
+## `AsyncState`
+
+Decorator used to subscribe a component state property to a source `Observable`. The property's value will be updated whenever the source `Observable` emits.
+
+```ts
+function AsyncState<Source extends string = undefined>(asyncSource?: Source);
+```
+
+**`asyncSource`** - (Optional) The property name of the source `Observable`. If not defined, it will automatically use the current property name with a `$` postfix as the source property name. This property must be a public class member and must be an `Observable` of the same type as the property being decorated.
+
+## `DirectiveState`
+
+Alias of [`ComponentState`](#componentstate).
+
+```ts
+type DirectiveState<DirectiveT> = ComponentState<DirectiveT>;
+```
+
+See [`ComponentState`](#componentstate).
+
+### `DirectiveStateRef.create`
+
+Creates a new `FactoryProvider` that provides a `DirectiveStateRef` service for the given directive class, which allows for reactive directive state interactions.
+
+```ts
+function create<DirectiveT>($class: Type<any>): FactoryProvider;
+```
+
+**`$class`** - The directive class to create the `FactoryProvider` for.
+
+Returns a `FactoryProvider` instance to be provided on the given directive class.
+
+### `DirectiveStateRef.tokenFor`
+
+Resolves the injection token from the given `DirectiveState` provider that can be used to inject the `DirectiveStateRef` service for the directive instance.
+
+```ts
+function tokenFor(provider: FactoryProvider): any;
+```
+
+**`provider`** - The `FactoryProvider` to resolve the token from.
+
+Returns the injection token for the given `DirectiveState` provider that can be used to inject the `DirectiveStateRef` service for the directive instance.
+
+### `stateTokenFor`
+
+Alias of [`DirectiveStateRef.tokenFor`](#directivestatereftokenfor).
+
+```ts
+const stateTokenFor = DirectiveState.tokenFor;
+```
+
+See [`DirectiveStateRef.tokenFor`](#directivestatereftokenfor).
+
+## `DirectiveStateRef`
+
+Alias of [`ComponentStateRef`](#componentstateref).
+
+```ts
+type DirectiveStateRef<DirectiveT> = ComponentStateRef<DirectiveT>;
+```
+
+See [`ComponentStateRef`](#componentstateref).
+
+## AutoPush
+
+`AutoPush` enables automatic change detection management of component state for simplified [OnPush](https://angular.io/api/core/ChangeDetectionStrategy) components. Any change to a component state value will automatically mark the component for change detection, eliminating the need for manually handling change detection in [special cases](https://blog.angular-university.io/onpush-change-detection-how-it-works/).
+
+### ```AutoPush.enable```
+
+```ts
+function enable(component: any, changeDetector: ChangeDetectorLike, options?: CdRefOptions) {
+    Metadata.SetMetadata(CHANGE_DETECTOR_REF, component, changeDetector);
+}
+```
+
+```ts
+function enable(component: any, changeDetector: ChangeDetectorProxy, options?: Options) {
+    Metadata.SetMetadata(CHANGE_DETECTOR_REF, component, changeDetector);
+}
+```
+
+Enables `AutoPush` for a specfic instance of a component or directive using the given change detector reference or proxy.
+
+**```component```** - The component or directive instance to enable AutoPush for.
+
+**```changeDetector```** - The [change detector reference](https://angular.io/api/core/ChangeDetectorRef) or [```ChangeDetectorProxy```](#autopushchangedetectorproxy) to use to invoke change detection.
+
+**```options```** - The change detection options to use for this instance. See [**```AutoPush.CdRefOptions```**](#autopushcdrefoptions).
+
+### ```AutoPush.Options```
+
+```ts
+interface Options {}
+```
+
+### ```AutoPush.CdRefOptions```
+
+```ts
+interface CdRefOptions extends Options {
+    forceDetectChanges?: boolean;
+}
+```
+
+**```forceDetectChanges```** - By default, [```ChangeDetectorRef.markforCheck```](https://angular.io/api/core/ChangeDetectorRef#markforcheck) will be called when ```StateEmitter``` properties are changed. When this is enabled, [```ChangeDetectorRef.detectChanges```](https://angular.io/api/core/ChangeDetectorRef#detectchanges) will be called instead.
+
+### ```AutoPush.ChangeDetectorProxy```
+
+Interface that represents logic to be invoked as change detection.
+
+```ts
+interface ChangeDetectorProxy {
+    doCheck(): void;
+}
+```
+
+**```doCheck```** - Function that will be invoked when a component's state is changed.
+
 ## ```EventSource```
 
-Creates an event source, which is an ```Observable``` that automatically emits when the given function (```eventType```) is called.
+Decorator used to create an event source, which is an ```Observable``` that automatically emits when the given function (```eventType```) is called.
 
 ```ts
 function EventSource(): EventSourceDecorator
@@ -40,9 +349,77 @@ interface DecoratorOptions {
 type EventType = string;
 ```
 
+## Angular Lifecycle `EventSource` decorators <a name="lifecycle-decorators"></a>
+
+### ```OnChanges```
+
+```ts
+function OnChanges(options?: EventSource.DecoratorOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator
+```
+
+See [**```EventSource```**](#eventsource).
+
+### ```OnInit```
+
+```ts
+function OnInit(options?: EventSource.DecoratorOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator
+```
+
+See [**```EventSource```**](#eventsource).
+
+### ```OnDestroy```
+
+```ts
+function OnDestroy(options?: EventSource.DecoratorOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator
+```
+
+See [**```EventSource```**](#eventsource).
+
+### ```DoCheck```
+
+```ts
+function DoCheck(options?: EventSource.DecoratorOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator
+```
+
+See [**```EventSource```**](#eventsource).
+
+### ```AfterContentInit```
+
+```ts
+function AfterContentInit(options?: EventSource.DecoratorOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator
+```
+
+See [**```EventSource```**](#eventsource).
+
+### ```AfterContentChecked```
+
+```ts
+function AfterContentChecked(options?: EventSource.DecoratorOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator
+```
+
+See [**```EventSource```**](#eventsource).
+
+### ```AfterViewInit```
+
+```ts
+function AfterViewInit(options?: EventSource.DecoratorOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator
+```
+
+See [**```EventSource```**](#eventsource).
+
+### ```AfterViewChecked```
+
+```ts
+function AfterViewChecked(options?: EventSource.DecoratorOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator
+```
+
+See [**```EventSource```**](#eventsource).
+
 ## ```StateEmitter```
 
-Creates a state emitter, which is a ```Subject``` that automatically emits when the underlying property value is modified, and automatically updates the property value when the ```Subject``` emits.
+> **NOTE**: Use of `StateEmitter` is no longer recommended and has been replaced with [`ComponentState`](#componentstate). `StateEmitter` will be deprecated and removed in future versions of Lithium. See the [migration guide](/docs/lithium-7-migration-guide.md) for more information.
+
+Decorator used to create a state emitter, which is a ```Subject``` that automatically emits when the underlying property value is modified, and automatically updates the property value when the ```Subject``` emits.
 
 ```ts
 function StateEmitter(): StateEmitterDecorator
@@ -265,130 +642,12 @@ interface SelfProxyDecoratorParams {
 
 **```unmanaged```** - (Optional) See [**```StateEmitter.DecoratorParams.unmanaged```**](#stateemitterdecoratorparams).
 
-## ```LiComponent```
+## `LiComponent` _(deprecated)_ <a name="licomponent"></a>
+
+> **NOTE**: Use of `LiComponent` is no longer recommended and will be removed in future versions of Lithium. See the [migration guide](/docs/lithium-7-migration-guide.md) for more information.
 
 An abstract class that any Angular component class can extend to automatically allow `StateEmitter`s and `EventSource`s to be deduced for use in templates without explicit corresponding property declarations.
 
 ```ts
 abstract class LiComponent extends TemplateDynamic() {}
 ```
-
-## AutoPush
-
-AutoPush enables automatic change detection management of StateEmitters for performant [OnPush](https://angular.io/api/core/ChangeDetectionStrategy) components and directives. Any change to a  ```StateEmitter``` value will invoke detection on the component automatically, eliminating the need to ever manually invoke change detection in [special cases](https://blog.angular-university.io/onpush-change-detection-how-it-works/).
-
-### ```AutoPush.enable```
-
-```ts
-function enable(component: any, changeDetector: ChangeDetectorLike, options?: CdRefOptions) {
-    Metadata.SetMetadata(CHANGE_DETECTOR_REF, component, changeDetector);
-}
-```
-
-```ts
-function enable(component: any, changeDetector: ChangeDetectorProxy, options?: Options) {
-    Metadata.SetMetadata(CHANGE_DETECTOR_REF, component, changeDetector);
-}
-```
-
-Enables AutoPush for a specfic instance of a component or directive using the given change detector reference or proxy.
-
-**```component```** - The component or directive instance to enable AutoPush for.
-
-**```changeDetector```** - The [change detector reference](https://angular.io/api/core/ChangeDetectorRef) or [```ChangeDetectorProxy```](#autopushchangedetectorproxy) to use to invoke change detection.
-
-**```options```** - The change detection options to use for this instance. See [**```AutoPush.CdRefOptions```**](#autopushcdrefoptions).
-
-### ```AutoPush.Options```
-
-```ts
-interface Options {}
-```
-
-### ```AutoPush.CdRefOptions```
-
-```ts
-interface CdRefOptions extends Options {
-    forceDetectChanges?: boolean;
-}
-```
-
-**```forceDetectChanges```** - By default, [```ChangeDetectorRef.markforCheck```](https://angular.io/api/core/ChangeDetectorRef#markforcheck) will be called when ```StateEmitter``` properties are changed. When this is enabled, [```ChangeDetectorRef.detectChanges```](https://angular.io/api/core/ChangeDetectorRef#detectchanges) will be called instead.
-
-### ```AutoPush.ChangeDetectorProxy```
-
-```ts
-interface ChangeDetectorProxy {
-    doCheck(): void;
-}
-```
-
-Interface that represents logic to be invoked as change detection.
-
-**```doCheck```** - Function that will be invoked when a component's ```StateEmitter``` properties are changed.
-
-## Angular Lifecycle ```EventSource``` decorators
-
-### ```OnChanges```
-
-```ts
-function OnChanges(options?: EventSource.DecoratorOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator
-```
-
-See [**```EventSource```**](#eventsource).
-
-### ```OnInit```
-
-```ts
-function OnInit(options?: EventSource.DecoratorOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator
-```
-
-See [**```EventSource```**](#eventsource).
-
-### ```OnDestroy```
-
-```ts
-function OnDestroy(options?: EventSource.DecoratorOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator
-```
-
-See [**```EventSource```**](#eventsource).
-
-### ```DoCheck```
-
-```ts
-function DoCheck(options?: EventSource.DecoratorOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator
-```
-
-See [**```EventSource```**](#eventsource).
-
-### ```AfterContentInit```
-
-```ts
-function AfterContentInit(options?: EventSource.DecoratorOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator
-```
-
-See [**```EventSource```**](#eventsource).
-
-### ```AfterContentChecked```
-
-```ts
-function AfterContentChecked(options?: EventSource.DecoratorOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator
-```
-
-See [**```EventSource```**](#eventsource).
-
-### ```AfterViewInit```
-
-```ts
-function AfterViewInit(options?: EventSource.DecoratorOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator
-```
-
-See [**```EventSource```**](#eventsource).
-
-### ```AfterViewChecked```
-
-```ts
-function AfterViewChecked(options?: EventSource.DecoratorOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator
-```
-
-See [**```EventSource```**](#eventsource).

@@ -10,4 +10,4 @@ Make sure your project is using Lithium 5.0.0 or newer. After upgrading, your ap
 
 After the upgrade, please make the following changes to ensure your app remains compatible with Ivy:
 
-* Extend the [```LiComponent```](/docs/api-reference.md#licomponent) base class instead of the previous ```AotAware``` base class, which has been removed. [Read here](/docs/limitations.md) for more info.
+* Extend the [```LiComponent```](/docs/api-reference.md#licomponent) base class instead of the previous ```AotAware``` base class, which has been removed. [Read here](/docs/legacy/limitations.md) for more info.

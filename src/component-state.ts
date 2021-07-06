@@ -2,9 +2,9 @@ import type { IfEquals, IfReadonly, StringKey } from "./lang-utils";
 import type { AsyncSourceKey } from "./metadata";
 import { FactoryProvider, InjectFlags, Injector, resolveForwardRef, Type } from "@angular/core";
 import { combineLatest, from, merge, Observable, ReplaySubject, Subject, Subscription, throwError } from "rxjs";
-import { distinctUntilChanged, filter, map, mergeMap, skip, take, tap } from "rxjs/operators";
+import { distinctUntilChanged, filter, map, mergeMap, skip, switchMap, take, tap } from "rxjs/operators";
 import { AutoPush } from "./autopush";
-import { ManagedBehaviorSubject, ManagedObservable } from "./managed-observable";
+import { ManagedBehaviorSubject, ManagedObservable, ManagedReplaySubject } from "./managed-observable";
 import { EventSource } from "./event-source";
 import { AngularLifecycleType } from "./lifecycle-event";
 import { ComponentStateMetadata, CommonMetadata, asyncStateKey } from "./metadata";
@@ -99,9 +99,7 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentStateWithIde
         if (managed) {
             managedSource$ = from(this).pipe(
                 mergeMap(state => {
-                    const managedSource$ = new ManagedBehaviorSubject<V>(state[COMPONENT_IDENTITY], undefined);
-                    source$.subscribe(managedSource$);
-                    return managedSource$;
+                    return this.createManagedSource<V, Observable<V>>(source$, state[COMPONENT_IDENTITY]);
                 })
             );
         } else {
@@ -140,6 +138,40 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentStateWithIde
             ])),
             tap(() => syncing = false)
         ).subscribe();
+    }
+
+    /**
+     * @description Synchronizes the state of `stateProp` and `source$` such that any changes from `stateProp` will be propagated to `source$` and
+     * vice versa. The initial state value of `source$` is used.
+     * @param stateProp - A writable state property.
+     * @param source$ - A Subject to synchronize with.
+     */
+    public syncWith<K extends StringKey<ComponentT>>(
+        stateProp: ComponentState.WritableKey<ComponentT, K>,
+        source$: Subject<ComponentT[K]>
+    ): void {
+        let syncing = false;
+        
+        from(this).pipe(
+            switchMap(state => merge(
+                this.get(stateProp).pipe(skip(1)),
+                this.createManagedSource(source$, state[COMPONENT_IDENTITY])
+            )),
+            distinctUntilChanged(),
+            filter(() => !syncing),
+            tap(() => syncing = true),
+            mergeMap((value: ComponentT[K]) => {
+                source$.next(value);
+                return this.set(stateProp, value);
+            }),
+            tap(() => syncing = false)
+        ).subscribe();
+    }
+
+    private createManagedSource<T, S$ extends Observable<T>>(source$: S$, instance: ComponentT): Subject<T> {
+        const managedSource$ = new ManagedReplaySubject<T>(instance, 1);
+        source$.subscribe(managedSource$);
+        return managedSource$;
     }
 }
 

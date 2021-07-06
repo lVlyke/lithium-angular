@@ -1,6 +1,6 @@
 # Lithium for Angular (@lithiumjs/angular)
 
-Reactive components made easy. Lithium provides utilities that enable seamless reactive state and event interactions for Angular components.
+Reactive components made easy! Lithium provides utilities that enable seamless reactive state and event interactions for Angular components.
 
 Check out the [full README](https://github.com/lVlyke/lithium-angular/blob/master/README.md) for more information.
 
@@ -8,7 +8,7 @@ Check out the [full README](https://github.com/lVlyke/lithium-angular/blob/maste
 
 * **Reactive component state**
 
-    Lithium's `ComponentStateRef` service automatically exposes a component's state as a collection of subjects with full type safety:
+    Lithium's `ComponentStateRef` service exposes a type-safe representation of component state properties as Subjects, allowing for observation of the component's full state automatically:
 ```ts
 import { ComponentState, ComponentStateRef } from '@lithiumjs/angular';
 

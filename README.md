@@ -4,13 +4,13 @@
 
 [![Build Status](https://travis-ci.org/lVlyke/lithium-angular.svg?branch=master)](https://travis-ci.org/lVlyke/lithium-angular) [![Coverage](./coverage/coverage.svg)](./coverage/coverage.svg)
 
-Reactive components made easy. Lithium provides utilities that enable seamless reactive state and event interactions for Angular components.
+Reactive components made easy! Lithium provides utilities that enable seamless reactive state and event interactions for Angular components.
 
 ## Features
 
 * **Reactive component state**
 
-    Lithium's `ComponentStateRef` service automatically exposes a component's state as a collection of subjects with full type safety:
+    Lithium's `ComponentStateRef` service exposes a type-safe representation of component state properties as Subjects, allowing for observation of the component's full state automatically:
 ```ts
 import { ComponentState, ComponentStateRef } from '@lithiumjs/angular';
 
@@ -61,17 +61,17 @@ class MyComponent {
 
     Lithium automatically manages subscription lifetimes just like Angular's [async pipe](https://angular.io/api/common/AsyncPipe), without its syntax overhead (and [ugly workarounds](https://coryrylan.com/blog/angular-async-data-binding-with-ng-if-and-ng-else)).
 
-Read through the [intro guide](/docs/intro-guide.md) to get to know Lithium's core features and view the [example app](https://github.com/lVlyke/lithium-angular-example-app) to see Lithium in action with real-world use-cases. Full [API](/docs/api-reference.md) documentation is also available.
+## [Intro guide](/docs/intro-guide.md)
 
-If you are upgrading from Lithium 6.x or earlier, read through the [migration guide](/docs/lithium-7-migration-guide.md) to see how to updgrade your app to use the latest features from Lithium.
-
-* [**Features**](#features)
-* [**Installation**](#installation)
-* [**Quick Start Guide**](/docs/intro-guide.md)
-* [**API Reference**](/docs/api-reference.md)
-* [**FAQ and Other Information**](#other-information)
+Read through the intro guide to get to know Lithium's core features.
 
 ## [Example app](https://github.com/lVlyke/lithium-angular-example-app) - [[Live demo]](https://lvlyke.github.io/lithium-angular-example-app)
+
+The example todo list app showcases real-world usages of Lithium.
+
+## [API reference](/docs/api-reference.md)
+
+Full API documentation is available for Lithium.
 
 ## Installation
 
@@ -82,6 +82,8 @@ npm install @lithiumjs/angular
 ```
 
 ## FAQ and Other information
+
+If you are upgrading from Lithium 6.x or earlier, read through the [migration guide](/docs/lithium-7-migration-guide.md) to see how to updgrade your app to use the latest features from Lithium.
 
 ### FAQ
 

@@ -1,4 +1,4 @@
-# Quick Guide to Lithium for Angular
+# Intro Guide to Lithium for Angular
 
 This guide is designed to go over the core features of Lithium and examples of how to use them.
 

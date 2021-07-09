@@ -10,6 +10,8 @@ export type IfReadonly<T, K extends keyof T> =
 export type Publicize<T extends Record<string, any>, K extends string> =
     Omit<T, K> & Record<K, T[K]>;
 
+export type Constructable<T, Ctor = (...args: any[]) => T> = { constructor: Ctor };
+
 export namespace _LangUtils {
 
     export function isNil(value: any): value is null | undefined {

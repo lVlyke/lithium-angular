@@ -19,7 +19,7 @@ export namespace EventMetadata {
         subject: Subject<any>;
     }
 
-    export type PropertySubjectMap = Map<string, SubjectInfo>;
+    export type PropertySubjectMap = Map<string | symbol, SubjectInfo>;
     export type EventSubjectTable = Map<EventType, PropertySubjectMap>;
     export type InstanceBootstrapMap = Map<EventType, boolean>;
     export type LifecycleRegistrationMap = Map<EventType, boolean>;
@@ -90,7 +90,7 @@ export namespace EventMetadata {
         }
 
         Metadata.setMetadata(LifecycleCallbackMapSymbol, target, map);
-        return map.get(type);
+        return map.get(type)!;
     }
 
     export function HasOwnEventSubjectTable(target: Object): boolean {
@@ -108,7 +108,7 @@ export namespace EventMetadata {
             map.set(type, []);
         }
 
-        const callbacks = map.get(type);
+        const callbacks = map.get(type)!;
         callbacks.push(callback);
         Metadata.setMetadata(LifecycleCallbackMapSymbol, target, map);
     }
@@ -120,7 +120,7 @@ export namespace EventMetadata {
             return;
         }
 
-        const callbacks = map.get(type);
+        const callbacks = map.get(type)!;
         map.set(type, callbacks.filter(curCallback => curCallback !== callback));
         Metadata.setMetadata(LifecycleCallbackMapSymbol, target, map);
     }
@@ -136,7 +136,7 @@ export namespace EventMetadata {
 
             // Get the property subject map (or create it if it doesn't exist for this eventType)
             if (target.has(eventType)) {
-                targetPropertySubjectMap = target.get(eventType);
+                targetPropertySubjectMap = target.get(eventType)!;
             }
             else {
                 targetPropertySubjectMap = new Map();

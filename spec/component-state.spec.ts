@@ -87,7 +87,7 @@ describe("Given the ComponentState.create function", () => {
             asyncSourceA: initialAsyncSourceA,
             asyncSourceB: initialAsyncSourceB,
             namedAsyncSource: initialAsyncSourceA,
-            uninitializedAndDeclaredNumberA: undefined as number,
+            uninitializedAndDeclaredNumberA: undefined! as number,
             publicNamedGenericA: Random.string(),
             publicNamedGenericB: Random.string(),
         } as const;
@@ -401,7 +401,7 @@ describe("The ComponentStateRef class", () => {
         class FakeComponentInstance {
 
             @OnDestroy()
-            public readonly onDestroy$: Observable<void>;
+            public readonly onDestroy$!: Observable<void>;
         }
 
         params.componentInstance = new FakeComponentInstance() as any;
@@ -920,8 +920,8 @@ describe("The ComponentStateRef class", () => {
             publicNamedGenericB$: new BehaviorSubject(params.expectedComponentState.publicNamedGenericB),
             uninitializedNumberA$: new BehaviorSubject(params.expectedComponentState.uninitializedNumberA),
             stateRef$: new BehaviorSubject(undefined),
-            ngOnDestroy$: undefined
-        });
+            ngOnDestroy$: undefined!
+        }) as any as ComponentState<ITestComponent>;
     }
 });
 
@@ -938,7 +938,7 @@ function generateBaseComponentState(): Partial<ITestComponentState> {
         asyncSourceA: initialAsyncSourceA,
         asyncSourceB: initialAsyncSourceB,
         namedAsyncSource: initialAsyncSourceA,
-        uninitializedAndDeclaredNumberA: undefined as number,
+        uninitializedAndDeclaredNumberA: undefined! as number,
         publicNamedGenericA: Random.string(),
         publicNamedGenericB: Random.string(),
     };

@@ -54,7 +54,7 @@ export namespace AutoPush {
         forceDetectChanges?: boolean;
     }
 
-    export function changeDetector(component: any): ChangeDetectorProxy {
+    export function changeDetector(component: any): ChangeDetectorProxy | undefined {
         const metadata = changeDetectorMetadata(component);
         return metadata ? metadata.changeDetector : undefined;
     }

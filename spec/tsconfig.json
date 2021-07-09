@@ -1,5 +1,6 @@
 {
     "compilerOptions": {
+        "strict": true,
         "noUnusedLocals": true,
 		"noUnusedParameters": true,
 		"noImplicitAny": true,
@@ -29,9 +30,6 @@
     "typeRoots": [
         "../node_modules/@types"
     ],
-    "atom": {
-        "rewriteTsConfig": false
-    },
     "angularCompilerOptions": {
         "genDir": "build",
         "skipTemplateCodegen": true

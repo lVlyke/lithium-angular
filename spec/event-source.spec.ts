@@ -42,7 +42,7 @@ describe("An EventSource decorator", () => {
         // Lifecycle tests:
         InputBuilder
             .fragment<ConstructionTemplateInput>({ propertyKey: Random.string() })
-            .fragment({ propertyKey: `${AngularLifecycleType.OnInit}$` }, options => !options.options.eventType)
+            .fragment({ propertyKey: `${AngularLifecycleType.OnInit}$` }, options => !options.options!.eventType)
             .fragmentBuilder<EventSource.DecoratorOptions>("options", InputBuilder
                 .fragmentList<EventSource.DecoratorOptions>({ eventType: [...AngularLifecycleType.values, undefined] })
             )
@@ -55,13 +55,13 @@ describe("An EventSource decorator", () => {
         options?: EventSource.DecoratorOptions,
         methodDecorators?: MethodDecorator[]
     ) => {
-        methodDecorators = methodDecorators || [];
+        methodDecorators ??= [];
         const is$ = propertyKey.endsWith("$");
         const eventType = (options && options.eventType) ? options.eventType : (is$ ? propertyKey.slice(0, -1) : undefined);
         const isValid = !!eventType;
         const isLifecycleEvent = AngularLifecycleType.values.includes(eventType as AngularLifecycleType);
-        const createEventSource = () => options ? EventSource(options, ...methodDecorators) : EventSource(...methodDecorators);
-        const getOptions = (): EventSource.DecoratorOptions => is$ ? Object.assign({ eventType }, options) : options;
+        const createEventSource = () => options ? EventSource(options, ...methodDecorators!) : EventSource(...methodDecorators!);
+        const getOptions = (): EventSource.DecoratorOptions => is$ ? Object.assign({ eventType }, options) : options!;
 
         spec.beforeEach((params) => {
             params.targetClass = class TestTargetClass {}; // Make sure a fresh class is created each time
@@ -81,7 +81,7 @@ describe("An EventSource decorator", () => {
                     describe("when an eventType is specified", () => {
 
                         spec.it("should create a facade function for the eventType", (params) => {
-                            expect(params.targetPrototype[options.eventType]).toEqual(jasmine.any(Function));
+                            expect(params.targetPrototype[options.eventType!]).toEqual(jasmine.any(Function));
                         });
 
                         spec.it("should NOT create a facade function for the property key", (params) => {
@@ -110,7 +110,7 @@ describe("An EventSource decorator", () => {
                         }));
 
                         spec.it("should create a facade function for the eventType", (params) => {
-                            expect(params.targetPrototype[options.eventType]).toEqual(jasmine.any(Function));
+                            expect(params.targetPrototype[options.eventType!]).toEqual(jasmine.any(Function));
                         });
                         
                     });
@@ -130,7 +130,7 @@ describe("An EventSource decorator", () => {
             describe("when there's a method collision", () => {
 
                 spec.beforeEach((params) => {
-                    params.targetPrototype[eventType] = function () {};
+                    params.targetPrototype[eventType!] = function () {};
                 });
 
                 if (options && options.skipMethodCheck) {
@@ -167,14 +167,14 @@ describe("An EventSource decorator", () => {
                     });
                 }
 
-                if (methodDecorators.length > 0) {
+                if (methodDecorators!.length > 0) {
                     describe("when there are method decorators", () => {
 
                         spec.it("should apply all of the method decorators", (params) => {
-                            methodDecorators.forEach(methodDecorator => expect(methodDecorator).toHaveBeenCalledWith(
+                            methodDecorators!.forEach(methodDecorator => expect(methodDecorator).toHaveBeenCalledWith(
                                 params.targetPrototype,
                                 eventType,
-                                Object.getOwnPropertyDescriptor(params.targetPrototype, eventType)
+                                Object.getOwnPropertyDescriptor(params.targetPrototype, eventType!)
                             ));
                         });
                     });
@@ -182,8 +182,8 @@ describe("An EventSource decorator", () => {
 
                 spec.it("should set the expected metadata for the class", (params) => {
                     const metadata: EventSource.DecoratorOptions = EventMetadata
-                        .GetOwnPropertySubjectMap(eventType, params.targetClass)
-                        .get(propertyKey);
+                        .GetOwnPropertySubjectMap(eventType!, params.targetClass)
+                        .get(propertyKey)!;
 
                     expect(metadata).toEqual(getOptions());
                 });
@@ -207,7 +207,7 @@ describe("An EventSource decorator", () => {
                     }
 
                     spec.it("should create the expected eventType facade function on the instance", (params) => {
-                        expect(params.targetInstance[eventType]).toEqual(jasmine.any(Function));
+                        expect(params.targetInstance[eventType!]).toEqual(jasmine.any(Function));
                     });
 
                     spec.it("should create the expected propertyKey facade function on the instance for AoT", (params) => {
@@ -229,8 +229,8 @@ describe("An EventSource decorator", () => {
 
                     spec.it("should set the expected metadata for the instance", (params) => {
                         const metadata: EventMetadata.SubjectInfo = EventMetadata
-                            .GetOwnPropertySubjectMap(eventType, params.targetInstance)
-                            .get(propertyKey);
+                            .GetOwnPropertySubjectMap(eventType!, params.targetInstance)
+                            .get(propertyKey)!;
     
                         expect(<any>metadata).toEqual(jasmine.objectContaining(Object.assign({}, getOptions(), {
                             subject: jasmine.any(Subject)

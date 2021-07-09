@@ -48,7 +48,7 @@ describe("Given a StateEmitter decorator", () => {
             .fragmentBuilder<StateEmitter.DecoratorParams>("options", InputBuilder
                 .fragment<StateEmitter.DecoratorParams>({ propertyName: Random.string() })
                 .fragmentList({ proxyMode: [undefined, EmitterMetadata.ProxyMode.Alias, EmitterMetadata.ProxyMode.From, EmitterMetadata.ProxyMode.Merge, EmitterMetadata.ProxyMode.None] })
-                .fragmentList({ proxyPath: [STATIC_PROXY_PATH, DYNAMIC_PROXY_PATH] }, options => options.proxyMode && options.proxyMode !== EmitterMetadata.ProxyMode.None)
+                .fragmentList({ proxyPath: [STATIC_PROXY_PATH, DYNAMIC_PROXY_PATH] }, options => !!options.proxyMode && options.proxyMode !== EmitterMetadata.ProxyMode.None)
                 .fragment({ proxyMergeUpdates: undefined })
                 .fragmentList({ proxyMergeUpdates: [true, false] }, options => options.proxyPath === DYNAMIC_PROXY_PATH)
                 .fragmentList({ unmanaged: [true, false, undefined] })
@@ -88,11 +88,11 @@ describe("Given a StateEmitter decorator", () => {
         const isStaticProxyPath = options && options.proxyPath === STATIC_PROXY_PATH;
         const propertyName = (options && options.propertyName) ? options.propertyName : (is$ ? propertyKey.slice(0, -1) : undefined);
         const isValid = !!propertyName;
-        const createStateEmitter = () => options ? StateEmitter(options, ...propertyDecorators) : StateEmitter(...propertyDecorators);
+        const createStateEmitter = () => options ? StateEmitter(options, ...propertyDecorators!) : StateEmitter(...propertyDecorators!);
         const mergedOptions = () => is$ ? Object.assign({ propertyName }, options) : options;
 
         function getMetadata(targetClass: any): EmitterMetadata.SubjectInfo {
-            return EmitterMetadata.GetOwnMetadataMap(targetClass).get(propertyName);
+            return EmitterMetadata.GetOwnMetadataMap(targetClass).get(propertyName!)!;
         }
 
         function bootstrap(instance: any) {
@@ -196,7 +196,7 @@ describe("Given a StateEmitter decorator", () => {
             describe("when there's a property name collision", () => {
 
                 spec.beforeEach((params) => {
-                    params.targetPrototype[propertyName] = true;
+                    params.targetPrototype[propertyName!] = true;
                 });
 
                 spec.it("then it should throw an error", (params) => {
@@ -210,11 +210,11 @@ describe("Given a StateEmitter decorator", () => {
                     createStateEmitter()(params.targetPrototype, propertyKey);
                 }));
 
-                if (propertyDecorators.length > 0) {
+                if (propertyDecorators?.length! > 0) {
                     describe("when there are property decorators", () => {
 
                         spec.it("should apply all of the property decorators", (params) => {
-                            propertyDecorators.forEach(propertyDecorator => expect(propertyDecorator).toHaveBeenCalledWith(
+                            propertyDecorators!.forEach(propertyDecorator => expect(propertyDecorator).toHaveBeenCalledWith(
                                 params.targetPrototype,
                                 propertyName
                             ));
@@ -225,7 +225,7 @@ describe("Given a StateEmitter decorator", () => {
                 spec.it("should set the expected metadata for the class", (params) => {
                     const metadata: EmitterMetadata.SubjectInfo = getMetadata(params.targetClass);
 
-                    expect(metadata).toEqual(jasmine.objectContaining(mergedOptions()));
+                    expect(metadata).toEqual(jasmine.objectContaining(mergedOptions()!));
                 });
 
                 if (options && options.unmanaged) {
@@ -257,34 +257,34 @@ describe("Given a StateEmitter decorator", () => {
 
                     if (!options || !options.readOnly) {
                         spec.it("then it should create a facade setter function on the instance for the property name", (params) => {
-                            const facadeProperty = Object.getOwnPropertyDescriptor(params.targetInstance, propertyName);
+                            const facadeProperty = Object.getOwnPropertyDescriptor(params.targetInstance, propertyName!);
 
-                            expect(facadeProperty.set).toEqual(jasmine.any(Function));
+                            expect(facadeProperty!.set).toEqual(jasmine.any(Function));
                         });
 
                         describe("when the facade setter is invoked", () => {
-                            testFacadeSetterFunction((params, value) => params.targetInstance[propertyName] = value);
+                            testFacadeSetterFunction((params, value) => params.targetInstance[propertyName!] = value);
                         });
                     }
                     else {
                         spec.it("then it should NOT create a facade setter function on the instance for the property name", (params) => {
-                            const facadeProperty = Object.getOwnPropertyDescriptor(params.targetInstance, propertyName);
+                            const facadeProperty = Object.getOwnPropertyDescriptor(params.targetInstance, propertyName!);
 
-                            expect(facadeProperty.set).not.toBeDefined();
+                            expect(facadeProperty!.set).not.toBeDefined();
                         });
                     }
 
                     if (!options || !options.writeOnly) {
                         spec.it("then it should create a facade getter function on the instance for the property name", (params) => {
-                            const facadeProperty = Object.getOwnPropertyDescriptor(params.targetInstance, propertyName);
+                            const facadeProperty = Object.getOwnPropertyDescriptor(params.targetInstance, propertyName!);
 
-                            expect(facadeProperty.get).toEqual(jasmine.any(Function));
+                            expect(facadeProperty!.get).toEqual(jasmine.any(Function));
                         });
                     } else {
                         spec.it("then it should NOT create a facade getter function on the instance for the property name", (params) => {
-                            const facadeProperty = Object.getOwnPropertyDescriptor(params.targetInstance, propertyName);
+                            const facadeProperty = Object.getOwnPropertyDescriptor(params.targetInstance, propertyName!);
 
-                            expect(facadeProperty.get).not.toBeDefined();
+                            expect(facadeProperty!.get).not.toBeDefined();
                         });
                     }
 
@@ -294,18 +294,18 @@ describe("Given a StateEmitter decorator", () => {
     
                                 spec.it("then it should return the expected value", (params) => {
                                     if (!options || !options.proxyMode || options.proxyMode === EmitterMetadata.ProxyMode.None) {
-                                        expect(params.targetInstance[propertyName]).toEqual(mergedOptions().initialValue);
+                                        expect(params.targetInstance[propertyName!]).toEqual(mergedOptions()!.initialValue);
                                     }
                                     else if (isStaticProxyPath) {
                                         return params.targetInstance.static.proxy.path$.pipe(
                                             take(1),
-                                            map((value: string) => expect(params.targetInstance[propertyName]).toEqual(value))
+                                            map((value: string) => expect(params.targetInstance[propertyName!]).toEqual(value))
                                         ).toPromise();
                                     }
                                     else {
                                         return params.targetInstance.dynamic.proxy$.pipe(
                                             take(1),
-                                            map((value: { path: string }) => expect(params.targetInstance[propertyName]).toEqual(value.path))
+                                            map((value: { path: string }) => expect(params.targetInstance[propertyName!]).toEqual(value.path))
                                         ).toPromise();
                                     }
                                 });
@@ -317,7 +317,7 @@ describe("Given a StateEmitter decorator", () => {
                         spec.it("then it should create a facade setter on the instance for the property key to support AoT", (params) => {
                             const stateEmitterProperty = Object.getOwnPropertyDescriptor(params.targetInstance, propertyKey);
 
-                            expect(stateEmitterProperty.set).toEqual(jasmine.any(Function));
+                            expect(stateEmitterProperty!.set).toEqual(jasmine.any(Function));
                         });
 
                         describe("when the facade setter for AoT is invoked", () => {
@@ -329,7 +329,7 @@ describe("Given a StateEmitter decorator", () => {
                         const stateEmitterProperty = Object.getOwnPropertyDescriptor(params.targetInstance, propertyKey);
                         const metadata: EmitterMetadata.SubjectInfo = getMetadata(params.targetInstance);
 
-                        expect(stateEmitterProperty.get).toEqual(jasmine.any(Function));
+                        expect(stateEmitterProperty!.get).toEqual(jasmine.any(Function));
 
                         if (!options || !options.proxyMode || options.proxyMode === EmitterMetadata.ProxyMode.None) {
                             let expectedClass = (options && options.unmanaged) ? BehaviorSubject : ManagedBehaviorSubject;
@@ -426,7 +426,7 @@ describe("Given a StateEmitter decorator", () => {
                         describe("if the component is destroyed", () => {
 
                             spec.beforeEach((params) => {
-                                params.targetInstance[propertyName];
+                                params.targetInstance[propertyName!];
                                 params.targetInstance[CommonMetadata.MANAGED_ONDESTROY_KEY].next();
                             });
 
@@ -450,7 +450,7 @@ describe("Given a StateEmitter decorator", () => {
                                     describe("if the component has already been read in the template", () => {
 
                                         spec.beforeEach((params) => {
-                                            params.targetInstance[propertyName];
+                                            params.targetInstance[propertyName!];
                                         });
 
                                         describe("when a new value is emitted from the StateEmitter", () => {
@@ -468,7 +468,7 @@ describe("Given a StateEmitter decorator", () => {
                                             describe("when a new value is updated via the facade setter", () => {
 
                                                 spec.beforeEach((params) => {
-                                                    params.targetInstance[propertyName] = 42;
+                                                    params.targetInstance[propertyName!] = 42;
                                                 });
 
                                                 spec.it("should invoke change detection on the component", (params) => {
@@ -484,7 +484,7 @@ describe("Given a StateEmitter decorator", () => {
                                     describe("if the component has already been read in the template", () => {
 
                                         spec.beforeEach((params) => {
-                                            params.targetInstance[propertyName];
+                                            params.targetInstance[propertyName!];
                                         });
 
                                         describe("when a new value is emitted from the StateEmitter", () => {
@@ -502,7 +502,7 @@ describe("Given a StateEmitter decorator", () => {
                                             describe("when a new value is updated via the facade setter", () => {
 
                                                 spec.beforeEach((params) => {
-                                                    params.targetInstance[propertyName] = 42;
+                                                    params.targetInstance[propertyName!] = 42;
                                                 });
 
                                                 spec.it("should NOT invoke change detection on the component", (params) => {
@@ -554,7 +554,7 @@ describe("Given a StateEmitter decorator", () => {
             .fragment<StateEmitter.DecoratorParams>({ propertyName: Random.string() })
             .fragmentList({ proxyMode: [undefined, EmitterMetadata.ProxyMode.Alias, EmitterMetadata.ProxyMode.From, EmitterMetadata.ProxyMode.Merge, EmitterMetadata.ProxyMode.None] })
             .fragment({ proxyPath: undefined }, options => !options.proxyMode || options.proxyMode === EmitterMetadata.ProxyMode.None)
-            .fragmentList({ proxyPath: ["", _propertyKey, STATIC_PROXY_PATH, DYNAMIC_PROXY_PATH] }, options => options.proxyMode && options.proxyMode !== EmitterMetadata.ProxyMode.None)
+            .fragmentList({ proxyPath: ["", _propertyKey, STATIC_PROXY_PATH, DYNAMIC_PROXY_PATH] }, options => !!options.proxyMode && options.proxyMode !== EmitterMetadata.ProxyMode.None)
         );
 
     const InitialPropertyValueTemplateKeys: (keyof InitialPropertyValueTemplateInput)[] = ["propertyKey", "initialPropertyValue", "options"];
@@ -565,15 +565,15 @@ describe("Given a StateEmitter decorator", () => {
         options: StateEmitter.DecoratorParams
     ) => {
         const createStateEmitter = () => StateEmitter(options);
-        const subjectInfo = Object.assign({ propertyKey, observable: undefined }, options);
+        const subjectInfo = Object.assign({ propertyKey, observable: undefined! }, options);
         const isSelfProxy = EmitterMetadata.SubjectInfo.IsSelfProxy(subjectInfo) || options.proxyPath === "";
 
         function getMetadata(targetClass: any): EmitterMetadata.SubjectInfo {
-            return EmitterMetadata.GetOwnMetadataMap(targetClass).get(options.propertyName);
+            return EmitterMetadata.GetOwnMetadataMap(targetClass).get(options.propertyName!)!;
         }
 
         function bootstrap(instance: any) {
-            Random.boolean() ? instance[propertyKey] : instance[options.propertyName];
+            Random.boolean() ? instance[propertyKey] : instance[options.propertyName!];
         }
 
         spec.beforeEach((params) => {
@@ -767,15 +767,15 @@ describe("Given a StateEmitter decorator", () => {
         options?: StateEmitter.ProxyDecoratorParams,
         propertyDecorators?: PropertyDecorator[]
     ) => {
-        propertyDecorators = propertyDecorators || [];
-        const params = options || { path: proxyPath };
+        propertyDecorators ??= [];
+        const params = options ?? { path: proxyPath } as StateEmitter.ProxyDecoratorParams;
 
         describe(`when the ${proxyMode} helper decorator is called`, () => {
 
             spec.beforeEach(() => {
                 spyOn(StateEmitter, "WithParams").and.callThrough();
 
-                StateEmitter[proxyMode](options || proxyPath, ...propertyDecorators);
+                StateEmitter[proxyMode](options ?? proxyPath!, ...propertyDecorators!);
             });
 
             spec.it("should call StateEmitter.WithParams with the expected parameters", () => {
@@ -787,7 +787,7 @@ describe("Given a StateEmitter decorator", () => {
                     readOnly: params.readOnly,
                     writeOnly: params.writeOnly,
                     unmanaged: params.unmanaged
-                }, ...propertyDecorators);
+                }, ...propertyDecorators!);
             });
         });
     })();
@@ -820,7 +820,7 @@ describe("Given a StateEmitter decorator", () => {
     ) => {
         const $params = Object.assign(options || {}, { path: "" });
         let delegateHelperFnName: "Alias" | "From" | "Merge";
-        propertyDecorators = propertyDecorators || [];
+        propertyDecorators ??= [];
 
         switch (helperName) {
             case "AliasSelf": delegateHelperFnName = "Alias"; break;
@@ -833,11 +833,11 @@ describe("Given a StateEmitter decorator", () => {
             beforeEach(() => {
                 spyOn(StateEmitter, delegateHelperFnName).and.callThrough();
 
-                StateEmitter[helperName](options, ...propertyDecorators);
+                StateEmitter[helperName](options, ...propertyDecorators!);
             });
 
             it(`should call StateEmitter.${delegateHelperFnName} with the expected parameters`, () => {
-                expect(StateEmitter[delegateHelperFnName]).toHaveBeenCalledWith($params, ...propertyDecorators);
+                expect(StateEmitter[delegateHelperFnName]).toHaveBeenCalledWith($params, ...propertyDecorators!);
             });
         });
     })();

@@ -1,4 +1,4 @@
-import type { IfEquals, IfReadonly, StringKey } from "./lang-utils";
+import type { Constructable, IfEquals, IfReadonly, StringKey } from "./lang-utils";
 import type { AsyncSourceKey } from "./metadata";
 import { FactoryProvider, InjectFlags, Injector, resolveForwardRef, Type } from "@angular/core";
 import { combineLatest, from, merge, Observable, ReplaySubject, Subject, Subscription, throwError } from "rxjs";
@@ -132,9 +132,9 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentStateWithIde
             distinctUntilChanged(),
             filter(() => !syncing),
             tap(() => syncing = true),
-            mergeMap((value: V) => combineLatest([
-                this.set<K1, V>(statePropA, value),
-                this.set<K2, V>(statePropB, value)
+            mergeMap((value) => combineLatest([
+                this.set<K1, V>(statePropA, value as V),
+                this.set<K2, V>(statePropB, value as V)
             ])),
             tap(() => syncing = false)
         ).subscribe();
@@ -160,9 +160,9 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentStateWithIde
             distinctUntilChanged(),
             filter(() => !syncing),
             tap(() => syncing = true),
-            mergeMap((value: ComponentT[K]) => {
-                source$.next(value);
-                return this.set(stateProp, value);
+            mergeMap((value) => {
+                source$.next(value as ComponentT[K]);
+                return this.set(stateProp, value as ComponentT[K]);
             }),
             tap(() => syncing = false)
         ).subscribe();
@@ -255,7 +255,7 @@ export namespace ComponentState {
         onComplete?: (state: ComponentStateWithIdentity<ComponentT>) => void
     ): void {
         // Register a lifecycle event listener for the given event
-        EventSource.registerLifecycleEvent($class, event, function onEvent() {
+        EventSource.registerLifecycleEvent($class, event, function onEvent(this: ThisType<any>) {
             const instance: any = injector.get($class, null, InjectFlags.Self);
 
             if (instance === this) {
@@ -273,7 +273,7 @@ export namespace ComponentState {
         });
     }
 
-    function updateState<ComponentT>(
+    function updateState<ComponentT extends Constructable<any, any>>(
         componentStateRef: ComponentStateRef<ComponentT>,
         componentState: Partial<StateRecord<ComponentT>>,
         instance: ComponentT
@@ -296,7 +296,7 @@ export namespace ComponentState {
         return componentState;
     }
 
-    function updateStateForProperty<ComponentT, K extends StringKey<ComponentT>>(
+    function updateStateForProperty<ComponentT extends Constructable<any, any>, K extends StringKey<ComponentT>>(
         componentStateRef: ComponentStateRef<ComponentT>,
         componentState: Partial<StateRecord<ComponentT>>,
         instance: ComponentT,
@@ -349,7 +349,7 @@ export namespace ComponentState {
 
                 // Set up the property wrapper that exposes the backing subject
                 try {
-                    manageProperty(instance, prop.key, !propDescriptor || propDescriptor.enumerable);
+                    manageProperty(instance, prop.key, !propDescriptor || !!propDescriptor.enumerable);
 
                     // If a separate publicKey was defined, also map it to the backing subject
                     if (prop.publicKey && prop.publicKey !== prop.key) {
@@ -375,14 +375,14 @@ export namespace ComponentState {
 
     function isReadonlyProperty<T, K extends keyof T>(instance: T, key: K): boolean {
         const publicPropDescriptor = Object.getOwnPropertyDescriptor(instance, key);
-        return publicPropDescriptor && !publicPropDescriptor.writable && !publicPropDescriptor.set;
+        return !!publicPropDescriptor && !publicPropDescriptor.writable && !publicPropDescriptor.set;
     }
 
     function resolveClass<ComponentT>($class: Type<any>): Type<ComponentT> {
         return resolveForwardRef<Type<ComponentT>>($class);
     }
 
-    function getAllAccessibleKeys<T extends Record<string, any>>(instance: T): ComponentStateMetadata.ManagedPropertyList<T> {
+    function getAllAccessibleKeys<T extends Record<string, any> & Constructable<any, any>>(instance: T): ComponentStateMetadata.ManagedPropertyList<T> {
         // Ensure managed keys are processed first
         return getManagedKeys(instance).concat(getPublicKeys(instance));
     }
@@ -391,7 +391,7 @@ export namespace ComponentState {
         return (Object.keys(instance) as Array<StringKey<T>>).map(key => ({ key }));
     }
 
-    function getManagedKeys<T>(instance: T): ComponentStateMetadata.ManagedPropertyList<T> {
+    function getManagedKeys<T extends Constructable<any, any>>(instance: T): ComponentStateMetadata.ManagedPropertyList<T> {
         return ComponentStateMetadata.GetInheritedManagedPropertyList<T>(instance.constructor);
     }
 }

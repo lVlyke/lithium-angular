@@ -31,7 +31,7 @@ describe("Given Angular lifecycle event EventSource decorators", () => {
         options?: EventSource.DecoratorOptions,
         methodDecorators?: MethodDecorator[]
     ) => {
-        methodDecorators = methodDecorators || [];
+        methodDecorators ??= [];
         const lifecycleDecoratorName: string = lifecycleEvent.replace(/^ng/, "");
 
         describe(`when the ${lifecycleDecoratorName} EventSource decorator is applied`, () => {
@@ -45,11 +45,11 @@ describe("Given Angular lifecycle event EventSource decorators", () => {
                 params.targetClass[NG_COMP_DEF] = {};
 
                 // Apply the lifecycle decorator
-                lifecycleDecorator(options, ...methodDecorators)(params.targetClass.prototype, lifecycleDecoratorName);
+                lifecycleDecorator(options, ...methodDecorators!)(params.targetClass.prototype, lifecycleDecoratorName);
             });
 
             spec.it("should call EventSource.WithParams with the expected values", () => {
-                expect(EventSource.WithParams).toHaveBeenCalledWith(Object.assign({ eventType: lifecycleEvent }, options), ...methodDecorators);
+                expect(EventSource.WithParams).toHaveBeenCalledWith(Object.assign({ eventType: lifecycleEvent }, options), ...methodDecorators!);
             });
         });
     })();

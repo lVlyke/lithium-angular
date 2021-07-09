@@ -23,7 +23,7 @@ export namespace EmitterMetadata {
     }
 
     export interface SubjectInfo extends SubjectInfo.CoreDetails {
-        propertyKey: string;
+        propertyKey: string | symbol;
         observable: Subject<any> | Observable<any>;
     }
 

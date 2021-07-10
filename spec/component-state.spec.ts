@@ -1,10 +1,10 @@
 import { Component, FactoryProvider, forwardRef, Injector, Type } from "@angular/core";
 import { TestBed } from "@angular/core/testing";
-import { Random, Spec } from "detest-bdd";
+import { InputBuilder, Random, Spec, Template } from "detest-bdd";
 import { BehaviorSubject, combineLatest, Observable, Subject } from "rxjs";
 import { first, isEmpty } from "rxjs/operators";
 import { firstSync } from "./utils/first-sync";
-import { ComponentState, ComponentStateRef, _initComponentState } from "../src/component-state";
+import { ComponentState, ComponentStateRef } from "../src/component-state";
 import { DeclareState } from "../src/declare-state";
 import { AsyncState } from "../src/async-state";
 import { asyncStateKey } from "../src/metadata/component-state-metadata";
@@ -124,10 +124,24 @@ describe("Given the ComponentState.create function", () => {
 
     spec.afterEach(params => params.componentInstance?.ngOnDestroy?.());
 
-    describe("when called with a component class", () => {
+    type ComponentClassTemplateInput = {
+        options?: ComponentState.CreateOptions;
+    };
+
+    const componentClassTemplateInput = InputBuilder
+        .fragment<ComponentClassTemplateInput>({ options: undefined })
+        .fragmentBuilder("options", InputBuilder
+            .fragmentList<ComponentState.CreateOptions>({ lazy: [true, false, undefined] })
+        );
+
+    const componentClassTemplateKeys: (keyof ComponentClassTemplateInput)[] = ["options"];
+
+    describe("when called with a component class", Template(componentClassTemplateKeys, componentClassTemplateInput, (
+        options?: ComponentState.CreateOptions
+    ) => {
 
         spec.beforeEach((params) => {
-            params.createResult = ComponentState.create(forwardRef(() => TestComponent));
+            params.createResult = ComponentState.create(forwardRef(() => TestComponent), options);
 
             // TODO - Test inherited state from base class
             @Component({
@@ -352,7 +366,7 @@ describe("Given the ComponentState.create function", () => {
                 });
             });
         });
-    });
+    }));
 
     async function verifyObservableState(params: SpecParams) {
         await Promise.all(params.expectedComponentStateKeys.map(async (expectedProp) => {
@@ -386,7 +400,7 @@ describe("The ComponentStateRef class", () => {
         expectedSetValue: any;
         expectedInitialSyncValue: any;
         expectedSyncWithSubject: Subject<any>;
-        resolveStateRef: (state: ComponentState<ITestComponentState>) => void;
+        resolveStateRef: (state: ComponentState<ITestComponent<any>>) => void;
         rejectStateRef: (e: any) => void;
         subscribeToSource$: Subject<any>;
         getResponse$: Observable<any>;
@@ -404,17 +418,17 @@ describe("The ComponentStateRef class", () => {
             public readonly onDestroy$!: Observable<void>;
         }
 
-        params.componentInstance = new FakeComponentInstance() as any;
         params.expectedBaseComponentState = generateBaseComponentState();
         params.expectedComponentState = generateComponentState(params.expectedBaseComponentState);
-        params.expectedComponentStateObject = createComponentState(params, params.componentInstance);
+        params.expectedComponentStateObject = createComponentState(params);
+        params.componentInstance = new FakeComponentInstance() as any;
         params.stateRef = new ComponentStateRef<ITestComponent>((resolve, reject) => {
-            params.resolveStateRef = (v) => {
-                params.stateRef._pendingState = v;
-                resolve(v as any);
-            };
+            params.resolveStateRef = resolve;
             params.rejectStateRef = reject;
         });
+        params.stateRef.componentInstance = params.componentInstance;
+
+        ComponentState._initComponentState(params.componentInstance, params.expectedComponentStateObject);
 
         // TODO - Pick these randomly
         params.expectedComponentStateProperty = "initializedNumberA";
@@ -905,8 +919,8 @@ describe("The ComponentStateRef class", () => {
         });
     });
 
-    function createComponentState(params: SpecParams, instance: ITestComponent): ComponentState<ITestComponent> {
-        return Object.assign(_initComponentState(instance),  {
+    function createComponentState(params: SpecParams): ComponentState<ITestComponent> {
+        return {
             initializedNumberA$: new BehaviorSubject(params.expectedComponentState.initializedNumberA),
             readonlyInitializedNumberA$: new BehaviorSubject(params.expectedComponentState.readonlyInitializedNumberA),
             readonlyInitializedNumberB$: new BehaviorSubject(params.expectedComponentState.readonlyInitializedNumberB),
@@ -919,9 +933,9 @@ describe("The ComponentStateRef class", () => {
             publicNamedGenericA$: new BehaviorSubject(params.expectedComponentState.publicNamedGenericA),
             publicNamedGenericB$: new BehaviorSubject(params.expectedComponentState.publicNamedGenericB),
             uninitializedNumberA$: new BehaviorSubject(params.expectedComponentState.uninitializedNumberA),
-            stateRef$: new BehaviorSubject(undefined),
+            stateRef$: undefined!,
             ngOnDestroy$: undefined!
-        }) as any as ComponentState<ITestComponent>;
+        };
     }
 });
 

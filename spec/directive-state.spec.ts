@@ -1,5 +1,5 @@
 import { Directive, FactoryProvider, forwardRef, Injector } from "@angular/core";
-import { Spec } from "detest-bdd";
+import { InputBuilder, Spec, Template } from "detest-bdd";
 import { ComponentState } from "../src/component-state";
 import { DirectiveState, stateTokenFor } from "../src/directive-state";
 
@@ -13,13 +13,27 @@ describe("Given the DirectiveState.create function", () => {
 
     const spec = Spec.create<SpecParams>();
 
-    describe("when called with a directive class", () => {
+    type DirectiveClassTemplateInput = {
+        options?: DirectiveState.CreateOptions;
+    };
+
+    const directiveClassTemplateInput = InputBuilder
+        .fragment<DirectiveClassTemplateInput>({ options: undefined })
+        .fragmentBuilder("options", InputBuilder
+            .fragmentList<DirectiveState.CreateOptions>({ lazy: [true, false, undefined] })
+        );
+
+    const directiveClassTemplateKeys: (keyof DirectiveClassTemplateInput)[] = ["options"];
+
+    describe("when called with a directive class", Template(directiveClassTemplateKeys, directiveClassTemplateInput, (
+        options?: ComponentState.CreateOptions
+    ) => {
 
         spec.beforeEach((params) => {
             params.expectedFactory = () => {};
             spyOn(ComponentState, "createFactory").and.returnValue(params.expectedFactory as any);
 
-            params.createResult = DirectiveState.create(forwardRef(() => TestDirective));
+            params.createResult = DirectiveState.create(forwardRef(() => TestDirective), options);
 
             @Directive({ providers: [params.createResult] })
             class TestDirective {}
@@ -34,7 +48,7 @@ describe("Given the DirectiveState.create function", () => {
                 deps: jasmine.arrayWithExactContents([Injector])
             } as Record<string, unknown>));
         });
-    });
+    }));
 });
 
 describe("Given the DirectiveState.tokenFor function", () => {

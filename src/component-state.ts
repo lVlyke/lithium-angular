@@ -2,22 +2,20 @@ import type { Constructable, IfEquals, IfReadonly, StringKey } from "./lang-util
 import type { AsyncSourceKey } from "./metadata";
 import { FactoryProvider, InjectFlags, Injector, resolveForwardRef, Type } from "@angular/core";
 import { combineLatest, from, merge, Observable, ReplaySubject, Subject, Subscription, throwError } from "rxjs";
-import { distinctUntilChanged, filter, map, mergeMap, skip, switchMap, take, tap } from "rxjs/operators";
+import { distinctUntilChanged, filter, map, mergeMap, skip, switchMap, tap } from "rxjs/operators";
 import { AutoPush } from "./autopush";
 import { ManagedBehaviorSubject, ManagedObservable, ManagedReplaySubject } from "./managed-observable";
 import { EventSource } from "./event-source";
 import { AngularLifecycleType } from "./lifecycle-event";
 import { ComponentStateMetadata, CommonMetadata, asyncStateKey } from "./metadata";
 
-const COMPONENT_IDENTITY = Symbol("COMPONENT_IDENTITY");
-
-type ComponentStateWithIdentity<ComponentT> = ComponentState<ComponentT> & { [COMPONENT_IDENTITY]: ComponentT };
+const COMPONENT_STATE_IDENTITY = Symbol("COMPONENT_STATE_IDENTITY");
 
 export type ComponentState<ComponentT> = ComponentState.Of<ComponentT>;
 
-export class ComponentStateRef<ComponentT> extends Promise<ComponentStateWithIdentity<ComponentT>> {
+export class ComponentStateRef<ComponentT> extends Promise<ComponentState<ComponentT>> {
 
-    public _pendingState: Partial<ComponentState<ComponentT>> = {};
+    public componentInstance!: ComponentT;
 
     public state(): Observable<ComponentState<ComponentT>> {
         return from(this);
@@ -27,10 +25,10 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentStateWithIde
         stateProp: ComponentState.ReadableKey<ComponentT, K>
     ): Observable<ComponentT[K]> {
         const stateKey = ComponentState.stateKey<ComponentT, K>(stateProp);
-        const pendingSource$ = this._pendingState[stateKey] as unknown as Observable<ComponentT[K]>;
+        const pendingSource$ = this.pendingState?.[stateKey];
 
         if (pendingSource$) {
-            return pendingSource$;
+            return pendingSource$ as unknown as Observable<ComponentT[K]>;
         }
         
         return from(this).pipe(
@@ -58,7 +56,7 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentStateWithIde
     ): Observable<void> {
         const stateKey = ComponentState.stateKey<ComponentT, K>(stateProp);
         const result$ = new ReplaySubject<void>(1);
-        const pendingSource$ = this._pendingState[stateKey] as unknown as Subject<V>;
+        const pendingSource$ = this.pendingState?.[stateKey] as unknown as Subject<V>;
 
         if (pendingSource$) {
             pendingSource$.next(value);
@@ -98,9 +96,7 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentStateWithIde
         let managedSource$: Observable<V>;
         if (managed) {
             managedSource$ = from(this).pipe(
-                mergeMap(state => {
-                    return this.createManagedSource<V, Observable<V>>(source$, state[COMPONENT_IDENTITY]);
-                })
+                mergeMap(() => _createManagedSource<ComponentT, V, Observable<V>>(source$, this.componentInstance))
             );
         } else {
             managedSource$ = source$;
@@ -153,9 +149,9 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentStateWithIde
         let syncing = false;
         
         from(this).pipe(
-            switchMap(state => merge(
+            switchMap(() => merge(
                 this.get(stateProp).pipe(skip(1)),
-                this.createManagedSource(source$, state[COMPONENT_IDENTITY])
+                _createManagedSource(source$, this.componentInstance)
             )),
             distinctUntilChanged(),
             filter(() => !syncing),
@@ -168,14 +164,16 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentStateWithIde
         ).subscribe();
     }
 
-    private createManagedSource<T, S$ extends Observable<T>>(source$: S$, instance: ComponentT): Subject<T> {
-        const managedSource$ = new ManagedReplaySubject<T>(instance, 1);
-        source$.subscribe(managedSource$);
-        return managedSource$;
+    private get pendingState(): ComponentState<ComponentT> | undefined {
+        return (this.componentInstance as any)?.[COMPONENT_STATE_IDENTITY];
     }
 }
 
 export namespace ComponentState {
+
+    export interface CreateOptions {
+        lazy?: boolean;
+    }
 
     export type ReactiveStateKey<ComponentT, K extends keyof ComponentT = keyof ComponentT> =
         K extends string ? AsyncSourceKey<ComponentT, K> : never;
@@ -205,34 +203,62 @@ export namespace ComponentState {
 
     type ComponentClassProvider<ComponentT> = Type<ComponentT> | Type<unknown>;
 
-    export function create<ComponentT>($class: ComponentClassProvider<ComponentT>): FactoryProvider {
+    export function create<ComponentT>(
+        $class: ComponentClassProvider<ComponentT>,
+        options?: CreateOptions
+    ): FactoryProvider {
         return {
             provide: ComponentStateRef,
-            useFactory: createFactory<ComponentT>($class),
+            useFactory: createFactory<ComponentT>($class, options),
             deps: [Injector]
         };
     }
 
-    export function createFactory<ComponentT>($class: ComponentClassProvider<ComponentT>): (injector: Injector) => ComponentStateRef<ComponentT> {
-        return function (injector: Injector): ComponentStateRef<ComponentT> {
-            const resolvedClass = resolveClass<ComponentT>($class);
+    export function createFactory<ComponentT>(
+        $class: ComponentClassProvider<ComponentT>,
+        options?: CreateOptions
+    ): (injector: Injector) => ComponentStateRef<ComponentT> {
+        options ??= {};
 
-            // Ensure that we create a OnDestroy EventSource on the target for managing subscriptions
-            EventSource({ eventType: AngularLifecycleType.OnDestroy })(resolvedClass.prototype, CommonMetadata.MANAGED_ONDESTROY_KEY);
-
-            const stateRef = new ComponentStateRef<ComponentT>((resolve) => {
-                const stateSelector = () => stateRef;
-                
+        if (!options!.lazy) {
+            forwardResolveClass<ComponentT>($class).then((resolvedClass) => {
                 // Generate initial component state on ngOnInit
-                updateStateOnEvent(resolvedClass, injector, AngularLifecycleType.OnInit, stateSelector);
+                updateStateOnEvent(resolvedClass, AngularLifecycleType.OnInit);
 
                 // Update the component state on afterViewInit and afterContentInit to capture dynamically initialized properties
-                updateStateOnEvent(resolvedClass, injector, AngularLifecycleType.AfterContentInit, stateSelector);
-                updateStateOnEvent(resolvedClass, injector, AngularLifecycleType.AfterViewInit, stateSelector, (state) => {
-                    // Resolve the finalized state
-                    resolve(state);
-                });
+                updateStateOnEvent(resolvedClass, AngularLifecycleType.AfterContentInit);
+                updateStateOnEvent(resolvedClass, AngularLifecycleType.AfterViewInit);
             });
+        }
+        
+        return function (injector: Injector): ComponentStateRef<ComponentT> {
+            const stateRef = new ComponentStateRef<ComponentT>((resolve) => {
+                const resolvedClass = resolveClass<ComponentT>($class);
+
+                if (options!.lazy) {                
+                    // Generate initial component state on ngOnInit
+                    updateStateOnEvent(resolvedClass, AngularLifecycleType.OnInit, injector, (instance) => {
+                        stateRef.componentInstance = instance;
+                    });
+
+                    // Update the component state on afterViewInit and afterContentInit to capture dynamically initialized properties
+                    updateStateOnEvent(resolvedClass, AngularLifecycleType.AfterContentInit, injector);
+                    updateStateOnEvent(resolvedClass, AngularLifecycleType.AfterViewInit, injector, (instance) => {
+                        // Resolve the finalized state
+                        resolve(instance[COMPONENT_STATE_IDENTITY]);
+                    });
+                } else {
+                    updateOnEvent(resolvedClass, AngularLifecycleType.OnInit, (instance: any) => {
+                        stateRef.componentInstance = instance;
+                    }, injector);
+
+                    updateOnEvent(resolvedClass, AngularLifecycleType.AfterViewInit, (instance: any) => {
+                        // Resolve the finalized state
+                        resolve(instance[COMPONENT_STATE_IDENTITY]);
+                    }, injector);
+                }
+            });
+
             return stateRef;
         }
     }
@@ -247,34 +273,70 @@ export namespace ComponentState {
         return asyncStateKey<ComponentT, K>(key) as any;
     }
 
+    export function _initComponentState<T extends { [COMPONENT_STATE_IDENTITY]?: Partial<ComponentState<T>> } & Record<any, any>>(
+        instance: T,
+        initValue: Partial<ComponentState<T>> = {}
+    ): Partial<ComponentState<T>> {
+        instance[COMPONENT_STATE_IDENTITY] ??= initValue;
+        return instance[COMPONENT_STATE_IDENTITY]!;
+    }
+
     function updateStateOnEvent<ComponentT>(
         $class: Type<ComponentT>,
-        injector: Injector,
         event: AngularLifecycleType,
-        stateRefSelector: () => ComponentStateRef<ComponentT>,
-        onComplete?: (state: ComponentStateWithIdentity<ComponentT>) => void
+        injector?: Injector,
+        onComplete?: (instance: any) => void
     ): void {
-        // Register a lifecycle event listener for the given event
-        EventSource.registerLifecycleEvent($class, event, function onEvent(this: ThisType<any>) {
-            const instance: any = injector.get($class, null, InjectFlags.Self);
+        updateOnEvent($class, event, (instance: any) => {
+            updateState(_initComponentState(instance), instance);
+
+            if (onComplete) {
+                onComplete(instance);
+            }
+        }, injector);
+    }
+
+    function updateOnEvent<ComponentT>(
+        $class: Type<ComponentT>,
+        event: AngularLifecycleType,
+        onUpdate: (instance: any) => void,
+        injector?: Injector
+    ): void {
+        onEvent($class, event, function onEventFn(this: ThisType<any>) {
+            const instance: any = injector ? injector.get($class, null, InjectFlags.Self) : this;
 
             if (instance === this) {
-                const stateRef = stateRefSelector();
-                const state: any = updateState(stateRef, stateRef._pendingState, instance);
+                onUpdate(instance);
 
-                state[COMPONENT_IDENTITY] = instance;
-
-                EventSource.unregisterLifecycleEvent($class, event, onEvent);
-
-                if (onComplete) {
-                    onComplete(state);
+                // Only de-register instance-specific event handlers
+                if (injector) {
+                    offEvent($class, event, onEventFn);
                 }
             }
         });
     }
 
+    function onEvent<ComponentT>(
+        $class: Type<ComponentT>,
+        event: AngularLifecycleType,
+        callback: () => void
+    ): void {
+        // Ensure that we create a OnDestroy EventSource on the target for managing subscriptions
+        EventSource({ eventType: AngularLifecycleType.OnDestroy })($class.prototype, CommonMetadata.MANAGED_ONDESTROY_KEY);
+
+        // Register a lifecycle event listener for the given event
+        EventSource.registerLifecycleEvent($class, event, callback);
+    }
+
+    function offEvent<ComponentT>(
+        $class: Type<ComponentT>,
+        event: AngularLifecycleType,
+        callback: () => void
+    ): void {
+        EventSource.unregisterLifecycleEvent($class, event, callback);
+    }
+
     function updateState<ComponentT extends Constructable<any, any>>(
-        componentStateRef: ComponentStateRef<ComponentT>,
         componentState: Partial<StateRecord<ComponentT>>,
         instance: ComponentT
     ): Partial<StateRecord<ComponentT>> {
@@ -285,7 +347,6 @@ export namespace ComponentState {
             // Only update an entry if it hasn't yet been defined
             if (!componentState[ComponentState.stateKey<ComponentT>(prop.key)]) {
                 updateStateForProperty(
-                    componentStateRef,
                     componentState,
                     instance,
                     prop
@@ -297,7 +358,6 @@ export namespace ComponentState {
     }
 
     function updateStateForProperty<ComponentT extends Constructable<any, any>, K extends StringKey<ComponentT>>(
-        componentStateRef: ComponentStateRef<ComponentT>,
         componentState: Partial<StateRecord<ComponentT>>,
         instance: ComponentT,
         prop: ComponentStateMetadata.ManagedProperty<ComponentT, K>
@@ -340,10 +400,10 @@ export namespace ComponentState {
                 if (prop.asyncSource) {
                     const reactiveSource$ = instance[prop.asyncSource];
 
-                    // If the property has a valid async source, subscribe to it
+                    // If the property has a valid async source, create a managed subscription to it
                     if (reactiveSource$ && reactiveSource$ instanceof Observable) {
-                        componentStateRef.subscribeTo(prop.key as WritableKey<ComponentT, K>, reactiveSource$);
-                        reactiveSource$.pipe(take(1)).subscribe(initialValue => propSubject$.next(initialValue));
+                        _createManagedSource(reactiveSource$, instance)
+                            .subscribe((value: any) => propSubject$.next(value));
                     }
                 }
 
@@ -378,6 +438,21 @@ export namespace ComponentState {
         return !!publicPropDescriptor && !publicPropDescriptor.writable && !publicPropDescriptor.set;
     }
 
+    function isForwardRef($class: Type<any>): boolean {
+        return !$class.name;
+    }
+
+    async function forwardResolveClass<ComponentT>($class: Type<any>): Promise<Type<ComponentT>> {
+        if (isForwardRef($class)) {
+            // If the given class type is a forwardRef, resolve it later
+            return await new Promise((resolve) => {
+                setTimeout(() => resolve(resolveClass($class)));
+            });
+        } else {
+            return resolveClass($class);
+        }
+    }
+
     function resolveClass<ComponentT>($class: Type<any>): Type<ComponentT> {
         return resolveForwardRef<Type<ComponentT>>($class);
     }
@@ -396,8 +471,8 @@ export namespace ComponentState {
     }
 }
 
-export function _initComponentState<T>(instance: T): { [COMPONENT_IDENTITY]: T } {
-    return {
-        [COMPONENT_IDENTITY]: instance
-    };
+function _createManagedSource<ComponentT, T, S$ extends Observable<T>>(source$: S$, instance: ComponentT): Subject<T> {
+    const managedSource$ = new ManagedReplaySubject<T>(instance, 1);
+    source$.subscribe(managedSource$);
+    return managedSource$;
 }

@@ -23,15 +23,31 @@ type ComponentState<ComponentT> = {
 };
 ```
 
+### `ComponentState.CreateOptions`
+
+Represents the options that can be used to control creation of a component state.
+
+```ts
+interface CreateOptions {
+    lazy?: boolean;
+}
+```
+
+**`lazy`** - (Optional) Whether or not the `ComponentState` should be lazily resolved. If set to `true`, the component's component state will only be resolved when the `ComponentStateRef` provider is injected by the component. If set to `false`, the component's component state will be resolved regardless of if the `ComponentStateRef` provider is injected. Defaults to `false`.
+
 ### `ComponentState.create`
 
 Creates a new `FactoryProvider` that provides a [`ComponentStateRef`](#componentstateref) service for the given component class, which allows for reactive component state interactions.
 
 ```ts
-function create<ComponentT>($class: ComponentClassProvider<ComponentT>): FactoryProvider;
+function create<ComponentT>(
+    $class: ComponentClassProvider<ComponentT>,
+    options?: CreateOptions
+): FactoryProvider;
 ```
 
 **`$class`** - The component class to create the `FactoryProvider` for.
+**`options`** - (Optional) The [`CreateOptions`](#componentstatecreateoptions) for the component state.
 
 Returns a `FactoryProvider` instance to be provided on the given component class.
 
@@ -211,15 +227,29 @@ type DirectiveState<DirectiveT> = ComponentState<DirectiveT>;
 
 See [`ComponentState`](#componentstate).
 
+### `DirectiveState.CreateOptions`
+
+Alias of [`ComponentState.CreateOptions`](#componentstatecreateoptions).
+
+```ts
+type CreateOptions = ComponentState.CreateOptions;
+```
+
+See [`ComponentState.CreateOptions`](#componentstatecreateoptions).
+
 ### `DirectiveStateRef.create`
 
 Creates a new `FactoryProvider` that provides a `DirectiveStateRef` service for the given directive class, which allows for reactive directive state interactions.
 
 ```ts
-function create<DirectiveT>($class: Type<any>): FactoryProvider;
+function create<DirectiveT>(
+    $class: Type<any>,
+    options?: CreateOptions
+): FactoryProvider;
 ```
 
 **`$class`** - The directive class to create the `FactoryProvider` for.
+**`options`** - (Optional) The [`CreateOptions`](#directivestatecreateoptions) for the directive state.
 
 Returns a `FactoryProvider` instance to be provided on the given directive class.
 

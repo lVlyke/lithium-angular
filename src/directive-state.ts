@@ -6,10 +6,15 @@ export type DirectiveStateRef<DirectiveT> = ComponentStateRef<DirectiveT>;
 
 export namespace DirectiveState {
 
-    export function create<DirectiveT>($class: Type<any>): FactoryProvider {
+    export type CreateOptions = ComponentState.CreateOptions;
+
+    export function create<DirectiveT>(
+        $class: Type<any>,
+        options?: CreateOptions
+    ): FactoryProvider {
         return {
             provide: new InjectionToken<DirectiveT>($class.name),
-            useFactory: ComponentState.createFactory<DirectiveT>($class),
+            useFactory: ComponentState.createFactory<DirectiveT>($class, options),
             deps: [Injector]
         };
     }

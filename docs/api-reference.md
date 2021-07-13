@@ -47,6 +47,7 @@ function create<ComponentT>(
 ```
 
 **`$class`** - The component class to create the `FactoryProvider` for.
+
 **`options`** - (Optional) The [`CreateOptions`](#componentstatecreateoptions) for the component state.
 
 Returns a `FactoryProvider` instance to be provided on the given component class.
@@ -141,6 +142,7 @@ function set<K extends StringKey<ComponentT>, V extends ComponentT[K]>(
 ```
 
 **`stateProp`** - The state property to update. This property must not be readonly.
+
 **`value`** - The new value to update to.
 
 Returns an `Observable` that emits and completes when the value has been updated.
@@ -158,7 +160,9 @@ function subscribeTo<K extends StringKey<ComponentT>, V extends ComponentT[K]>(
 ```
 
 **`stateProp`** - The state property to receive source updates. This property must not be readonly.
+
 **`source$`** - The source `Observable` to subscribe to.
+
 **`managed`** - Whether or not the subscription lifetime should be managed. Defaults to `true`.
 
 Returns a `Subscription` representing the subscription to the source.
@@ -179,6 +183,7 @@ function sync<
 ```
 
 **`statePropA`** - The first state property to synchronize. This property must not be readonly.
+
 **`statePropB`** - The second state property to synchronize. This property must not be readonly.
 
 ### `ComponentStateRef.syncWith`
@@ -193,6 +198,7 @@ function syncWith<K extends StringKey<ComponentT>>(
 ```
 
 **`stateProp`** - The state property to synchronize. This property must not be readonly.
+
 **`source$`** - The source `Subject` to synchronize.
 
 ## `DeclareState`
@@ -249,6 +255,7 @@ function create<DirectiveT>(
 ```
 
 **`$class`** - The directive class to create the `FactoryProvider` for.
+
 **`options`** - (Optional) The [`CreateOptions`](#directivestatecreateoptions) for the directive state.
 
 Returns a `FactoryProvider` instance to be provided on the given directive class.

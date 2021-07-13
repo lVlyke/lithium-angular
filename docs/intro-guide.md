@@ -2,7 +2,7 @@
 
 This guide is designed to go over the core features of Lithium and examples of how to use them.
 
-If you are upgrading from Lithium 6.x or earlier, read through the [migration guide](/docs/lithium-7-migration-guide.md) to see how to updgrade your app to use the latest features from Lithium.
+If you are upgrading from Lithium 6.x or earlier, read through the [migration guide](/docs/lithium-7-migration-guide.md) to see how to upgrade your app to use the latest features from Lithium.
 
 The legacy intro guide for older versions of Lithium can be found [here](/docs/legacy/intro-guide.md).
 
@@ -20,7 +20,7 @@ The legacy intro guide for older versions of Lithium can be found [here](/docs/l
 
 ## Lithium vs `AsyncPipe`
 
-Angular has a built-in [async pipe](https://angular.io/api/common/AsyncPipe) that is used to automatically subscribe to observables within a template. While this works well in many cases, you are limited to [one-way in binding](https://angular.io/guide/template-syntax#one-way-in) binding of values. Child properties also cannot be accessed easily without [ugly workarounds](https://coryrylan.com/blog/angular-async-data-binding-with-ng-if-and-ng-else).
+Angular has a built-in [async pipe](https://angular.io/api/common/AsyncPipe) that is used to automatically subscribe to observables within a template. While this works well in many cases, there are limitations. Since values resolved with `async` are read-only, binding is limited to [one-way in binding](https://angular.io/guide/template-syntax#one-way-in). Child properties also cannot be accessed easily without [ugly workarounds](https://coryrylan.com/blog/angular-async-data-binding-with-ng-if-and-ng-else).
 
 Lithium works by providing a service that can be injected into your components, called [`ComponentStateRef`](#componentstate). `ComponentStateRef` manages an RxJS `BehaviorSubject` for each public state property of a component instance, and automatically synchronizes its emissions with the corresponding property value. This provides several benefits:
 
@@ -56,7 +56,7 @@ class MyComponent {
 }
 ```
 
-The `ComponentState` type represents a collection of Subjects and Observables that correspond to the public state of a component. All properties in `ComponentState` are postfixed with a `$` to denote that they are observables. As an example, let's say our component has the following properties:
+The `ComponentState` type represents a collection of Subjects and Observables that correspond to the public state of a component. All properties in `ComponentState` are postfixed with a `$` to denote that they are observables. As an example, suppose our component has the following properties:
 
 ```ts
 import { ComponentState } from '@lithiumjs/angular';
@@ -450,7 +450,7 @@ Log output:
 
 [**API reference**](/docs/api-reference.md#autopush)
 
-With AutoPush, Lithium will automatically invoke change detection on a component when a state value is changed. This allows for writing more performant components using [OnPush change detection](https://angular.io/api/core/ChangeDetectionStrategy) without the [traditional pitfalls](https://blog.angular-university.io/onpush-change-detection-how-it-works/) associated with OnPush change detection.
+With AutoPush, Lithium will automatically invoke change detection on a component when a state value is changed. This allows for writing more performant components using [OnPush change detection](https://angular.io/api/core/ChangeDetectionStrategy) without [manual change detection management](https://blog.angular-university.io/onpush-change-detection-how-it-works/) that is typically necessary for OnPush change detection.
 
 AutoPush is enabled on a component by using the ```AutoPush.enable``` function:
 

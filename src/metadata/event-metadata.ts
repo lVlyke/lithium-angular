@@ -44,12 +44,32 @@ export namespace EventMetadata {
         return Metadata.requireMetadata<InstanceBootstrapMap>(InstanceBootstrapMapSymbol, target, new Map());
     }
 
-    export function GetLifecycleRegistrationMap(target: Object): LifecycleRegistrationMap {
-        return Metadata.requireMetadata<LifecycleRegistrationMap>(LifecycleRegistrationMapSymbol, target, new Map());
+    export function GetOwnLifecycleRegistrationMap(target: Object): LifecycleRegistrationMap {
+        return Metadata.requireOwnMetadata<LifecycleRegistrationMap>(LifecycleRegistrationMapSymbol, target, new Map());
+    }
+
+    export function GetLifecycleRegistrationMap(target: any): LifecycleRegistrationMap {
+        const targetPrototype = Object.getPrototypeOf(target);
+        
+        if (targetPrototype?.name) {
+            return GetLifecycleRegistrationMap(targetPrototype);
+        } else {
+            return GetOwnLifecycleRegistrationMap(target);
+        }
+    }
+
+    export function GetOwnLifecycleCallbackMap(target: Object): LifecycleCallbackMap {
+        return Metadata.requireOwnMetadata<LifecycleCallbackMap>(LifecycleCallbackMapSymbol, target, new Map());
     }
 
     export function GetLifecycleCallbackMap(target: Object): LifecycleCallbackMap {
-        return Metadata.requireMetadata<LifecycleCallbackMap>(LifecycleCallbackMapSymbol, target, new Map());
+        const targetPrototype = Object.getPrototypeOf(target);
+        
+        if (targetPrototype?.name) {
+            return GetLifecycleCallbackMap(targetPrototype);
+        } else {
+            return GetOwnLifecycleCallbackMap(target);
+        }
     }
 
     /** @description

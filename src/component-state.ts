@@ -218,17 +218,23 @@ export namespace ComponentState {
         $class: ComponentClassProvider<ComponentT>,
         options?: CreateOptions
     ): (injector: Injector) => ComponentStateRef<ComponentT> {
-        options ??= {};
+        options ??= {
+            lazy: isForwardRef($class)
+        };
 
         if (!options!.lazy) {
-            forwardResolveClass<ComponentT>($class).then((resolvedClass) => {
-                // Generate initial component state on ngOnInit
-                updateStateOnEvent(resolvedClass, AngularLifecycleType.OnInit);
+            if (isForwardRef($class)) {
+                throw new Error("[ComponentState] A component state created with forwardRef must be created with the `lazy` flag.");
+            }
 
-                // Update the component state on afterViewInit and afterContentInit to capture dynamically initialized properties
-                updateStateOnEvent(resolvedClass, AngularLifecycleType.AfterContentInit);
-                updateStateOnEvent(resolvedClass, AngularLifecycleType.AfterViewInit);
-            });
+            const resolvedClass = resolveClass<ComponentT>($class);
+
+            // Generate initial component state on ngOnInit
+            updateStateOnEvent(resolvedClass, AngularLifecycleType.OnInit);
+
+            // Update the component state on afterViewInit and afterContentInit to capture dynamically initialized properties
+            updateStateOnEvent(resolvedClass, AngularLifecycleType.AfterContentInit);
+            updateStateOnEvent(resolvedClass, AngularLifecycleType.AfterViewInit);
         }
         
         return function (injector: Injector): ComponentStateRef<ComponentT> {
@@ -440,17 +446,6 @@ export namespace ComponentState {
 
     function isForwardRef($class: Type<any>): boolean {
         return !$class.name;
-    }
-
-    async function forwardResolveClass<ComponentT>($class: Type<any>): Promise<Type<ComponentT>> {
-        if (isForwardRef($class)) {
-            // If the given class type is a forwardRef, resolve it later
-            return await new Promise((resolve) => {
-                setTimeout(() => resolve(resolveClass($class)));
-            });
-        } else {
-            return resolveClass($class);
-        }
     }
 
     function resolveClass<ComponentT>($class: Type<any>): Type<ComponentT> {

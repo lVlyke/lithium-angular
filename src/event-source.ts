@@ -240,7 +240,7 @@ export namespace EventSource {
                 }
 
                 // Invoke all of the hook functions associated with this lifeycle event for the current component instance
-                const hookFns = EventMetadata.GetLifecycleCallbackList(targetClass, eventType);
+                const hookFns = EventMetadata.GetLifecycleCallbackList(this.constructor, eventType);
                 hookFns.forEach(hookFn => hookFn.call(this, ...args));
             }, { eventType });
         }

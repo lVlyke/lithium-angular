@@ -44,32 +44,41 @@ export namespace EventMetadata {
         return Metadata.requireMetadata<InstanceBootstrapMap>(InstanceBootstrapMapSymbol, target, new Map());
     }
 
-    export function GetOwnLifecycleRegistrationMap(target: Object): LifecycleRegistrationMap {
-        return Metadata.requireOwnMetadata<LifecycleRegistrationMap>(LifecycleRegistrationMapSymbol, target, new Map());
-    }
-
-    export function GetLifecycleRegistrationMap(target: any): LifecycleRegistrationMap {
-        const targetPrototype = Object.getPrototypeOf(target);
-        
-        if (targetPrototype?.name) {
-            return GetLifecycleRegistrationMap(targetPrototype);
-        } else {
-            return GetOwnLifecycleRegistrationMap(target);
-        }
+    export function GetLifecycleRegistrationMap(target: Object): LifecycleRegistrationMap {
+        return Metadata.requireMetadata<LifecycleRegistrationMap>(LifecycleRegistrationMapSymbol, target, new Map());
     }
 
     export function GetOwnLifecycleCallbackMap(target: Object): LifecycleCallbackMap {
         return Metadata.requireOwnMetadata<LifecycleCallbackMap>(LifecycleCallbackMapSymbol, target, new Map());
     }
 
-    export function GetLifecycleCallbackMap(target: Object): LifecycleCallbackMap {
+    export function GetLifecycleCallbackMap(target: Object): Readonly<LifecycleCallbackMap> {
+        const metadata: LifecycleCallbackMap = new Map();
+        const ownMetadata = GetOwnLifecycleCallbackMap(target);
+
+        ownMetadata.forEach((v, k) => {
+            if (!metadata.has(k)) {
+                metadata.set(k, []);
+            }
+
+            metadata.get(k)!.push(...v);
+        });
+
         const targetPrototype = Object.getPrototypeOf(target);
-        
-        if (targetPrototype?.name) {
-            return GetLifecycleCallbackMap(targetPrototype);
-        } else {
-            return GetOwnLifecycleCallbackMap(target);
+
+        if (targetPrototype) {
+            const inherittedMetadata = GetLifecycleCallbackMap(targetPrototype);
+
+            inherittedMetadata.forEach((v, k) => {
+                if (!metadata.has(k)) {
+                    metadata.set(k, []);
+                }
+
+                metadata.get(k)!.push(...v);
+            });
         }
+
+        return metadata;
     }
 
     /** @description
@@ -122,7 +131,7 @@ export namespace EventMetadata {
     }
 
     export function AddLifecycleCallback(target: Object, type: EventType, callback: (...args: any[]) => void) {
-        const map = GetLifecycleCallbackMap(target);
+        const map = GetOwnLifecycleCallbackMap(target);
 
         if (!map.has(type)) {
             map.set(type, []);
@@ -134,7 +143,7 @@ export namespace EventMetadata {
     }
 
     export function RemoveLifecycleCallback(target: Object, type: EventType, callback: (...args: any[]) => void) {
-        const map = GetLifecycleCallbackMap(target);
+        const map = GetOwnLifecycleCallbackMap(target);
 
         if (!map.has(type)) {
             return;

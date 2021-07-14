@@ -33,7 +33,11 @@ interface CreateOptions {
 }
 ```
 
-**`lazy`** - (Optional) Whether or not the `ComponentState` should be lazily resolved. If set to `true`, the component's component state will only be resolved when the `ComponentStateRef` provider is injected by the component. If set to `false`, the component's component state will be resolved regardless of if the `ComponentStateRef` provider is injected. Defaults to `false`.
+**`lazy`** - (Optional) Whether or not the `ComponentState` should be lazily resolved. If set to `true`, the component's component state will only be resolved when the `ComponentStateRef` provider is injected by the component. If set to `false`, the component's component state will be resolved regardless of if the `ComponentStateRef` provider is injected.
+
+Defaults to `false` if the `ComponentState` is created directly with a component class, otherwise defaults to `true` if the `ComponentState` is created with a component class via [`forwardRef`](https://angular.io/api/core/forwardRef).
+
+> **Note:** A `ComponentState` created with a component class via `forwardRef` must be lazy-instantiated. If `lazy` is set to `false` in this scenario, an error will be thrown.
 
 ### `ComponentState.create`
 
@@ -46,7 +50,7 @@ function create<ComponentT>(
 ): FactoryProvider;
 ```
 
-**`$class`** - The component class to create the `FactoryProvider` for.
+**`$class`** - The component class to create the `FactoryProvider` for. The component class may be passed via [`forwardRef`](https://angular.io/api/core/forwardRef).
 
 **`options`** - (Optional) The [`CreateOptions`](#componentstatecreateoptions) for the component state.
 
@@ -254,7 +258,7 @@ function create<DirectiveT>(
 ): FactoryProvider;
 ```
 
-**`$class`** - The directive class to create the `FactoryProvider` for.
+**`$class`** - The directive class to create the `FactoryProvider` for. The  directive class may be passed via [`forwardRef`](https://angular.io/api/core/forwardRef).
 
 **`options`** - (Optional) The [`CreateOptions`](#directivestatecreateoptions) for the directive state.
 

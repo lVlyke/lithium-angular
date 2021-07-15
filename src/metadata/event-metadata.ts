@@ -1,4 +1,5 @@
 import { Subject } from "rxjs";
+import type { ImmutableMap } from "../lang-utils";
 import { Metadata } from "./metadata";
 
 export type EventType = string;
@@ -44,15 +45,34 @@ export namespace EventMetadata {
         return Metadata.requireMetadata<InstanceBootstrapMap>(InstanceBootstrapMapSymbol, target, new Map());
     }
 
-    export function GetLifecycleRegistrationMap(target: Object): LifecycleRegistrationMap {
-        return Metadata.requireMetadata<LifecycleRegistrationMap>(LifecycleRegistrationMapSymbol, target, new Map());
+    export function GetOwnLifecycleRegistrationMap(target: Object): LifecycleRegistrationMap {
+        return Metadata.requireOwnMetadata<LifecycleRegistrationMap>(LifecycleRegistrationMapSymbol, target, new Map());
+    }
+
+    /** @description Gets own and inherited lifecycle registration data merged into a single Map. */
+    export function GetLifecycleRegistrationMap(target: Object): ImmutableMap<LifecycleRegistrationMap> {
+        const metadata: LifecycleRegistrationMap = new Map();
+        const ownMetadata = GetOwnLifecycleRegistrationMap(target);
+
+        ownMetadata.forEach((v, k) => metadata.set(k, v));
+
+        const targetPrototype = Object.getPrototypeOf(target);
+
+        if (targetPrototype) {
+            const inherittedMetadata = GetLifecycleRegistrationMap(targetPrototype);
+
+            inherittedMetadata.forEach((v, k) => metadata.set(k, v ?? metadata.get(k)));
+        }
+
+        return metadata;
     }
 
     export function GetOwnLifecycleCallbackMap(target: Object): LifecycleCallbackMap {
         return Metadata.requireOwnMetadata<LifecycleCallbackMap>(LifecycleCallbackMapSymbol, target, new Map());
     }
 
-    export function GetLifecycleCallbackMap(target: Object): Readonly<LifecycleCallbackMap> {
+    /** @description Gets own and inherited lifecycle callback data merged into a single Map. */
+    export function GetLifecycleCallbackMap(target: Object): ImmutableMap<LifecycleCallbackMap> {
         const metadata: LifecycleCallbackMap = new Map();
         const ownMetadata = GetOwnLifecycleCallbackMap(target);
 
@@ -81,7 +101,8 @@ export namespace EventMetadata {
         return metadata;
     }
 
-    /** @description
+    /** 
+     *  @description
      *  Gets the property subject map for the given event type from the metadata map for the given target class (or its inheritted classes).
      */
     export function GetPropertySubjectMap(type: EventType, target: Object): PropertySubjectMap {
@@ -96,7 +117,8 @@ export namespace EventMetadata {
         return subjectMap;
     }
 
-    /** @description
+    /** 
+     *  @description
      *  Gets the property subject map for the given event type from the metadata map for the given target class.
      */
     export function GetOwnPropertySubjectMap(type: EventType, target: Object): PropertySubjectMap {
@@ -111,15 +133,10 @@ export namespace EventMetadata {
         return subjectMap;
     }
 
-    export function GetLifecycleCallbackList(target: Object, type: EventType): Array<(...args: any[]) => void> {
+    export function GetLifecycleCallbackList(target: Object, type: EventType): ReadonlyArray<(...args: any[]) => void> {
         const map = GetLifecycleCallbackMap(target);
 
-        if (!map.has(type)) {
-            map.set(type, []);
-        }
-
-        Metadata.setMetadata(LifecycleCallbackMapSymbol, target, map);
-        return map.get(type)!;
+        return map.get(type) ?? [];
     }
 
     export function HasOwnEventSubjectTable(target: Object): boolean {
@@ -154,7 +171,8 @@ export namespace EventMetadata {
         Metadata.setMetadata(LifecycleCallbackMapSymbol, target, map);
     }
 
-    /** @description Copy all metadata from the source map to the target map.
+    /** 
+     *  @description Copy all metadata from the source map to the target map.
      * 
      *  Note: This mutates the target map.
      **/
@@ -181,7 +199,8 @@ export namespace EventMetadata {
         return target;
     }
 
-    /** @description Merge own and inheritted metadata into a single map.
+    /** 
+     *  @description Merge own and inheritted metadata into a single map.
      * 
      *  Note: This mutates the object's metadata.
      **/

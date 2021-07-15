@@ -12,6 +12,8 @@ export type Publicize<T extends Record<string, any>, K extends string> =
 
 export type Constructable<T, Ctor = (...args: any[]) => T> = { constructor: Ctor };
 
+export type ImmutableMap<M extends Map<unknown, unknown>> = Omit<M, "set" | "clear" | "delete">;
+
 export namespace _LangUtils {
 
     export function isNil(value: any): value is null | undefined {

@@ -206,12 +206,14 @@ export namespace EventSource {
     }
 
     function registerLifecycleEventFacade(targetClass: Type<any>, eventType: EventType) {
-        const registrationState = EventMetadata.GetLifecycleRegistrationMap(targetClass);
-
+        const registrationMap = EventMetadata.GetLifecycleRegistrationMap(targetClass);
+        
         // Register the facade function for this component lifecycle target if we haven't already
-        if (!registrationState.get(eventType)) {
+        if (!registrationMap.get(eventType)) {
+            const ownRegistrationMap = EventMetadata.GetOwnLifecycleRegistrationMap(targetClass);
+
             registerLifecycleEvent(targetClass, eventType, Facade.Create(eventType));
-            registrationState.set(eventType, true);
+            ownRegistrationMap.set(eventType, true);
         }
     }
 

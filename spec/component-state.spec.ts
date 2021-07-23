@@ -230,156 +230,159 @@ describe("Given the ComponentState.create function", () => {
                 });
             });
         } else {
-            spec.it("should return the expected provider", (params) => {
-                expect(params.createResult).toEqual(jasmine.objectContaining({
-                    provide: ComponentStateRef,
-                    useFactory: jasmine.any(Function),
-                    deps: jasmine.arrayWithExactContents([Injector])
-                } as Record<string, unknown>));
-            });
-    
-            describe("when the result is provided on an instantiated component", () => {
-            
-                spec.beforeEach((params) => {
-                    TestBed.configureTestingModule({ declarations: [params.$class] });
+            describe(`when the given component class is ${fwdRef ? "" : "NOT "}a forwardRef and is ${options?.lazy ? "" : "NOT "}explicitly lazy-initialized`, () => {
 
-                    const injector = TestBed.inject(Injector);
-
-                    const spyt = spyOn(injector, "get");
-                    
-                    spyt.withArgs(params.$class).and.throwError("EE");
-                    spyt.and.callThrough();
-    
-                    const component = TestBed.createComponent(params.$class);
-                    params.componentInstance = component.componentInstance;
-                    params.componentStateRef = component.componentRef.injector.get<ComponentStateRef<ITestComponent>>(ComponentStateRef);
+                spec.it("should return the expected provider", (params) => {
+                    expect(params.createResult).toEqual(jasmine.objectContaining({
+                        provide: ComponentStateRef,
+                        useFactory: jasmine.any(Function),
+                        deps: jasmine.arrayWithExactContents([Injector])
+                    } as Record<string, unknown>));
                 });
-    
-                spec.it("should provide a ComponentStateRef instance linked to the created component instance", (params) => {
-                    expect(params.componentStateRef).toBeDefined();
-                });
-    
-                describe("when the component's lifecycle events are completed", () => {
-    
+        
+                describe("when the result is provided on an instantiated component", () => {
+                
                     spec.beforeEach((params) => {
-                        // TODO - Test these separately
-                        params.$class.prototype.ngOnInit.call(params.componentInstance);
-                        params.$class.prototype.ngAfterContentInit.call(params.componentInstance);
-                        params.$class.prototype.ngAfterViewInit.call(params.componentInstance);
-    
-                        params.componentStateObservables = params.expectedComponentStateKeys.reduce<ITestComponentState.Watchers>((result, expectedProp) => {
-                            result[expectedProp] =  params.componentStateRef.get(expectedProp)
-                            return result;
-                        }, {} as any);
-                    });
-    
-                    spec.it("should initialize the class instance with the expected values", (params) => {
-                        veryComponentInstanceState(params);
-                    });
-    
-                    spec.it("should initialize the ComponentState instance with the expected properties", async (params) => {
-                        const componentState = await params.componentStateRef;
-    
-                        componentState.asyncSourceA$;
-                        componentState.asyncSourceB$;
-                        componentState.initializedNumberA$;
-                        componentState.namedAsyncSource$;
-                        componentState.publicNamedStringA$;
-                        componentState.publicNamedStringB$;
-                        componentState.readonlyInitializedNumberA$;
-                        componentState.readonlyInitializedNumberB$;
-                        componentState.uninitializedAndDeclaredNumberA$;
-                        componentState.uninitializedNumberA$;
-    
-                        expect(componentState).toBeDefined();
-                    });
-    
-                    spec.it("should initialize the ComponentState instance with the expected values", async (params) => {
-                        const componentState = await params.componentStateRef;
-    
-                        params.expectedComponentStateKeys.forEach(expectedProp => {
-                            if (!params.componentInstance[expectedProp] as any instanceof Observable) {
-                                const propDescriptor = Object.getOwnPropertyDescriptor(params.componentInstance, expectedProp);
-                                const isReadonlyProp = !!propDescriptor && !propDescriptor.writable && !propDescriptor.set;
-                                const asyncProp = asyncStateKey<ITestComponent>(expectedProp) as ComponentState.ReactiveStateKey<ITestComponent, ComponentState.StateKey<ITestComponent>>;
-    
-                                expect(componentState[asyncProp] instanceof Observable).toBeTruthy();
-                                expect(componentState[asyncProp] instanceof Subject).toBe(!isReadonlyProp);
-                            }
-                        });
-                    });
-    
-                    spec.it("should initialize the ComponentStateRef instance with the expected values", async (params) => {
-                        await verifyObservableState(params);
+                        TestBed.configureTestingModule({ declarations: [params.$class] });
+
+                        const injector = TestBed.inject(Injector);
+
+                        const spyt = spyOn(injector, "get");
+                        
+                        spyt.withArgs(params.$class).and.throwError("EE");
+                        spyt.and.callThrough();
+        
+                        const component = TestBed.createComponent(params.$class);
+                        params.componentInstance = component.componentInstance;
+                        params.componentStateRef = component.componentRef.injector.get<ComponentStateRef<ITestComponent>>(ComponentStateRef);
                     });
         
-                    describe("when the component state changes", () => {
+                    spec.it("should provide a ComponentStateRef instance linked to the created component instance", (params) => {
+                        expect(params.componentStateRef).toBeDefined();
+                    });
+        
+                    describe("when the component's lifecycle events are completed", () => {
         
                         spec.beforeEach((params) => {
-                            const expectedKeys = params.expectedWritableComponentStateKeys;
+                            // TODO - Test these separately
+                            params.$class.prototype.ngOnInit.call(params.componentInstance);
+                            params.$class.prototype.ngAfterContentInit.call(params.componentInstance);
+                            params.$class.prototype.ngAfterViewInit.call(params.componentInstance);
         
-                            // Change each component instance property to match the new expected values
-                            expectedKeys.forEach((expectedKey) => {
-                                const valueType = typeof params.componentInstance[expectedKey] as 'string' | 'number';
-                                const expectedValue = valueType === 'string' ? Random.string() : Random.number();
-    
-                                (params.componentInstance as any)[expectedKey] = expectedValue;
-                                (params.expectedComponentState as any)[expectedKey] = expectedValue;
-                            });
+                            params.componentStateObservables = params.expectedComponentStateKeys.reduce<ITestComponentState.Watchers>((result, expectedProp) => {
+                                result[expectedProp] =  params.componentStateRef.get(expectedProp)
+                                return result;
+                            }, {} as any);
                         });
         
-                        spec.it("should update all component state observables with the expected values", async (params) => {
-                            await verifyObservableState(params);
-                        });
-    
-                        spec.it("should sync all renamed component instance values with their declared state counterparts", (params) => {
-                            const renamedKeys = Object.keys(params.expectedNamedComponentStateKeys);
-    
-                            renamedKeys.forEach((key) => {
-                                expect(params.componentInstance[key as keyof ITestComponentState])
-                                    .toBe(params.componentInstance[params.expectedNamedComponentStateKeys[key]]);
-                            });
-                        });
-    
-                        spec.it("should sync all renamed component state values with their declared state counterparts", async (params) => {
-                            const declaredKeys = Object.keys(params.expectedNamedComponentStateKeys);
-    
-                            await Promise.all(declaredKeys.map(async (declaredKey) => {
-                                const declaredStateVal = await params.componentStateRef.get(declaredKey as ComponentState.StateKey<ITestComponentState>)
-                                    .pipe(first())
-                                    .toPromise();
-    
-                                const namedStateVal = await params.componentStateObservables[params.expectedNamedComponentStateKeys[declaredKey]]
-                                    .pipe(first())
-                                    .toPromise();
-    
-                                expect(declaredStateVal).toBe(namedStateVal);
-                            }));
-                        });
-                    });
-    
-                    describe("when async state sources are updated", () => {
-    
-                        spec.beforeEach((params) => {
-                            params.componentAsyncSourceKeys.forEach(asyncSourceKey => {
-                                const expectedValue = Random.number();
-    
-                                params.componentInstance[asyncSourceKey].next(expectedValue);
-    
-                                params.expectedWritableComponentStateKeys.forEach(expectedProp => {
-                                    if (params.expectedAsyncComponentStateKeys[expectedProp] === asyncSourceKey) {
-                                        (params.expectedComponentState as any)[expectedProp] = expectedValue;
-                                    }
-                                });
-                            });
-                        });
-    
-                        spec.it("should update the associated async properties with the latest values", (params) => {
+                        spec.it("should initialize the class instance with the expected values", (params) => {
                             veryComponentInstanceState(params);
                         });
-    
-                        spec.it("should update all component state observables with the expected values", async (params) => {
+        
+                        spec.it("should initialize the ComponentState instance with the expected properties", async (params) => {
+                            const componentState = await params.componentStateRef;
+        
+                            componentState.asyncSourceA$;
+                            componentState.asyncSourceB$;
+                            componentState.initializedNumberA$;
+                            componentState.namedAsyncSource$;
+                            componentState.publicNamedStringA$;
+                            componentState.publicNamedStringB$;
+                            componentState.readonlyInitializedNumberA$;
+                            componentState.readonlyInitializedNumberB$;
+                            componentState.uninitializedAndDeclaredNumberA$;
+                            componentState.uninitializedNumberA$;
+        
+                            expect(componentState).toBeDefined();
+                        });
+        
+                        spec.it("should initialize the ComponentState instance with the expected values", async (params) => {
+                            const componentState = await params.componentStateRef;
+        
+                            params.expectedComponentStateKeys.forEach(expectedProp => {
+                                if (!params.componentInstance[expectedProp] as any instanceof Observable) {
+                                    const propDescriptor = Object.getOwnPropertyDescriptor(params.componentInstance, expectedProp);
+                                    const isReadonlyProp = !!propDescriptor && !propDescriptor.writable && !propDescriptor.set;
+                                    const asyncProp = asyncStateKey<ITestComponent>(expectedProp) as ComponentState.ReactiveStateKey<ITestComponent, ComponentState.StateKey<ITestComponent>>;
+        
+                                    expect(componentState[asyncProp] instanceof Observable).toBeTruthy();
+                                    expect(componentState[asyncProp] instanceof Subject).toBe(!isReadonlyProp);
+                                }
+                            });
+                        });
+        
+                        spec.it("should initialize the ComponentStateRef instance with the expected values", async (params) => {
                             await verifyObservableState(params);
+                        });
+            
+                        describe("when the component state changes", () => {
+            
+                            spec.beforeEach((params) => {
+                                const expectedKeys = params.expectedWritableComponentStateKeys;
+            
+                                // Change each component instance property to match the new expected values
+                                expectedKeys.forEach((expectedKey) => {
+                                    const valueType = typeof params.componentInstance[expectedKey] as 'string' | 'number';
+                                    const expectedValue = valueType === 'string' ? Random.string() : Random.number();
+        
+                                    (params.componentInstance as any)[expectedKey] = expectedValue;
+                                    (params.expectedComponentState as any)[expectedKey] = expectedValue;
+                                });
+                            });
+            
+                            spec.it("should update all component state observables with the expected values", async (params) => {
+                                await verifyObservableState(params);
+                            });
+        
+                            spec.it("should sync all renamed component instance values with their declared state counterparts", (params) => {
+                                const renamedKeys = Object.keys(params.expectedNamedComponentStateKeys);
+        
+                                renamedKeys.forEach((key) => {
+                                    expect(params.componentInstance[key as keyof ITestComponentState])
+                                        .toBe(params.componentInstance[params.expectedNamedComponentStateKeys[key]]);
+                                });
+                            });
+        
+                            spec.it("should sync all renamed component state values with their declared state counterparts", async (params) => {
+                                const declaredKeys = Object.keys(params.expectedNamedComponentStateKeys);
+        
+                                await Promise.all(declaredKeys.map(async (declaredKey) => {
+                                    const declaredStateVal = await params.componentStateRef.get(declaredKey as ComponentState.StateKey<ITestComponentState>)
+                                        .pipe(first())
+                                        .toPromise();
+        
+                                    const namedStateVal = await params.componentStateObservables[params.expectedNamedComponentStateKeys[declaredKey]]
+                                        .pipe(first())
+                                        .toPromise();
+        
+                                    expect(declaredStateVal).toBe(namedStateVal);
+                                }));
+                            });
+                        });
+        
+                        describe("when async state sources are updated", () => {
+        
+                            spec.beforeEach((params) => {
+                                params.componentAsyncSourceKeys.forEach(asyncSourceKey => {
+                                    const expectedValue = Random.number();
+        
+                                    params.componentInstance[asyncSourceKey].next(expectedValue);
+        
+                                    params.expectedWritableComponentStateKeys.forEach(expectedProp => {
+                                        if (params.expectedAsyncComponentStateKeys[expectedProp] === asyncSourceKey) {
+                                            (params.expectedComponentState as any)[expectedProp] = expectedValue;
+                                        }
+                                    });
+                                });
+                            });
+        
+                            spec.it("should update the associated async properties with the latest values", (params) => {
+                                veryComponentInstanceState(params);
+                            });
+        
+                            spec.it("should update all component state observables with the expected values", async (params) => {
+                                await verifyObservableState(params);
+                            });
                         });
                     });
                 });

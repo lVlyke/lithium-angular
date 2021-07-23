@@ -240,45 +240,49 @@ export namespace ComponentState {
         return function (injector: Injector): ComponentStateRef<ComponentT> {
             const stateRef = new ComponentStateRef<ComponentT>((resolve) => {
                 const resolvedClass = resolveClass<ComponentT>($class);
+                const delayedInitializer = setTimeout(() => {
+                    // If the stateRef has not been initialized by the end of the current execution frame (e.g. the service was 
+                    // injected after component's lifecycle events were invoked), we need to resolve it now.
+
+                    const instance: any = injector.get(resolvedClass);
+                    stateRef.componentInstance = instance;
+
+                    updateState(_requireComponentState(instance), instance);
+
+                    // Resolve the component state
+                    resolve(instance[COMPONENT_STATE_IDENTITY]);
+                });
 
                 if (options!.lazy) {                
                     // Generate initial component state on ngOnInit
                     updateStateOnEvent(resolvedClass, AngularLifecycleType.OnInit, injector, (instance) => {
+                        clearTimeout(delayedInitializer);
+
                         stateRef.componentInstance = instance;
                     });
 
                     // Update the component state on afterViewInit and afterContentInit to capture dynamically initialized properties
                     updateStateOnEvent(resolvedClass, AngularLifecycleType.AfterContentInit, injector);
                     updateStateOnEvent(resolvedClass, AngularLifecycleType.AfterViewInit, injector, (instance) => {
+                        clearTimeout(delayedInitializer);
+
                         // Resolve the component state
                         resolve(instance[COMPONENT_STATE_IDENTITY]);
                     });
                 } else {
                     updateOnEvent(resolvedClass, AngularLifecycleType.OnInit, (instance: any) => {
+                        clearTimeout(delayedInitializer);
+
                         stateRef.componentInstance = instance;
                     }, injector);
 
                     updateOnEvent(resolvedClass, AngularLifecycleType.AfterViewInit, (instance: any) => {
+                        clearTimeout(delayedInitializer);
+
                         // Resolve the component state
                         resolve(instance[COMPONENT_STATE_IDENTITY]);
                     }, injector);
                 }
-
-                // Try to resolve the component instance immediately. This will fail if the ComponentStateRef provider has been 
-                // injected directly in the component's constructor, but is neccesary if the ComponentStateRef provider has been
-                // injected after the component's lifecycle events were already invoked.
-                try {
-                    const instance: any = injector.get(resolvedClass, Injector.THROW_IF_NOT_FOUND);
-
-                    stateRef.componentInstance = instance;
-
-                    if (options!.lazy) {
-                        updateState(_requireComponentState(instance), instance);
-                    }
-
-                    // Resolve the component state
-                    resolve(instance[COMPONENT_STATE_IDENTITY]);
-                } catch (_e) {}
             });
 
             return stateRef;

@@ -25,23 +25,23 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentState<Compon
         stateProp: ComponentState.ReadableKey<ComponentT, K>
     ): Observable<ComponentT[K]> {
         const stateKey = ComponentState.stateKey<ComponentT, K>(stateProp);
-        const pendingSource$ = this.pendingState?.[stateKey];
+        const resolvedSource$ = this.resolvedState?.[stateKey];
 
-        if (pendingSource$) {
-            return pendingSource$ as unknown as Observable<ComponentT[K]>;
-        }
-        
-        return from(this).pipe(
-            mergeMap((state: ComponentState<ComponentT>) => {
-                if (!state[stateKey]) {
-                    return throwError(
+        if (resolvedSource$) {
+            return resolvedSource$ as unknown as Observable<ComponentT[K]>;
+        } else {
+            return this.state().pipe(
+                mergeMap((state: ComponentState<ComponentT>) => {
+                    if (!state[stateKey]) {
+                        return throwError(
 `[ComponentStateRef] Failed to get state for component property "${stateProp}". Ensure that this property is explicitly initialized (or declare it with @DeclareState()).`
-                    );
-                }
-
-                return state[stateKey];
-            })
-        ) as Observable<ComponentT[K]>;
+                        );
+                    }
+    
+                    return state[stateKey];
+                })
+            ) as Observable<ComponentT[K]>;
+        }
     }
 
     public getAll<
@@ -56,14 +56,14 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentState<Compon
     ): Observable<void> {
         const stateKey = ComponentState.stateKey<ComponentT, K>(stateProp);
         const result$ = new ReplaySubject<void>(1);
-        const pendingSource$ = this.pendingState?.[stateKey] as unknown as Subject<V>;
+        const resolvedSource$ = this.resolvedState?.[stateKey] as unknown as Subject<V>;
 
-        if (pendingSource$) {
-            pendingSource$.next(value);
+        if (resolvedSource$) {
+            resolvedSource$.next(value);
             result$.next();
             result$.complete();
         } else {
-            from(this).pipe(
+            this.state().pipe(
                 map((state) => {
                     const stateSubject$ = state[ComponentState.stateKey<ComponentT, K>(stateProp)] as any as Subject<V>;
     
@@ -95,7 +95,7 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentState<Compon
     ): Subscription {
         let managedSource$: Observable<V>;
         if (managed) {
-            managedSource$ = from(this).pipe(
+            managedSource$ = this.state().pipe(
                 mergeMap(() => _createManagedSource<ComponentT, V, Observable<V>>(source$, this.componentInstance))
             );
         } else {
@@ -148,7 +148,7 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentState<Compon
     ): void {
         let syncing = false;
         
-        from(this).pipe(
+        this.state().pipe(
             switchMap(() => merge(
                 this.get(stateProp).pipe(skip(1)),
                 _createManagedSource(source$, this.componentInstance)
@@ -164,7 +164,7 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentState<Compon
         ).subscribe();
     }
 
-    private get pendingState(): ComponentState<ComponentT> | undefined {
+    private get resolvedState(): ComponentState<ComponentT> | undefined {
         return (this.componentInstance as any)?.[COMPONENT_STATE_IDENTITY];
     }
 }
@@ -179,7 +179,7 @@ export namespace ComponentState {
         K extends string ? AsyncSourceKey<ComponentT, K> : never;
 
     type QualifiedStateKey<ComponentT, K extends keyof ComponentT = keyof ComponentT> =
-        K extends `${infer _K}$` ? (ComponentT[K] extends Observable<unknown> ? never : K) : K;
+        K extends `${infer _K}$` ? never : K;
 
     export type StateKey<ComponentT> = keyof {
         [K in keyof ComponentT as QualifiedStateKey<ComponentT, K>]: never
@@ -250,7 +250,7 @@ export namespace ComponentState {
                     // Update the component state on afterViewInit and afterContentInit to capture dynamically initialized properties
                     updateStateOnEvent(resolvedClass, AngularLifecycleType.AfterContentInit, injector);
                     updateStateOnEvent(resolvedClass, AngularLifecycleType.AfterViewInit, injector, (instance) => {
-                        // Resolve the finalized state
+                        // Resolve the component state
                         resolve(instance[COMPONENT_STATE_IDENTITY]);
                     });
                 } else {
@@ -259,10 +259,26 @@ export namespace ComponentState {
                     }, injector);
 
                     updateOnEvent(resolvedClass, AngularLifecycleType.AfterViewInit, (instance: any) => {
-                        // Resolve the finalized state
+                        // Resolve the component state
                         resolve(instance[COMPONENT_STATE_IDENTITY]);
                     }, injector);
                 }
+
+                // Try to resolve the component instance immediately. This will fail if the ComponentStateRef provider has been 
+                // injected directly in the component's constructor, but is neccesary if the ComponentStateRef provider has been
+                // injected after the component's lifecycle events were already invoked.
+                try {
+                    const instance: any = injector.get(resolvedClass, Injector.THROW_IF_NOT_FOUND);
+
+                    stateRef.componentInstance = instance;
+
+                    if (options!.lazy) {
+                        updateState(_requireComponentState(instance), instance);
+                    }
+
+                    // Resolve the component state
+                    resolve(instance[COMPONENT_STATE_IDENTITY]);
+                } catch (_e) {}
             });
 
             return stateRef;
@@ -279,14 +295,6 @@ export namespace ComponentState {
         return asyncStateKey<ComponentT, K>(key) as any;
     }
 
-    export function _initComponentState<T extends { [COMPONENT_STATE_IDENTITY]?: Partial<ComponentState<T>> } & Record<any, any>>(
-        instance: T,
-        initValue: Partial<ComponentState<T>> = {}
-    ): Partial<ComponentState<T>> {
-        instance[COMPONENT_STATE_IDENTITY] ??= initValue;
-        return instance[COMPONENT_STATE_IDENTITY]!;
-    }
-
     function updateStateOnEvent<ComponentT>(
         $class: Type<ComponentT>,
         event: AngularLifecycleType,
@@ -294,7 +302,7 @@ export namespace ComponentState {
         onComplete?: (instance: any) => void
     ): void {
         updateOnEvent($class, event, (instance: any) => {
-            updateState(_initComponentState(instance), instance);
+            updateState(_requireComponentState(instance), instance);
 
             if (onComplete) {
                 onComplete(instance);
@@ -464,6 +472,14 @@ export namespace ComponentState {
     function getManagedKeys<T extends Constructable<any, any>>(instance: T): ComponentStateMetadata.ManagedPropertyList<T> {
         return ComponentStateMetadata.GetInheritedManagedPropertyList<T>(instance.constructor);
     }
+}
+
+export function _requireComponentState<T extends { [COMPONENT_STATE_IDENTITY]?: Partial<ComponentState<T>> } & Record<any, any>>(
+    instance: T,
+    initValue: Partial<ComponentState<T>> = {}
+): Partial<ComponentState<T>> {
+    instance[COMPONENT_STATE_IDENTITY] ??= initValue;
+    return instance[COMPONENT_STATE_IDENTITY]!;
 }
 
 function _createManagedSource<ComponentT, T, S$ extends Observable<T>>(source$: S$, instance: ComponentT): Subject<T> {

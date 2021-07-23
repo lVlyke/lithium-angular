@@ -4,7 +4,7 @@ import { InputBuilder, Random, Spec, Template } from "detest-bdd";
 import { BehaviorSubject, combineLatest, Observable, Subject } from "rxjs";
 import { first, isEmpty } from "rxjs/operators";
 import { firstSync } from "./utils/first-sync";
-import { ComponentState, ComponentStateRef } from "../src/component-state";
+import { ComponentState, ComponentStateRef, _requireComponentState } from "../src/component-state";
 import { DeclareState } from "../src/declare-state";
 import { AsyncState } from "../src/async-state";
 import { asyncStateKey } from "../src/metadata/component-state-metadata";
@@ -34,7 +34,6 @@ interface ITestComponentState<T = any> {
 }
 
 interface ITestComponent<T = any> extends ITestComponentState<T> {
-    readonly stateRef: ComponentStateRef<ITestComponent<T>>;
 
     ngOnDestroy(): void;
 }
@@ -191,10 +190,6 @@ describe("Given the ComponentState.create function", () => {
                     @DeclareState('publicNamedGenericB')
                     private  _namedGenericB: T = params.expectedComponentState.publicNamedGenericB;
 
-                    constructor (
-                        public readonly stateRef: ComponentStateRef<TestComponent<T>>
-                    ) {}
-
                     @DeclareState()
                     public get readonlyInitializedNumberA(): number {
                         return params.expectedComponentState.readonlyInitializedNumberA;
@@ -247,9 +242,17 @@ describe("Given the ComponentState.create function", () => {
             
                 spec.beforeEach((params) => {
                     TestBed.configureTestingModule({ declarations: [params.$class] });
+
+                    const injector = TestBed.inject(Injector);
+
+                    const spyt = spyOn(injector, "get");
+                    
+                    spyt.withArgs(params.$class).and.throwError("EE");
+                    spyt.and.callThrough();
     
-                    params.componentInstance = TestBed.createComponent(params.$class).componentInstance;
-                    params.componentStateRef = params.componentInstance?.stateRef;
+                    const component = TestBed.createComponent(params.$class);
+                    params.componentInstance = component.componentInstance;
+                    params.componentStateRef = component.componentRef.injector.get<ComponentStateRef<ITestComponent>>(ComponentStateRef);
                 });
     
                 spec.it("should provide a ComponentStateRef instance linked to the created component instance", (params) => {
@@ -444,7 +447,7 @@ describe("The ComponentStateRef class", () => {
         });
         params.stateRef.componentInstance = params.componentInstance;
 
-        ComponentState._initComponentState(params.componentInstance, params.expectedComponentStateObject);
+        _requireComponentState(params.componentInstance, params.expectedComponentStateObject);
 
         // TODO - Pick these randomly
         params.expectedComponentStateProperty = "initializedNumberA";
@@ -949,7 +952,6 @@ describe("The ComponentStateRef class", () => {
             publicNamedGenericA$: new BehaviorSubject(params.expectedComponentState.publicNamedGenericA),
             publicNamedGenericB$: new BehaviorSubject(params.expectedComponentState.publicNamedGenericB),
             uninitializedNumberA$: new BehaviorSubject(params.expectedComponentState.uninitializedNumberA),
-            stateRef$: undefined!,
             ngOnDestroy$: undefined!
         };
     }

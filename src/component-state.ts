@@ -1,7 +1,7 @@
 import type { Constructable, IfEquals, IfReadonly, StringKey } from "./lang-utils";
 import type { AsyncSourceKey } from "./metadata";
 import { FactoryProvider, InjectFlags, Injector, resolveForwardRef, Type } from "@angular/core";
-import { combineLatest, from, merge, Observable, ReplaySubject, Subject, Subscription, throwError } from "rxjs";
+import { combineLatest, forkJoin, from, merge, Observable, of, ReplaySubject, Subject, Subscription, throwError } from "rxjs";
 import { distinctUntilChanged, filter, map, mergeMap, skip, switchMap, tap } from "rxjs/operators";
 import { AutoPush } from "./autopush";
 import { ManagedBehaviorSubject, ManagedObservable, ManagedReplaySubject } from "./managed-observable";
@@ -145,20 +145,47 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentState<Compon
     public syncWith<K extends StringKey<ComponentT>>(
         stateProp: ComponentState.WritableKey<ComponentT, K>,
         source$: Subject<ComponentT[K]>
+    ): void;
+
+    public syncWith<
+        ComponentT2,
+        K1 extends StringKey<ComponentT>,
+        K2 extends StringKey<ComponentT2>,
+        V extends IfEquals<ComponentT[K1], ComponentT2[K2]> extends true ? ComponentT[K1] & ComponentT2[K2] : never
+    >(
+        stateProp: V extends never ? never : ComponentState.WritableKey<ComponentT, K1>,
+        sourceState: ComponentStateRef<ComponentT2>,
+        sourceProp: V extends never ? never : ComponentState.WritableKey<ComponentT2, K2>
+    ): void;
+    
+    public syncWith<
+        ComponentT2,
+        K1 extends StringKey<ComponentT>,
+        K2 extends StringKey<ComponentT2>,
+    >(
+        stateProp: ComponentState.WritableKey<ComponentT, K1>,
+        source: Subject<ComponentT[K1]> | ComponentStateRef<ComponentT2>,
+        sourceProp?: ComponentState.WritableKey<ComponentT2, K2>
     ): void {
         let syncing = false;
         
         this.state().pipe(
             switchMap(() => merge(
                 this.get(stateProp).pipe(skip(1)),
-                _createManagedSource(source$, this.componentInstance)
+                source instanceof Subject
+                    ? _createManagedSource(source, this.componentInstance)
+                    : source.get(sourceProp!)
             )),
             distinctUntilChanged(),
             filter(() => !syncing),
             tap(() => syncing = true),
             mergeMap((value) => {
-                source$.next(value as ComponentT[K]);
-                return this.set(stateProp, value as ComponentT[K]);
+                return forkJoin([
+                    source instanceof Subject
+                        ? of(source!.next(value as ComponentT[K1]))
+                        : source.set<K2, ComponentT2[K2]>(sourceProp!, value as ComponentT2[K2]),
+                    this.set(stateProp, value as ComponentT[K1])
+                ]);
             }),
             tap(() => syncing = false)
         ).subscribe();

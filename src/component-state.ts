@@ -17,10 +17,20 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentState<Compon
 
     public componentInstance!: ComponentT;
 
+    /**
+     * @description Resolves the `ComponentState` instance for this reference.
+     * @returns An `Observable` that emits the `ComponentState` instance for this reference.
+     */
     public state(): Observable<ComponentState<ComponentT>> {
         return from(this);
     }
 
+    /**
+     * @description Returns an `Observable` that represents the current value of the given state property and emits whenever the value of the given state
+     * property is changed.
+     * @param stateProp - The state property to observe.
+     * @returns An `Observable` that emits the value of the given state property and re-emits when the value is changed.
+     */
     public get<K extends StringKey<ComponentT>>(
         stateProp: ComponentState.ReadableKey<ComponentT, K>
     ): Observable<ComponentT[K]> {
@@ -44,12 +54,25 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentState<Compon
         }
     }
 
+    /**
+     * @description Returns an array of `Observable`s that represents the current value for each given state property. Each `Observable` emits whenever a
+     * value of the corresponding given state property is changed.
+     * @param stateProps - The state properties to observe.
+     * @returns An array of `Observable`s that represents the current value for each given state property and re-emits when the corresponding value is
+     * changed.
+     */
     public getAll<
         K extends Array<ComponentState.ReadableKey<ComponentT, StringKey<ComponentT>>>
     >(...stateProps: K): ComponentState.StateSelector<ComponentT, K> {
         return stateProps.map(stateProp => this.get(stateProp)) as ComponentState.StateSelector<ComponentT, K>;
     }
 
+    /**
+     * @description Updates the value of the given state property with the given value. Equivalent to assigning to the component state property directly.
+     * @param stateProp - The state property to update. This property must not be readonly.
+     * @param value - The new value to update to.
+     * @returns An `Observable` that emits and completes when the value has been updated.
+     */
     public set<K extends StringKey<ComponentT>, V extends ComponentT[K]>(
         stateProp: ComponentState.WritableKey<ComponentT, K>,
         value: V
@@ -88,6 +111,14 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentState<Compon
         return result$;
     }
 
+    /**
+     * @description Subscribes the given state property to the given source `Observable`. If `managed` is set to true, the lifetime of the subscription will
+     * be managed and cleaned up when the component is destroyed.
+     * @param stateProp - The state property to receive source updates. This property must not be readonly.
+     * @param source$ - The source `Observable` to subscribe to.
+     * @param managed - Whether or not the subscription lifetime should be managed. Defaults to `true`.
+     * @returns A `Subscription` representing the subscription to the source.
+     */
     public subscribeTo<K extends StringKey<ComponentT>, V extends ComponentT[K]>(
         stateProp: ComponentState.WritableKey<ComponentT, K>,
         source$: Observable<V>,
@@ -108,10 +139,10 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentState<Compon
     }
 
     /**
-     * @description Synchronizes the state of `statePropA` and `statePropB` such that any changes from `statePropA` will be propagated to `statePropB`
-     * and vice versa. The initial state value of `statePropA` is used.
-     * @param statePropA - A writable state property.
-     * @param statePropB - A writable state property.
+     * @description Synchronizes the values of the given state properties such that any changes from one state property will be propagated to the
+     * other state property. The initial value of the first given state property is used.
+     * @param statePropA - The first state property to synchronize. This property must not be readonly.
+     * @param statePropB - The second state property to synchronize. This property must not be readonly.
      */
     public sync<
         K1 extends StringKey<ComponentT>,
@@ -137,16 +168,23 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentState<Compon
     }
 
     /**
-     * @description Synchronizes the state of `stateProp` and `source$` such that any changes from `stateProp` will be propagated to `source$` and
-     * vice versa. The initial state value of `source$` is used.
-     * @param stateProp - A writable state property.
-     * @param source$ - A Subject to synchronize with.
+     * @description Synchronizes the values of the given state property and source `Subject` such that any changes from the state property will be
+     * propagated to the source `Subject` and vice versa. The initial value of the source `Subject` is used.
+     * @param stateProp - The state property to synchronize. This property must not be readonly.
+     * @param source$ - The source `Subject` to synchronize with.
      */
     public syncWith<K extends StringKey<ComponentT>>(
         stateProp: ComponentState.WritableKey<ComponentT, K>,
         source$: Subject<ComponentT[K]>
     ): void;
 
+    /**
+     * @description Synchronizes the state of `stateProp` and `sourceProp`, a property from another `ComponentStateRef`, such that any changes from 
+     * `stateProp` will be propagated to `sourceProp` and vice versa. The initial state value of `sourceProp` is used.
+     * @param stateProp - The state property to synchronize. This property must not be readonly.
+     * @param sourceState - The source `ComponentStateRef` instance.
+     * @param sourceProp - The source state property from `sourceState` to synchronize with. This property must not be readonly.
+     */
     public syncWith<
         ComponentT2,
         K1 extends StringKey<ComponentT>,

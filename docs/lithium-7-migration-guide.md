@@ -347,7 +347,7 @@ class TodoListComponent {
     ...
 
     constructor(
-        stateRef, ComponentStateRef<TodoListComponent>,
+        stateRef: ComponentStateRef<TodoListComponent>,
         sessionManager: SessionManager
     ) {
         stateRef.subscribeTo('user', sessionManager.user$);
@@ -367,12 +367,12 @@ import { ComponentState, ComponentStateRef, DeclareState } from '@lithiumjs/angu
 class TodoListComponent {
 
     @DeclareState()
-    public readonly user!: User;
+    public user!: User;
 
     ...
 
     constructor(
-        stateRef, ComponentStateRef<TodoListComponent>,
+        stateRef: ComponentStateRef<TodoListComponent>,
         sessionManager: SessionManager
     ) {
         // Assumes sessionManager.user$ is a `Subject`
@@ -381,7 +381,36 @@ class TodoListComponent {
 }
 ```
 
-Now `sessionManager.user$` will emit whenever we update the `user` property in our component.
+Now `sessionManager.user$` will emit whenever we update the `user` property in this component, and vice versa.
+
+If the source of the `Alias` is another property from a `ComponentStateRef`, we can pass it into the `syncWith` method:
+
+```ts
+import { ComponentState, ComponentStateRef, DeclareState } from '@lithiumjs/angular';
+
+@Component({
+    ...
+    providers: [ComponentState.create(TodoListComponent)]
+})
+class TodoListComponent {
+
+    @DeclareState()
+    public user!: User;
+
+    ...
+
+    constructor(
+        @SkipSelf() parentComponent: ParentComponent,
+        stateRef: ComponentStateRef<TodoListComponent>,
+        sessionManager: SessionManager
+    ) {
+        // Assumes parentComponent.stateRef exists and componet has a `user` property
+        stateRef.syncWith('user', parentComponent.stateRef, 'user');
+    }
+}
+```
+
+Now `parentComponent.user` will be updated whenever we update the `user` property in this component, and vice versa.
 
 #### Replacing @StateEmitter.From usage
 

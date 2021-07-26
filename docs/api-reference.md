@@ -99,6 +99,17 @@ class ComponentStateRef<ComponentT> extends Promise<ComponentState<ComponentT>> 
         stateProp: ComponentState.WritableKey<ComponentT, K>,
         source$: Subject<ComponentT[K]>
     ): void;
+
+    public syncWith<
+        ComponentT2,
+        K1 extends StringKey<ComponentT>,
+        K2 extends StringKey<ComponentT2>,
+        V extends IfEquals<ComponentT[K1], ComponentT2[K2]> extends true ? ComponentT[K1] & ComponentT2[K2] : never
+    >(
+        stateProp: V extends never ? never : ComponentState.WritableKey<ComponentT, K1>,
+        sourceState: ComponentStateRef<ComponentT2>,
+        sourceProp: V extends never ? never : ComponentState.WritableKey<ComponentT2, K2>
+    ): void;
 }
 ```
 
@@ -167,7 +178,7 @@ function subscribeTo<K extends StringKey<ComponentT>, V extends ComponentT[K]>(
 
 **`source$`** - The source `Observable` to subscribe to.
 
-**`managed`** - Whether or not the subscription lifetime should be managed. Defaults to `true`.
+**`managed`** - (Optional) Whether or not the subscription lifetime should be managed. Defaults to `true`.
 
 Returns a `Subscription` representing the subscription to the source.
 
@@ -192,8 +203,6 @@ function sync<
 
 ### `ComponentStateRef.syncWith`
 
-Synchronizes the values of the given state property and source `Subject` such that any changes from the state property will be propagated to the source `Subject` and vice versa. The initial value of the source `Subject` is used.
-
 ```ts
 function syncWith<K extends StringKey<ComponentT>>(
     stateProp: ComponentState.WritableKey<ComponentT, K>,
@@ -201,9 +210,32 @@ function syncWith<K extends StringKey<ComponentT>>(
 ): void;
 ```
 
+Synchronizes the values of the given state property and source `Subject` such that any changes from the state property will be propagated to the source `Subject` and vice versa. The initial value of the source `Subject` is used.
+
 **`stateProp`** - The state property to synchronize. This property must not be readonly.
 
-**`source$`** - The source `Subject` to synchronize.
+**`source$`** - The source `Subject` to synchronize with.
+
+```ts
+function syncWith<
+    ComponentT2,
+    K1 extends StringKey<ComponentT>,
+    K2 extends StringKey<ComponentT2>,
+    V extends IfEquals<ComponentT[K1], ComponentT2[K2]> extends true ? ComponentT[K1] & ComponentT2[K2] : never
+>(
+    stateProp: V extends never ? never : ComponentState.WritableKey<ComponentT, K1>,
+    sourceState: ComponentStateRef<ComponentT2>,
+    sourceProp: V extends never ? never : ComponentState.WritableKey<ComponentT2, K2>
+): void;
+```
+
+Synchronizes the state of `stateProp` and `sourceProp`, a property from another `ComponentStateRef`, such that any changes from `stateProp` will be propagated to `sourceProp` and vice versa. The initial state value of `sourceProp` is used.
+
+**`stateProp`** - The state property to synchronize. This property must not be readonly.
+
+**`sourceState`** - The source `ComponentStateRef` instance.
+
+**`sourceProp`** - The source state property from `sourceState` to synchronize with. This property must not be readonly.
 
 ## `DeclareState`
 

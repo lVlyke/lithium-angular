@@ -422,6 +422,8 @@ describe("The ComponentStateRef class", () => {
         expectedSetValue: any;
         expectedInitialSyncValue: any;
         expectedSyncWithSubject: Subject<any>;
+        expectedSyncWithSourceComponentStateRef: ComponentStateRef<ITestComponent>;
+        expectedSyncWithSourceProperty: keyof ITestComponentState & ComponentState.StateKey<ITestComponentState>;
         resolveStateRef: (state: ComponentState<ITestComponent<any>>) => void;
         rejectStateRef: (e: any) => void;
         subscribeToSource$: Subject<any>;
@@ -931,6 +933,75 @@ describe("The ComponentStateRef class", () => {
                             .toPromise();
     
                         const currentValueB = await params.expectedSyncWithSubject
+                            .pipe(first())
+                            .toPromise();
+    
+                        expect(currentValueA).toBe(currentValueB);
+                    });
+                });
+            });
+
+            describe("when called with the given property and source ComponentStateRef property to sync", () => {
+
+                spec.beforeEach(async (params) => {
+                    params.expectedSyncWithSourceProperty = "publicNamedStringB"; // TODO
+                    params.expectedSyncWithSourceComponentStateRef = params.stateRef;
+                    params.expectedInitialSyncValue = await params.expectedSyncWithSourceComponentStateRef
+                        .get(params.expectedSyncWithSourceProperty)
+                        .pipe(first())
+                        .toPromise();
+
+                    params.stateRef.syncWith<ITestComponent, keyof ITestComponentState, keyof ITestComponentState, string>(
+                        params.expectedComponentStateProperty,
+                        params.expectedSyncWithSourceComponentStateRef,
+                        params.expectedSyncWithSourceProperty
+                    );
+                });
+
+                spec.it("should initialize the given property and the source property to the value of the source property", async (params) => {
+                    const currentValueA = await params.stateRef.get(params.expectedComponentStateProperty)
+                        .pipe(first())
+                        .toPromise();
+
+                    const currentValueB = await params.expectedSyncWithSourceComponentStateRef.get(params.expectedSyncWithSourceProperty)
+                        .pipe(first())
+                        .toPromise();
+
+                    expect(currentValueA).toBe(params.expectedInitialSyncValue);
+                    expect(currentValueB).toBe(params.expectedInitialSyncValue);
+                });
+
+                describe("when the property value is updated", () => {
+
+                    spec.beforeEach(async (params) => {
+                        params.stateRef.set(params.expectedComponentStateProperty, Random.string(10));
+                    });
+
+                    spec.it("should set the given property and the source property to the new value", async (params) => {
+                        const currentValueA = await params.stateRef.get(params.expectedComponentStateProperty)
+                            .pipe(first())
+                            .toPromise();
+    
+                        const currentValueB = await params.expectedSyncWithSourceComponentStateRef.get(params.expectedSyncWithSourceProperty)
+                            .pipe(first())
+                            .toPromise();
+    
+                        expect(currentValueB).toBe(currentValueA);
+                    });
+                });
+
+                describe("when the source property emits a new value", () => {
+
+                    spec.beforeEach((params) => {
+                        params.expectedSyncWithSourceComponentStateRef.set(params.expectedSyncWithSourceProperty, Random.string(15));
+                    });
+
+                    spec.it("should set the given property and the source property to the new value", async (params) => {
+                        const currentValueA = await params.stateRef.get(params.expectedComponentStateProperty)
+                            .pipe(first())
+                            .toPromise();
+    
+                        const currentValueB = await params.expectedSyncWithSourceComponentStateRef.get(params.expectedSyncWithSourceProperty)
                             .pipe(first())
                             .toPromise();
     

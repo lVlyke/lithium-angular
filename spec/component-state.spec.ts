@@ -4,7 +4,7 @@ import { InputBuilder, Random, Spec, Template } from "detest-bdd";
 import { BehaviorSubject, combineLatest, Observable, Subject } from "rxjs";
 import { first, isEmpty } from "rxjs/operators";
 import { firstSync } from "./utils/first-sync";
-import { ComponentState, ComponentStateRef, _requireComponentState } from "../src/component-state";
+import { ComponentState, ComponentStateRef, stateTokenFor, createComponentState, _requireComponentState } from "../src/component-state";
 import { DeclareState } from "../src/declare-state";
 import { AsyncState } from "../src/async-state";
 import { asyncStateKey } from "../src/metadata/component-state-metadata";
@@ -55,7 +55,7 @@ namespace ITestComponentState {
 }
 
 
-describe("Given the ComponentState.create function", () => {
+describe("Given the createComponentState function", () => {
     interface SpecParams {
         $class: Type<ITestComponent>;
         expectedComponentState: ITestComponentState;
@@ -148,7 +148,7 @@ describe("Given the ComponentState.create function", () => {
 
             try {
                 @Component({
-                    providers: [params.createResult = ComponentState.create(fwdRef ? forwardRef(() => TestComponent) : TestComponent, options)],
+                    providers: [params.createResult = createComponentState(fwdRef ? forwardRef(() => TestComponent) : TestComponent, options)],
                     template: ""
                 })
                 class TestComponent<T> implements ITestComponent<T> {
@@ -407,6 +407,29 @@ describe("Given the ComponentState.create function", () => {
             expect(params.componentInstance[expectedProp]).toEqual(params.expectedComponentState[expectedProp]);
         });
     }
+});
+
+describe("Given the stateTokenFor function", () => {
+
+    interface SpecParams {
+        provider: FactoryProvider;
+    }
+
+    const spec = Spec.create<SpecParams>();
+
+    spec.beforeEach((params) => {
+        params.provider = {
+            provide: {},
+            useFactory: () => {}
+        };
+    });
+
+    describe("when called with a given provider", () => {
+
+        spec.it("should return the expected token", (params) => {
+            expect(stateTokenFor(params.provider)).toBe(params.provider.provide);
+        });
+    });
 });
 
 describe("The ComponentStateRef class", () => {

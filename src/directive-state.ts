@@ -1,5 +1,5 @@
 import { FactoryProvider, InjectionToken, Injector, Type } from "@angular/core";
-import { ComponentState, ComponentStateRef } from "./component-state";
+import { ComponentState, ComponentStateRef, stateTokenFor } from "./component-state";
 
 export type DirectiveState<DirectiveT> = ComponentState<DirectiveT>;
 export type DirectiveStateRef<DirectiveT> = ComponentStateRef<DirectiveT>;
@@ -12,16 +12,21 @@ export namespace DirectiveState {
         $class: Type<any>,
         options?: CreateOptions
     ): FactoryProvider {
-        return {
-            provide: new InjectionToken<DirectiveT>($class.name),
-            useFactory: ComponentState.createFactory<DirectiveT>($class, options),
-            deps: [Injector]
-        };
+        return createDirectiveState<DirectiveT>($class, options);
     }
 
     export function tokenFor(provider: FactoryProvider): any {
-        return ComponentState.tokenFor(provider);
+        return stateTokenFor(provider);
     }
 }
 
-export const stateTokenFor = DirectiveState.tokenFor;
+export function createDirectiveState<DirectiveT>(
+    $class: Type<any>,
+    options?: DirectiveState.CreateOptions
+): FactoryProvider {
+    return {
+        provide: new InjectionToken<DirectiveT>($class.name),
+        useFactory: ComponentState.createFactory<DirectiveT>($class, options),
+        deps: [Injector]
+    };
+}

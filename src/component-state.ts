@@ -13,6 +13,8 @@ const COMPONENT_STATE_IDENTITY = Symbol("COMPONENT_STATE_IDENTITY");
 
 export type ComponentState<ComponentT> = ComponentState.Of<ComponentT>;
 
+type ComponentClassProvider<ComponentT> = Type<ComponentT> | Type<unknown>;
+
 export class ComponentStateRef<ComponentT> extends Promise<ComponentState<ComponentT>> {
 
     public componentInstance!: ComponentT;
@@ -266,17 +268,11 @@ export namespace ComponentState {
 
     type StateRecord<ComponentT, K extends keyof ComponentT = keyof ComponentT> = Record<ReactiveStateKey<ComponentT, K>, Observable<ComponentT[K]>>;
 
-    type ComponentClassProvider<ComponentT> = Type<ComponentT> | Type<unknown>;
-
     export function create<ComponentT>(
         $class: ComponentClassProvider<ComponentT>,
         options?: CreateOptions
     ): FactoryProvider {
-        return {
-            provide: ComponentStateRef,
-            useFactory: createFactory<ComponentT>($class, options),
-            deps: [Injector]
-        };
+        return createComponentState<ComponentT>($class, options);
     }
 
     export function createFactory<ComponentT>(
@@ -355,7 +351,7 @@ export namespace ComponentState {
     }
 
     export function tokenFor(provider: FactoryProvider): any {
-        return provider.provide;
+        return stateTokenFor(provider);
     }
 
     export function stateKey<ComponentT, K extends StringKey<ComponentT> = StringKey<ComponentT>>(
@@ -541,6 +537,21 @@ export namespace ComponentState {
     function getManagedKeys<T extends Constructable<any, any>>(instance: T): ComponentStateMetadata.ManagedPropertyList<T> {
         return ComponentStateMetadata.GetInheritedManagedPropertyList<T>(instance.constructor);
     }
+}
+
+export function createComponentState<ComponentT>(
+    $class: ComponentClassProvider<ComponentT>,
+    options?: ComponentState.CreateOptions
+): FactoryProvider {
+    return {
+        provide: ComponentStateRef,
+        useFactory: ComponentState.createFactory<ComponentT>($class, options),
+        deps: [Injector]
+    };
+}
+
+export function stateTokenFor(provider: FactoryProvider): any {
+    return provider.provide;
 }
 
 export function _requireComponentState<T extends { [COMPONENT_STATE_IDENTITY]?: Partial<ComponentState<T>> } & Record<any, any>>(

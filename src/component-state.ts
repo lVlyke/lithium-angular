@@ -1,6 +1,6 @@
 import type { Constructable, IfEquals, IfReadonly, StringKey } from "./lang-utils";
 import type { AsyncSourceKey } from "./metadata";
-import { FactoryProvider, InjectFlags, Injector, resolveForwardRef, Type } from "@angular/core";
+import { EventEmitter, FactoryProvider, InjectFlags, Injector, resolveForwardRef, Type } from "@angular/core";
 import { combineLatest, forkJoin, from, merge, Observable, of, ReplaySubject, Subject, Subscription, throwError } from "rxjs";
 import { distinctUntilChanged, filter, map, mergeMap, skip, switchMap, tap } from "rxjs/operators";
 import { AutoPush } from "./autopush";
@@ -67,6 +67,25 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentState<Compon
         K extends Array<ComponentState.ReadableKey<ComponentT, StringKey<ComponentT>>>
     >(...stateProps: K): ComponentState.StateSelector<ComponentT, K> {
         return stateProps.map(stateProp => this.get(stateProp)) as ComponentState.StateSelector<ComponentT, K>;
+    }
+
+    /**
+     * @description Returns an `EventEmitter` that emits whenever the value of the given state property is changed.
+     * @param stateProp - The state property to observe.
+     * @returns An `EventEmitter` instance that emits whenever the value of the given state property is changed.
+     */
+     public emitter<K extends StringKey<ComponentT>>(
+        stateProp: ComponentState.ReadableKey<ComponentT, K>
+    ): EventEmitter<ComponentT[K]> {
+        const emitter$ = new EventEmitter<ComponentT[K]>();
+
+        this.get<K>(stateProp)
+            .pipe(skip(1))
+            .subscribe({
+                next: value => emitter$.emit(value),
+                error: err => emitter$.error(err)
+            });
+        return emitter$;
     }
 
     /**

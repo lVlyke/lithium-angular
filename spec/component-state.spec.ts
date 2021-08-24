@@ -1,4 +1,4 @@
-import { Component, FactoryProvider, forwardRef, Injector, Type } from "@angular/core";
+import { Component, EventEmitter, FactoryProvider, forwardRef, Injector, Type } from "@angular/core";
 import { TestBed } from "@angular/core/testing";
 import { InputBuilder, Random, Spec, Template } from "detest-bdd";
 import { BehaviorSubject, combineLatest, Observable, Subject } from "rxjs";
@@ -452,6 +452,7 @@ describe("The ComponentStateRef class", () => {
         subscribeToSource$: Subject<any>;
         getResponse$: Observable<any>;
         getAllResponse$: Observable<any>[];
+        emitterResponse$: EventEmitter<any>;
         setResponse$: Observable<void>;
     }
 
@@ -646,6 +647,94 @@ describe("The ComponentStateRef class", () => {
 
                 spec.it("should not resolve", async (params) => {
                     const empty = await combineLatest(params.getAllResponse$)
+                        .pipe(firstSync(false), isEmpty())
+                        .toPromise();
+
+                    expect(empty).toBeTruthy();
+                });
+            });
+        });
+    });
+
+    describe("has an emitter method", () => {
+
+        describe("when the component state has been resolved", () => {
+
+            spec.beforeEach((params) => {
+                params.resolveStateRef(params.expectedComponentStateObject);
+            });
+
+            describe("when called with a known component state property", () => {
+
+                spec.beforeEach((params) => {
+                    params.emitterResponse$ = params.stateRef.emitter(params.expectedComponentStateProperty);
+                });
+
+                spec.it("should NOT resolve the initial value", async (params) => {
+                    const empty = await params.emitterResponse$
+                        .pipe(firstSync(false), isEmpty())
+                        .toPromise();
+
+                    expect(empty).toBeTruthy();
+                });
+
+                describe("when the given property value has been updated", () => {
+
+                    spec.beforeEach(async (params) => {
+                        await params.stateRef.set(params.expectedComponentStateProperty, Random.number(10)).toPromise();
+                    });
+
+                    spec.it("should emit the new value", async (params) => {
+                        const resolvedValue = await params.emitterResponse$
+                            .pipe(firstSync(false))
+                            .toPromise();
+    
+                        expect(resolvedValue).toEqual(params.componentInstance[params.expectedComponentStateProperty]);
+                    });
+                });
+            });
+
+            describe("when called with an unknown component state property", () => {
+
+                spec.it("should throw an error", async (params) => {
+                    try {
+                        await params.stateRef.emitter(params.expectedComponentStateProperty + Random.string(10) as any)
+                            .pipe(firstSync(false))
+                            .toPromise();
+                    } catch(e) {
+                        return;
+                    }
+
+                    throw new Error("emitter should throw");
+                });
+            });
+        });
+
+        describe("when the component state has NOT been resolved", () => {
+
+            describe("when called with a known component state property", () => {
+
+                spec.beforeEach((params) => {
+                    params.emitterResponse$ = params.stateRef.emitter(params.expectedComponentStateProperty);
+                });
+
+                spec.it("should not resolve", async (params) => {
+                    const empty = await params.emitterResponse$
+                        .pipe(firstSync(false), isEmpty())
+                        .toPromise();
+
+                    expect(empty).toBeTruthy();
+                });
+            });
+
+            describe("when called with an unknown component state property", () => {
+
+                spec.beforeEach((params) => {
+                    params.emitterResponse$ = params.stateRef.emitter(params.expectedComponentStateProperty + Random.string(10) as any);
+                });
+
+                spec.it("should not resolve", async (params) => {
+                    const empty = await params.emitterResponse$
                         .pipe(firstSync(false), isEmpty())
                         .toPromise();
 

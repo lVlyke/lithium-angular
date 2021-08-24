@@ -145,6 +145,18 @@ function getAll<
 
 **`stateProps`** - The state properties to observe.
 
+### `ComponentStateRef.emitter`
+
+Returns an `EventEmitter` that emits whenever the value of the given state property is changed.
+
+```ts
+function emitter<K extends StringKey<ComponentT>>(
+    stateProp: ComponentState.ReadableKey<ComponentT, K>
+): EventEmitter<ComponentT[K]>;
+```
+
+**`stateProp`** - The state property to observe.
+
 ### `ComponentStateRef.set`
 
 Updates the value of the given state property with the given value. Equivalent to assigning to the component state property directly.

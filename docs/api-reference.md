@@ -35,7 +35,7 @@ interface CreateOptions {
 
 **`lazy`** - (Optional) Whether or not the `ComponentState` should be lazily resolved. If set to `true`, the component's component state will only be resolved when the `ComponentStateRef` provider is injected by the component. If set to `false`, the component's component state will be resolved regardless of if the `ComponentStateRef` provider is injected.
 
-Defaults to `false` if the `ComponentState` is created directly with a component class, otherwise defaults to `true` if the `ComponentState` is created with a component class via [`forwardRef`](https://angular.io/api/core/forwardRef).
+Defaults to `true` if the `ComponentState` is created using [`forwardRef`](https://angular.io/api/core/forwardRef), otherwise defaults to `false`.
 
 > **Note:** A `ComponentState` created with a component class via `forwardRef` must be lazy-instantiated. If `lazy` is set to `false` in this scenario, an error will be thrown.
 
@@ -283,13 +283,19 @@ See [`ComponentState`](#componentstate).
 
 ### `DirectiveState.CreateOptions`
 
-Alias of [`ComponentState.CreateOptions`](#componentstatecreateoptions).
+Represents the options that can be used to control creation of a directive state. Includes all of the options from [`ComponentState.CreateOptions`](#componentstatecreateoptions).
 
 ```ts
-type CreateOptions = ComponentState.CreateOptions;
+interface CreateOptions extends ComponentState.CreateOptions {
+    uniqueToken?: boolean;
+}
 ```
 
-See [`ComponentState.CreateOptions`](#componentstatecreateoptions).
+**`uniqueToken`** - (Optional) Whether or not the provider definition for the `DirectiveState` should use a unique `InjectionToken` instead of the `DirectiveStateRef` class. If set to `true`, the provider definition will create a unique `InjectionToken` so that the resulting `DirectiveStateRef` service can only be injected by that specific `InjectionToken`. This is useful for preventing DI conflicts when injecting `DirectiveStateRef` instances with multiple attribute directives being applied to the same host. If set to `false`, the provider definition will use the `DirectiveStateRef` class, allowing for it to be injected without an `InjectionToken`, much like `ComponentStateRef`.
+
+Defaults to `true` if the `DirectiveState` is created using [`forwardRef`](https://angular.io/api/core/forwardRef), otherwise defaults to `false`.
+
+**`lazy`** - See [`ComponentState.CreateOptions`](#componentstatecreateoptions).
 
 ### `DirectiveStateRef.create`
 

@@ -2,7 +2,7 @@
 
 # Lithium for Angular (@lithiumjs/angular)
 
-[![Build Status](https://travis-ci.org/lVlyke/lithium-angular.svg?branch=master)](https://travis-ci.org/lVlyke/lithium-angular) [![Coverage](./coverage/coverage.svg)](./coverage/coverage.svg)
+[![Coverage](./coverage/coverage.svg)](./coverage/coverage.svg)
 
 Reactive components made easy! Lithium provides utilities that enable seamless reactive state and event interactions for Angular components.
 

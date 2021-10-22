@@ -1,7 +1,7 @@
-import { Directive, FactoryProvider, forwardRef, Injector } from "@angular/core";
+import { Directive, FactoryProvider, forwardRef, InjectionToken, Injector, Type } from "@angular/core";
 import { InputBuilder, Spec, Template } from "detest-bdd";
 import { ComponentState } from "../src/component-state";
-import { DirectiveState, createDirectiveState } from "../src/directive-state";
+import { DirectiveState, createDirectiveState, DirectiveStateRef } from "../src/directive-state";
 
 describe("Given the createDirectiveState function", () => {
     
@@ -14,39 +14,57 @@ describe("Given the createDirectiveState function", () => {
     const spec = Spec.create<SpecParams>();
 
     type DirectiveClassTemplateInput = {
+        forwardDecl: boolean;
         options?: DirectiveState.CreateOptions;
     };
 
     const directiveClassTemplateInput = InputBuilder
         .fragment<DirectiveClassTemplateInput>({ options: undefined })
+        .fragmentList({ forwardDecl: [true, false]})
         .fragmentBuilder("options", InputBuilder
             .fragmentList<DirectiveState.CreateOptions>({ lazy: [true, false, undefined] })
+            .fragmentList({ uniqueToken: [true, false, undefined] })
         );
 
     const directiveClassTemplateKeys: (keyof DirectiveClassTemplateInput)[] = ["options"];
 
     describe("when called with a directive class", Template(directiveClassTemplateKeys, directiveClassTemplateInput, (
-        options?: ComponentState.CreateOptions
+        forwardDecl: boolean,
+        options?: DirectiveState.CreateOptions
     ) => {
 
         spec.beforeEach((params) => {
             params.expectedFactory = () => {};
             spyOn(ComponentState, "createFactory").and.returnValue(params.expectedFactory as any);
 
-            params.createResult = createDirectiveState(forwardRef(() => TestDirective), options);
+            if (forwardDecl) {
+                params.$class = forwardRef(() => TestDirective);
+                params.createResult = createDirectiveState(params.$class, options);
 
-            @Directive({ providers: [params.createResult] })
-            class TestDirective {}
-
-            params.$class = TestDirective;
+                @Directive({ providers: [params.createResult] })
+                class TestDirective {}
+            } else {
+                @Directive({ providers: [params.createResult = createDirectiveState(TestDirective, options)] })
+                class TestDirective {}
+    
+                params.$class = TestDirective;
+            }
         });
 
-        spec.it("should return the expected provider", (params) => {
-            expect(params.createResult).toEqual(jasmine.objectContaining({
-                provide: params.createResult.provide,
-                useFactory: params.expectedFactory,
-                deps: jasmine.arrayWithExactContents([Injector])
-            } as Record<string, unknown>));
+        describe(`when uniqueToken is ${options?.uniqueToken}`, () => {
+
+            spec.it("should return the expected provider", (params) => {
+                function isForwardRef($class: Type<any>): boolean {
+                    return !$class.name;
+                }
+                const useToken = options?.uniqueToken ?? isForwardRef(params.$class);
+                
+                expect(params.createResult).toEqual(jasmine.objectContaining({
+                    provide: useToken ? jasmine.any(InjectionToken) : DirectiveStateRef,
+                    useFactory: params.expectedFactory,
+                    deps: jasmine.arrayWithExactContents([Injector])
+                } as Record<string, unknown>));
+            });
         });
     }));
 });

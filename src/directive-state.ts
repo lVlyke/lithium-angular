@@ -4,9 +4,13 @@ import { ComponentState, ComponentStateRef, stateTokenFor } from "./component-st
 export type DirectiveState<DirectiveT> = ComponentState<DirectiveT>;
 export type DirectiveStateRef<DirectiveT> = ComponentStateRef<DirectiveT>;
 
+export const DirectiveStateRef = ComponentStateRef;
+
 export namespace DirectiveState {
 
-    export type CreateOptions = ComponentState.CreateOptions;
+    export interface CreateOptions extends ComponentState.CreateOptions {
+        uniqueToken?: boolean;
+    }
 
     export function create<DirectiveT>(
         $class: Type<any>,
@@ -24,8 +28,13 @@ export function createDirectiveState<DirectiveT>(
     $class: Type<any>,
     options?: DirectiveState.CreateOptions
 ): FactoryProvider {
+    function isForwardRef($class: Type<any>): boolean {
+        return !$class.name;
+    }
+    const useToken = options?.uniqueToken ?? isForwardRef($class);
+
     return {
-        provide: new InjectionToken<DirectiveT>($class.name),
+        provide: useToken ? new InjectionToken<DirectiveT>($class.name) : DirectiveStateRef,
         useFactory: ComponentState.createFactory<DirectiveT>($class, options),
         deps: [Injector]
     };

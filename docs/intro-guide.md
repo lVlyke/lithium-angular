@@ -313,26 +313,30 @@ See the [**`@AsyncState` API reference**](/docs/api-reference.md#asyncstate) for
 
 [**API reference**](/docs/api-reference.md#directivestate)
 
-`DirectiveState` is a specialization of `ComponentState` for use with directives. The API is the same as `ComponentState`, with the only difference being how `DirectiveStateRef`, the equivalent of `ComponentStateRef`, is provided to the directive.
+`DirectiveState` is a specialization of `ComponentState` for use with directives. The API is the same as `ComponentState`, with the only difference being how the `DirectiveStateRef` service is provided to the directive.
 
-### Example - Using DirectiveState
+Providing `DirectiveState` differs slightly between attribute and structural directives. As attribute directives can be attached to the same host as components or other attribute directives, the `DirectiveStateRef` service is provided using the token returned from `DirectiveState.create` to ensure that the correct state provider is injected.
+
+### Example - Using DirectiveState with attribute directives
 
 ```ts
 import { forwardRef, Inject } from '@angular/core';
-import { DirectiveState, DirectiveStateRef, stateTokenFor } from '@lithiumjs/angular';
+import { createDirectiveState, stateTokenFor } from '@lithiumjs/angular';
 
-const STATE_PROVIDER = DirectiveState.create(forwardRef(() => MyDirective));
+// `createDirectiveState` is called before the directive declaration so it can be used for DI
+const STATE_PROVIDER = createDirectiveState(forwardRef(() => MyDirective));
 
 @Directive({
     ...
     providers: [STATE_PROVIDER]
 })
-class MyDirective {
+class MyAttributeDirective {
 
     public bar = 42;
 
+    // The `DirectiveStateRef` injection token is resolved from `STATE_PROVIDER` using `stateTokenFor`
     constructor(
-        @Inject(stateTokenFor(STATE_PROVIDER)) stateRef: DirectiveStateRef<MyDirective>
+        @Inject(stateTokenFor(STATE_PROVIDER)) stateRef: DirectiveStateRef<MyAttributeDirective>
     ) {
         stateRef.get('bar').subscribe(bar => console.log("bar: ", bar));
     }
@@ -342,7 +346,32 @@ class MyDirective {
 }
 ```
 
-As directives can be attached to other components, the `DirectiveStateRef` service is provided using the token returned from `DirectiveState.create` to ensure that the correct state provider is injected.
+Structural directives, on the other hand, create their own host element via `ng-template`, which means the `DirectiveStateRef` can be injected directly without use of `forwardRef` or injection tokens.
+
+### Example - Using DirectiveState with structural directives
+
+```ts
+import { forwardRef, Inject } from '@angular/core';
+import { createDirectiveState, stateTokenFor } from '@lithiumjs/angular';
+
+@Directive({
+    ...
+    // `createDirectiveState` is called inside the directive declaration
+    providers: [createDirectiveState(MyDirective)]
+})
+class MyStructuralDirective {
+
+    public bar = 42;
+
+    // `DirectiveStateRef` is injected directly like `ComponentStateRef`
+    constructor(stateRef: DirectiveStateRef<MyAttributeDirective>) {
+        stateRef.get('bar').subscribe(bar => console.log("bar: ", bar));
+    }
+
+    // Output:
+    // bar: 42
+}
+```
 
 ## EventSource
 

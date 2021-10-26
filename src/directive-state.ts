@@ -8,9 +8,7 @@ export const DirectiveStateRef = ComponentStateRef;
 
 export namespace DirectiveState {
 
-    export interface CreateOptions extends ComponentState.CreateOptions {
-        uniqueToken?: boolean;
-    }
+    export type CreateOptions = ComponentState.CreateOptions;
 
     export function create<DirectiveT>(
         $class: Type<any>,
@@ -28,13 +26,10 @@ export function createDirectiveState<DirectiveT>(
     $class: Type<any>,
     options?: DirectiveState.CreateOptions
 ): FactoryProvider {
-    function isForwardRef($class: Type<any>): boolean {
-        return !$class.name;
-    }
-    const useToken = options?.uniqueToken ?? isForwardRef($class);
-
     return {
-        provide: useToken ? new InjectionToken<DirectiveT>($class.name) : DirectiveStateRef,
+        // If $class is a declaration and not a forwardRef, provide service as DirectiveStateRef (structural directives)
+        // If $class is a forwardRef, provide service as a unique token (attribute directives)
+        provide: $class.name ? DirectiveStateRef : new InjectionToken<DirectiveT>($class.name),
         useFactory: ComponentState.createFactory<DirectiveT>($class, options),
         deps: [Injector]
     };

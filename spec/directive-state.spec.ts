@@ -23,7 +23,6 @@ describe("Given the createDirectiveState function", () => {
         .fragmentList({ forwardDecl: [true, false]})
         .fragmentBuilder("options", InputBuilder
             .fragmentList<DirectiveState.CreateOptions>({ lazy: [true, false, undefined] })
-            .fragmentList({ uniqueToken: [true, false, undefined] })
         );
 
     const directiveClassTemplateKeys: (keyof DirectiveClassTemplateInput)[] = ["options"];
@@ -51,20 +50,18 @@ describe("Given the createDirectiveState function", () => {
             }
         });
 
-        describe(`when uniqueToken is ${options?.uniqueToken}`, () => {
-
-            spec.it("should return the expected provider", (params) => {
-                function isForwardRef($class: Type<any>): boolean {
-                    return !$class.name;
-                }
-                const useToken = options?.uniqueToken ?? isForwardRef(params.$class);
-                
-                expect(params.createResult).toEqual(jasmine.objectContaining({
-                    provide: useToken ? jasmine.any(InjectionToken) : DirectiveStateRef,
-                    useFactory: params.expectedFactory,
-                    deps: jasmine.arrayWithExactContents([Injector])
-                } as Record<string, unknown>));
-            });
+        spec.it("should return the expected provider", (params) => {
+            function isForwardRef($class: Type<any>): boolean {
+                return !$class.name;
+            }
+            
+            const useToken = isForwardRef(params.$class);
+            
+            expect(params.createResult).toEqual(jasmine.objectContaining({
+                provide: useToken ? jasmine.any(InjectionToken) : DirectiveStateRef,
+                useFactory: params.expectedFactory,
+                deps: jasmine.arrayWithExactContents([Injector])
+            } as Record<string, unknown>));
         });
     }));
 });

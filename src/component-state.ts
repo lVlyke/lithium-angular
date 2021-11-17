@@ -1,5 +1,5 @@
 import type { Constructable, IfEquals, IfReadonly, StringKey } from "./lang-utils";
-import type { AsyncSourceKey } from "./metadata";
+import { AsyncSourceKey, EmitterMetadata } from "./metadata";
 import { EventEmitter, FactoryProvider, InjectFlags, Injector, resolveForwardRef, Type } from "@angular/core";
 import { combineLatest, forkJoin, from, merge, Observable, of, ReplaySubject, Subject, Subscription, throwError } from "rxjs";
 import { distinctUntilChanged, filter, map, mergeMap, skip, switchMap, tap } from "rxjs/operators";
@@ -463,7 +463,7 @@ export namespace ComponentState {
         const propDescriptor = Object.getOwnPropertyDescriptor(instance, prop.key);
         const stateSubjectProp = stateKey<ComponentT, K>(prop.key);
 
-        if (typeof prop.key === "string" && !prop.key.endsWith("$")) {
+        if (typeof prop.key === "string" && !prop.key.endsWith("$") && !EmitterMetadata.GetMetadataMap(instance).get(prop.key)) {
 
             if (!propDescriptor || propDescriptor.configurable) {
                 let lastValue: ComponentT[K] = instance[prop.key];

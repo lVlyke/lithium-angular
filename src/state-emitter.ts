@@ -164,9 +164,17 @@ export namespace StateEmitter {
 
     namespace Facade {
 
-        export function CreateSetter(type: EmitterType): (value: any) => void {
+        export function CreateSetter(type: EmitterType, getter: () => any): (value: any) => void {
+            let firstInvocation = true;
+
             return function (this: any, value: any) {
                 let subjectInfo = EmitterMetadata.GetMetadataMap(this).get(type)!;
+
+                // Invoke the getter to make sure change detection has been started
+                if (firstInvocation && !subjectInfo.writeOnly) {
+                    firstInvocation = false;
+                    getter.call(this);
+                }
 
                 // If this is a static subject...
                 if (EmitterMetadata.SubjectInfo.IsStaticAlias(subjectInfo)) {
@@ -219,6 +227,10 @@ export namespace StateEmitter {
                     });
 
                     lastObservable = curObservable;
+                }
+
+                if (curObservable instanceof BehaviorSubject) {
+                    lastValue = curObservable.value;
                 }
 
                 // Return the last value that was emitted
@@ -334,8 +346,8 @@ export namespace StateEmitter {
             }
         }
 
-        const facadeSetter = subjectInfo.readOnly ? undefined : Facade.CreateSetter(emitterType);
         const facadeGetter = Facade.CreateGetter(emitterType, initialValue);
+        const facadeSetter = subjectInfo.readOnly ? undefined : Facade.CreateSetter(emitterType, facadeGetter);
         // Assign the facade getter and setter to the target instance for targetInstance EmitterType
         Object.defineProperty(targetInstance, emitterType, {
             enumerable: true,

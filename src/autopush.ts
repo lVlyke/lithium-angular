@@ -1,23 +1,6 @@
 import { ChangeDetectorRef } from "@angular/core";
 import { Metadata } from "./metadata";
 
-/**
- * @ClassDecoratorFactory
-*/
-export function AutoPush(_options?: AutoPush.CdRefOptions): ClassDecorator {
-
-    /**
-     * @deprecated
-    */
-    return function() {
-        throw new Error(
-`
-The Lithium @AutoPush() class decorator has been removed and should be replaced with AutoPush.enable.
-See here for more info: https://github.com/lVlyke/lithium-angular/docs/intro-guide.md#autopush
-`)
-    }
-}
-
 export namespace AutoPush {
 
     const CHANGE_DETECTOR_DATA = Symbol("cdRefData");
@@ -54,7 +37,7 @@ export namespace AutoPush {
         forceDetectChanges?: boolean;
     }
 
-    export function changeDetector(component: any): ChangeDetectorProxy {
+    export function changeDetector(component: any): ChangeDetectorProxy | undefined {
         const metadata = changeDetectorMetadata(component);
         return metadata ? metadata.changeDetector : undefined;
     }

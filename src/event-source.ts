@@ -11,7 +11,7 @@ export function EventSource(options: EventSource.DecoratorOptions, ...methodDeco
 
 /** @PropertyDecoratorFactory */
 export function EventSource(...args: any[]): PropertyDecorator {
-    let paramsArg: EventSource.DecoratorOptions | MethodDecorator;
+    let paramsArg: EventSource.DecoratorOptions | MethodDecorator | undefined;
 
     if (args.length > 0) {
         paramsArg = args[0];
@@ -31,23 +31,23 @@ export namespace EventSource {
 
     /** @PropertyDecoratorFactory */
     export function WithParams(options?: DecoratorOptions, ...methodDecorators: MethodDecorator[]): PropertyDecorator {
-        options = options || {};
+        options ??= {};
 
         /** @PropertyDecorator */
-        return function(target: any, propertyKey: string) {
-            if (propertyKey !== CommonMetadata.MANAGED_ONDESTROY_KEY && !options.unmanaged) {
+        return function(target: any, propertyKey: string | symbol) {
+            if (propertyKey !== CommonMetadata.MANAGED_ONDESTROY_KEY && !options!.unmanaged) {
                 // Ensure that we create a ngOnDestroy EventSource on the target for managing subscriptions
                 WithParams({ eventType: AngularLifecycleType.OnDestroy })(target, CommonMetadata.MANAGED_ONDESTROY_KEY);
             }
             
             // If an eventType wasn't specified...
-            if (!options.eventType) {
+            if (!options!.eventType) {
                 // Try to deduce the eventType from the propertyKey
-                if (propertyKey.endsWith("$")) {
-                    options.eventType = propertyKey.substring(0, propertyKey.length - 1);
+                if (typeof propertyKey === "string" && propertyKey.endsWith("$")) {
+                    options!.eventType = propertyKey.substring(0, propertyKey.length - 1);
                 }
                 else {
-                    throw new Error(`@EventSource error: eventType could not be deduced from propertyKey "${propertyKey}" (only keys ending with '$' can be auto-deduced).`);
+                    throw new Error(`@EventSource error: eventType could not be deduced from propertyKey "${propertyKey as any}" (only keys ending with '$' can be auto-deduced).`);
                 }
             }
 
@@ -55,11 +55,11 @@ export namespace EventSource {
             createMetadata(options as EventMetadata.SubjectInfo, target, propertyKey);
 
             // Apply any method decorators to the facade function
-            methodDecorators.forEach(methodDecorator => methodDecorator(target, options.eventType, Object.getOwnPropertyDescriptor(target, options.eventType)));
+            methodDecorators.forEach(methodDecorator => methodDecorator(target, options!.eventType!, Object.getOwnPropertyDescriptor(target, options!.eventType!)!));
         };
     }
 
-    function bootstrapInstance(eventType: EventType, isLifecycleEvent: boolean) {
+    function bootstrapInstance(this: any, eventType: EventType, isLifecycleEvent?: boolean) {
         const targetInstance: any = this;
         
         if (!isLifecycleEvent) {
@@ -87,7 +87,7 @@ export namespace EventSource {
         const propertySubjectMap = subjectTable.get(eventType);
 
         // Iterate over each of the target properties for each proxied event type used in this class
-        propertySubjectMap.forEach((subjectInfo, propertyKey) => {
+        propertySubjectMap?.forEach((subjectInfo, propertyKey) => {
             // If the event proxy subject hasn't been created for this property yet...
             if (!subjectInfo.subject) {
                 // Create a new Subject
@@ -117,8 +117,8 @@ export namespace EventSource {
         /** @description
          *  Creates an event facade function (the function that is invoked during an event) for the given event type.
          */
-        export function Create(eventType: EventType): Function & { eventType: EventType } {
-            return Object.assign(function (...values: any[]) {
+        export function Create(eventType: EventType): ((...value: any[]) => void) & { eventType: EventType } {
+            return Object.assign(function (this: any, ...values: any[]) {
                 // Get the list of subjects to notify for this `eventType`
                 const subjectInfoList = Array.from(EventMetadata.GetPropertySubjectMap(eventType, this).values());
                 // Use the first value from this event if only a single value was given, otherwise emit all given values as an array to the Subject
@@ -147,7 +147,7 @@ export namespace EventSource {
         }
     }
 
-    function createMetadata(options: EventMetadata.SubjectInfo, target: any, propertyKey: string) {
+    function createMetadata(options: EventMetadata.SubjectInfo, target: any, propertyKey: string | symbol) {
         const ContainsCustomMethod = ($class = target): boolean => {
             const methodDescriptor = Object.getOwnPropertyDescriptor($class, options.eventType);
             const method = methodDescriptor ? (methodDescriptor.value || methodDescriptor.get) : undefined; 
@@ -167,7 +167,7 @@ export namespace EventSource {
         EventMetadata.GetOwnPropertySubjectMap(options.eventType, target.constructor).set(propertyKey, options);
 
         if (isLifecycleEvent) {
-            registerLifecycleEvent(target.constructor, options.eventType);
+            registerLifecycleEventFacade(target.constructor, options.eventType);
         }
 
         // Initialize the propertyKey on the target to a self-bootstrapper that will initialize an instance's EventSource when called
@@ -191,7 +191,7 @@ export namespace EventSource {
             Object.defineProperty(target, options.eventType, {
                 configurable: true,
                 writable: true,
-                value: Object.assign(function (...args: any[]) {
+                value: Object.assign(function (this: any, ...args: any[]) {
                     // Ensure we only bootstrap once for this `eventType` if the intializer is re-invoked (Ivy)
                     if (!isBootstrapped.call(this, options.eventType)) {
                         // Boostrap the event source for this instance
@@ -205,39 +205,55 @@ export namespace EventSource {
         }
     }
 
+    function registerLifecycleEventFacade(targetClass: Type<any>, eventType: EventType) {
+        const registrationMap = EventMetadata.GetLifecycleRegistrationMap(targetClass);
+        
+        // Register the facade function for this component lifecycle target if we haven't already
+        if (!registrationMap.get(eventType)) {
+            const ownRegistrationMap = EventMetadata.GetOwnLifecycleRegistrationMap(targetClass);
+
+            registerLifecycleEvent(targetClass, eventType, Facade.Create(eventType));
+            ownRegistrationMap.set(eventType, true);
+        }
+    }
+
     /**
      * @description Registers a lifecycle event handler for use with `registerPreOrderHooks`/`registerPostOrderHooks`
      */
-    function registerLifecycleEvent(targetClass: Type<any>, eventType: EventType) {
+    export function registerLifecycleEvent(targetClass: Type<any>, eventType: EventType, hookFn: (...args: any[]) => void) {
+        EventMetadata.AddLifecycleCallback(targetClass, eventType, hookFn);
+
         // Ensure a valid prototype exists for this component
         if (!targetClass.prototype) {
             targetClass.prototype = Object.create({});
         }
+
         // Get the name of the hook for this lifecycle event
         const hookName = eventType as AngularLifecycleType;
         // Store a reference to the original hook function
-        const baseHook = targetClass.prototype[hookName];
+        const prevLifecycleHook = targetClass.prototype[hookName];
 
-        // If we haven't already replaced the hook function for this component target...
-        if (!baseHook || !baseHook.eventType) {
-            // Create the facade function for this event
-            const facadeFn = Facade.Create(eventType);
-
-            // Replace the hook function with a modified one that ensures the event source facade function is invoked
-            targetClass.prototype[hookName] = Object.assign(function (...args: any[]) {
-                // Call the base hook function on the component instance if there is one
-                if (baseHook) {
-                    baseHook.call(this, ...args);
+        // Replace the default lifecycle hook with a modified one that ensures the given hook fns are invoked
+        if (!prevLifecycleHook?.eventType) {
+            targetClass.prototype[hookName] = Object.assign(function (this: any, ...args: any[]) {
+                // Call the previous hook function on the component instance if there is one
+                if (prevLifecycleHook) {
+                    prevLifecycleHook.call(this, ...args);
                 }
 
-                // Call the facade function associated with this event type on the component instance
-                facadeFn.call(this, ...args);
+                // Invoke all of the hook functions associated with this lifeycle event for the current component instance
+                const hookFns = EventMetadata.GetLifecycleCallbackList(this.constructor, eventType);
+                hookFns.forEach(hookFn => hookFn.call(this, ...args));
             }, { eventType });
         }
     }
 
-    function isBootstrapped(eventType: EventType): boolean {
+    export function unregisterLifecycleEvent(targetClass: Type<any>, eventType: EventType, hookFn: (...args: any[]) => void) {
+        EventMetadata.RemoveLifecycleCallback(targetClass, eventType, hookFn);
+    }
+
+    function isBootstrapped(this: any, eventType: EventType): boolean {
         const map = EventMetadata.GetInstanceBootstrapMap(this);
-        return map.has(eventType) ? map.get(eventType) : false;
+        return map.has(eventType) ? map.get(eventType)! : false;
     }
 }

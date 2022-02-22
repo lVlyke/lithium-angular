@@ -1,4 +1,4 @@
-import { Subscription, Observable, Subject, BehaviorSubject, Subscriber, TeardownLogic, empty } from "rxjs";
+import { Subscription, Observable, Subject, BehaviorSubject, Subscriber, TeardownLogic, EMPTY, ReplaySubject, SchedulerLike } from "rxjs";
 import { CommonMetadata, Metadata } from "./metadata";
 
 export type Constructor<T> = new (...args: any[]) => T;
@@ -36,7 +36,7 @@ export function ManagedObservableWrapper/*<T, BaseObservable extends Observable<
                 this.subscriptions.push(subscription);
                 return subscription;
             } else {
-                return empty().subscribe();
+                return EMPTY.subscribe();
             }
         }
     };
@@ -62,5 +62,12 @@ export class ManagedBehaviorSubject<T> extends ManagedObservableWrapper(Behavior
 
     constructor(componentInstance: any, initialValue: T) {
         super(componentInstance, initialValue);
+    }
+}
+
+export class ManagedReplaySubject<T> extends ManagedObservableWrapper(ReplaySubject)<ReplaySubject<T>> {
+
+    constructor(componentInstance: any, bufferSize?: number, windowTime?: number, scheduler?: SchedulerLike) {
+        super(componentInstance, bufferSize, windowTime, scheduler);
     }
 }

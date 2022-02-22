@@ -26,7 +26,7 @@ describe("Given a component that will use AutoPush functionality", () => {
     const decoratorApplicationTemplateInput = InputBuilder
         .fragmentList<DecoratorApplicationTemplateT>({ useProxy: [true, false] })
         .fragment({ forceDetectChanges: true }, options => !options.useProxy)
-        .fragmentList({ forceDetectChanges: [undefined, false] });
+        .fragmentList({ forceDetectChanges: [undefined!, false] });
 
     const DecoratorApplicationTemplateKeys: (keyof DecoratorApplicationTemplateT)[] = [
         "existingChangeDetector",

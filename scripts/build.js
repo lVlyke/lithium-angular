@@ -7,8 +7,7 @@ const child_process = require("child_process");
 const path = require("path");
 
 const INJECTED_FILES = {
-    "docs": "./docs",
-    "README.md": "./README.md",
+    "README.md": "./docs/readme-lite.md",
     "LICENSE": "./LICENSE"
 };
 

@@ -1,4 +1,5 @@
 import { Subject } from "rxjs";
+import type { ImmutableMap } from "../lang-utils";
 import { Metadata } from "./metadata";
 
 export type EventType = string;
@@ -7,6 +8,7 @@ export namespace EventMetadata {
 
     export const SUBJECT_TABLE_MERGED_KEY = "$$EVENTSOURCE_SUBJECT_TABLE_MERGED";
     export const BOOTSTRAPPED_KEY = "$$EVENTSOURCE_BOOTSTRAPPED";
+    export const LIFECYCLE_REGISTRATION_KEY = "$$EVENTSOURCE_LIFECYCLE_REGISTRATION";
 
     export interface ConfigOptions {
         eventType: EventType;
@@ -18,12 +20,16 @@ export namespace EventMetadata {
         subject: Subject<any>;
     }
 
-    export type PropertySubjectMap = Map<string, SubjectInfo>;
+    export type PropertySubjectMap = Map<string | symbol, SubjectInfo>;
     export type EventSubjectTable = Map<EventType, PropertySubjectMap>;
     export type InstanceBootstrapMap = Map<EventType, boolean>;
+    export type LifecycleRegistrationMap = Map<EventType, boolean>;
+    export type LifecycleCallbackMap = Map<EventType, Array<(...args: any[]) => void>>;
 
     const EventSubjectTableSymbol = Symbol("EventSubjectTableSymbol");
     const InstanceBootstrapMapSymbol = Symbol("InstanceBootstrapMapSymbol");
+    const LifecycleRegistrationMapSymbol = Symbol("LifecycleRegistrationMapSymbol");
+    const LifecycleCallbackMapSymbol = Symbol("LifecycleCallbackMapSymbol");
 
     /** @description Gets the metadata map object for the given target class (or its inheritted classes). */
     export function GetEventSubjectTable(target: Object): EventSubjectTable {
@@ -39,7 +45,64 @@ export namespace EventMetadata {
         return Metadata.requireMetadata<InstanceBootstrapMap>(InstanceBootstrapMapSymbol, target, new Map());
     }
 
-    /** @description
+    export function GetOwnLifecycleRegistrationMap(target: Object): LifecycleRegistrationMap {
+        return Metadata.requireOwnMetadata<LifecycleRegistrationMap>(LifecycleRegistrationMapSymbol, target, new Map());
+    }
+
+    /** @description Gets own and inherited lifecycle registration data merged into a single Map. */
+    export function GetLifecycleRegistrationMap(target: Object): ImmutableMap<LifecycleRegistrationMap> {
+        const metadata: LifecycleRegistrationMap = new Map();
+        const ownMetadata = GetOwnLifecycleRegistrationMap(target);
+
+        ownMetadata.forEach((v, k) => metadata.set(k, v));
+
+        const targetPrototype = Object.getPrototypeOf(target);
+
+        if (targetPrototype) {
+            const inherittedMetadata = GetLifecycleRegistrationMap(targetPrototype);
+
+            inherittedMetadata.forEach((v, k) => metadata.set(k, v ?? metadata.get(k)));
+        }
+
+        return metadata;
+    }
+
+    export function GetOwnLifecycleCallbackMap(target: Object): LifecycleCallbackMap {
+        return Metadata.requireOwnMetadata<LifecycleCallbackMap>(LifecycleCallbackMapSymbol, target, new Map());
+    }
+
+    /** @description Gets own and inherited lifecycle callback data merged into a single Map. */
+    export function GetLifecycleCallbackMap(target: Object): ImmutableMap<LifecycleCallbackMap> {
+        const metadata: LifecycleCallbackMap = new Map();
+        const ownMetadata = GetOwnLifecycleCallbackMap(target);
+
+        ownMetadata.forEach((v, k) => {
+            if (!metadata.has(k)) {
+                metadata.set(k, []);
+            }
+
+            metadata.get(k)!.push(...v);
+        });
+
+        const targetPrototype = Object.getPrototypeOf(target);
+
+        if (targetPrototype) {
+            const inherittedMetadata = GetLifecycleCallbackMap(targetPrototype);
+
+            inherittedMetadata.forEach((v, k) => {
+                if (!metadata.has(k)) {
+                    metadata.set(k, []);
+                }
+
+                metadata.get(k)!.push(...v);
+            });
+        }
+
+        return metadata;
+    }
+
+    /** 
+     *  @description
      *  Gets the property subject map for the given event type from the metadata map for the given target class (or its inheritted classes).
      */
     export function GetPropertySubjectMap(type: EventType, target: Object): PropertySubjectMap {
@@ -54,7 +117,8 @@ export namespace EventMetadata {
         return subjectMap;
     }
 
-    /** @description
+    /** 
+     *  @description
      *  Gets the property subject map for the given event type from the metadata map for the given target class.
      */
     export function GetOwnPropertySubjectMap(type: EventType, target: Object): PropertySubjectMap {
@@ -69,6 +133,12 @@ export namespace EventMetadata {
         return subjectMap;
     }
 
+    export function GetLifecycleCallbackList(target: Object, type: EventType): ReadonlyArray<(...args: any[]) => void> {
+        const map = GetLifecycleCallbackMap(target);
+
+        return map.get(type) ?? [];
+    }
+
     export function HasOwnEventSubjectTable(target: Object): boolean {
         return Metadata.hasOwnMetadata(EventSubjectTableSymbol, target);
     }
@@ -77,7 +147,32 @@ export namespace EventMetadata {
         Metadata.setMetadata(EventSubjectTableSymbol, target, map);
     }
 
-    /** @description Copy all metadata from the source map to the target map.
+    export function AddLifecycleCallback(target: Object, type: EventType, callback: (...args: any[]) => void) {
+        const map = GetOwnLifecycleCallbackMap(target);
+
+        if (!map.has(type)) {
+            map.set(type, []);
+        }
+
+        const callbacks = map.get(type)!;
+        callbacks.push(callback);
+        Metadata.setMetadata(LifecycleCallbackMapSymbol, target, map);
+    }
+
+    export function RemoveLifecycleCallback(target: Object, type: EventType, callback: (...args: any[]) => void) {
+        const map = GetOwnLifecycleCallbackMap(target);
+
+        if (!map.has(type)) {
+            return;
+        }
+
+        const callbacks = map.get(type)!;
+        map.set(type, callbacks.filter(curCallback => curCallback !== callback));
+        Metadata.setMetadata(LifecycleCallbackMapSymbol, target, map);
+    }
+
+    /** 
+     *  @description Copy all metadata from the source map to the target map.
      * 
      *  Note: This mutates the target map.
      **/
@@ -88,7 +183,7 @@ export namespace EventMetadata {
 
             // Get the property subject map (or create it if it doesn't exist for this eventType)
             if (target.has(eventType)) {
-                targetPropertySubjectMap = target.get(eventType);
+                targetPropertySubjectMap = target.get(eventType)!;
             }
             else {
                 targetPropertySubjectMap = new Map();
@@ -104,7 +199,8 @@ export namespace EventMetadata {
         return target;
     }
 
-    /** @description Merge own and inheritted metadata into a single map.
+    /** 
+     *  @description Merge own and inheritted metadata into a single map.
      * 
      *  Note: This mutates the object's metadata.
      **/

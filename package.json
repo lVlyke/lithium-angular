@@ -1,7 +1,7 @@
 {
   "name": "@lithiumjs/angular",
-  "version": "6.1.0",
-  "description": "A decorator-based library that allows you to fully use RxJS with Angular. Use Observables as first-class citizens in your view templates! Listen to component lifecycle events with Observables! Lithium makes your components highly reactive.",
+  "version": "7.0.0",
+  "description": "Reactive components made easy. Lithium provides utilities that enable seamless reactive state and event interactions for Angular components.",
   "author": "Mychal Thompson <mychal.r.thompson@gmail.com>",
   "repository": "https://github.com/lVlyke/lithium-angular",
   "license": "MIT",
@@ -21,13 +21,15 @@
     "decorators",
     "lifecycle",
     "component",
+    "directive",
     "reactive",
     "data-binding",
     "binding",
     "template",
     "observable",
     "state",
-    "selector",
+    "event",
+    "events",
     "lifecycle-event-decorators"
   ],
   "scripts": {
@@ -37,20 +39,26 @@
     "test": "node ./scripts/test.js"
   },
   "peerDependencies": {
-    "@angular/core": ">=10.0.0 <13.0.0",
-    "rxjs": "6.x.x"
+    "@angular/core": ">=11.0.0 <13.0.0",
+    "rxjs": "6.x.x",
+    "typescript": ">=4.1.0"
   },
   "devDependencies": {
+    "@angular/common": "12.0.4",
     "@angular/compiler": "12.0.4",
     "@angular/compiler-cli": "12.0.4",
     "@angular/core": "12.0.4",
+    "@angular/platform-browser": "12.0.4",
+    "@angular/platform-browser-dynamic": "12.0.4",
     "@types/jasmine": "^3.3.13",
-    "@types/node": "^12.6.9",
-    "detest-bdd": "^1.1.1",
+    "@types/jsdom": "^16.2.12",
+    "@types/node": "^15.12.4",
+    "detest-bdd": "^1.2.0",
     "fs-extra": "^8.1.0",
     "istanbul": "^0.4.5",
     "istanbul-cobertura-badger": "^1.3.1",
     "jasmine": "^3.5.0",
+    "jsdom": "^16.6.0",
     "ng-packagr": "^12.0.5",
     "rxjs": "^6.5.3",
     "source-map-support": "^0.5.12",

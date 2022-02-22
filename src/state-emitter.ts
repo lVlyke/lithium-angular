@@ -14,7 +14,7 @@ export function StateEmitter(params: StateEmitter.DecoratorParams, ...propertyDe
 
 /** @PropertyDecoratorFactory */
 export function StateEmitter(...args: any[]): PropertyDecorator {
-    let paramsArg: StateEmitter.DecoratorParams | PropertyDecorator;
+    let paramsArg: StateEmitter.DecoratorParams | PropertyDecorator | undefined;
 
     if (args.length > 0) {
         paramsArg = args[0];
@@ -52,41 +52,41 @@ export namespace StateEmitter {
 
     /** @PropertyDecoratorFactory */
     export function WithParams(params?: StateEmitter.DecoratorParams, ...propertyDecorators: PropertyDecorator[]): PropertyDecorator {
-        params = params || {};
+        params ??= {};
 
         /** @PropertyDecorator */
-        return function (target: any, propertyKey: string) {
-            if (!params.unmanaged) {
+        return function (target: any, propertyKey: string | symbol) {
+            if (!params!.unmanaged) {
                 // Ensure that we create a OnDestroy EventSource on the target for managing subscriptions
                 EventSource({ eventType: AngularLifecycleType.OnDestroy })(target, CommonMetadata.MANAGED_ONDESTROY_KEY);
             }
 
             // If a propertyName wasn't specified...
-            if (!params.propertyName) {
+            if (!params!.propertyName) {
                 // Try to deduce the propertyName from the propertyKey
-                if (propertyKey.endsWith("$")) {
-                    params.propertyName = propertyKey.substring(0, propertyKey.length - 1);
+                if (typeof propertyKey === "string" && propertyKey.endsWith("$")) {
+                    params!.propertyName = propertyKey.substring(0, propertyKey.length - 1);
                 }
                 else {
-                    throw new Error(`@StateEmitter error: propertyName could not be deduced from propertyKey "${propertyKey}" (only keys ending with '$' can be auto-deduced).`);
+                    throw new Error(`@StateEmitter error: propertyName could not be deduced from propertyKey "${propertyKey as any}" (only keys ending with '$' can be auto-deduced).`);
                 }
             }
             
             // If a proxy mode was set but an empty proxy path was set, default to a self proxy
-            if (params.proxyMode && typeof params.proxyPath === "string" && params.proxyPath.length === 0) {
-                params.proxyPath = propertyKey;
+            if (params!.proxyMode && typeof params!.proxyPath === "string" && params!.proxyPath.length === 0) {
+                params!.proxyPath = propertyKey as string;
             }
 
             // Default merging of updated values in proxy aliases to true
-            if (LangUtils.isNil(params.proxyMergeUpdates)) {
-                params.proxyMergeUpdates = true;
+            if (LangUtils.isNil(params!.proxyMergeUpdates)) {
+                params!.proxyMergeUpdates = true;
             }
 
             // Apply any property decorators to the property
-            propertyDecorators.forEach(propertyDecorator => propertyDecorator(target, params.propertyName));
+            propertyDecorators.forEach(propertyDecorator => propertyDecorator(target, params!.propertyName!));
 
             // Create the state emitter metadata for the decorated property
-            createMetadata(target, params.propertyName, Object.assign({ propertyKey, observable: undefined }, params));
+            createMetadata(target, params!.propertyName, Object.assign({ propertyKey, observable: undefined! }, params));
         };
     }
 
@@ -164,9 +164,17 @@ export namespace StateEmitter {
 
     namespace Facade {
 
-        export function CreateSetter(type: EmitterType): (value: any) => void {
-            return function (value: any) {
-                let subjectInfo = EmitterMetadata.GetMetadataMap(this).get(type);
+        export function CreateSetter(type: EmitterType, getter: () => any): (value: any) => void {
+            let firstInvocation = true;
+
+            return function (this: any, value: any) {
+                let subjectInfo = EmitterMetadata.GetMetadataMap(this).get(type)!;
+
+                // Invoke the getter to make sure change detection has been started
+                if (firstInvocation && !subjectInfo.writeOnly) {
+                    firstInvocation = false;
+                    getter.call(this);
+                }
 
                 // If this is a static subject...
                 if (EmitterMetadata.SubjectInfo.IsStaticAlias(subjectInfo)) {
@@ -176,7 +184,7 @@ export namespace StateEmitter {
                 else {
                     try {
                         // Update the dynamic proxy value
-                        ObservableUtil.UpdateDynamicPropertyPathValue(this, subjectInfo.proxyPath, value, subjectInfo.proxyMergeUpdates);
+                        ObservableUtil.UpdateDynamicPropertyPathValue(this, subjectInfo.proxyPath!, value, subjectInfo.proxyMergeUpdates);
                     }
                     catch (_e) {
                         console.error(`Unable to set value for proxy StateEmitter "${this.constructor.name}.${type}" with dynamic property path "${subjectInfo.proxyPath}" - Path does not contain a Subject.`);
@@ -192,8 +200,8 @@ export namespace StateEmitter {
             let subscription: Subscription;
             let lastObservable: Observable<any>;
 
-            return function (): any {
-                let subjectInfo = EmitterMetadata.GetMetadataMap(this).get(type);
+            return function (this: any): any {
+                let subjectInfo = EmitterMetadata.GetMetadataMap(this).get(type)!;
                 let curObservable = subjectInfo.observable;
 
                 // If the resolved observable has changed since last time the getter was called (or this is the first getter call)...
@@ -221,13 +229,17 @@ export namespace StateEmitter {
                     lastObservable = curObservable;
                 }
 
+                if (curObservable instanceof BehaviorSubject) {
+                    lastValue = curObservable.value;
+                }
+
                 // Return the last value that was emitted
                 return lastValue;
             };
         }
     }
 
-    function bootstrapInstance(initialPropertyDescriptor: PropertyDescriptor, emitterType: EmitterType) {
+    function bootstrapInstance(this: any, initialPropertyDescriptor: PropertyDescriptor | undefined, emitterType: EmitterType) {
         const targetInstance: any = this;
 
         function classMetadataMerged(merged?: boolean): boolean | undefined {
@@ -249,7 +261,7 @@ export namespace StateEmitter {
                     if (EmitterMetadata.SubjectInfo.IsSelfProxy(subjectInfo)) {
                         observable = initialPropertyValue;
                     } else {
-                        observable = ObservableUtil.ResolvePropertyPath(targetInstance, subjectInfo.proxyPath);
+                        observable = ObservableUtil.ResolvePropertyPath(targetInstance, subjectInfo.proxyPath!);
                     }
 
                     if (onResolve) {
@@ -275,10 +287,10 @@ export namespace StateEmitter {
             classMetadataMerged(true);
         }
 
-        const subjectInfo = metadataMap.get(emitterType);
+        const subjectInfo = metadataMap.get(emitterType)!;
         const initialValue = resolveInitialValue.call(targetInstance, subjectInfo);
         // Get the initial value of the property being decorated
-        const initialPropertyValue: any = initialPropertyDescriptor ? (initialPropertyDescriptor.value || initialPropertyDescriptor.get()) : undefined;
+        const initialPropertyValue: any = initialPropertyDescriptor ? (initialPropertyDescriptor.value || initialPropertyDescriptor.get?.()) : undefined;
 
         // Check if there's a value set for the property and it's an Observable
         if (initialPropertyValue && initialPropertyValue instanceof Observable) {
@@ -287,14 +299,14 @@ export namespace StateEmitter {
             if (!subjectInfo.proxyMode || subjectInfo.proxyMode === EmitterMetadata.ProxyMode.None) {
                 // Setup a self-proxying alias that will reference the initial value
                 subjectInfo.proxyMode = EmitterMetadata.ProxyMode.Alias;
-                subjectInfo.proxyPath = subjectInfo.propertyKey;
+                subjectInfo.proxyPath = subjectInfo.propertyKey as string;
             } else if (!EmitterMetadata.SubjectInfo.IsSelfProxy(subjectInfo)) {
-                throw new Error(`[${targetInstance.constructor.name}]: Unable to create a StateEmitter on property "${subjectInfo.propertyKey}": property cannot have a pre-defined observable when declaring a proxying StateEmitter.`);
+                throw new Error(`[${targetInstance.constructor.name}]: Unable to create a StateEmitter on property "${subjectInfo.propertyKey as any}": property cannot have a pre-defined observable when declaring a proxying StateEmitter.`);
             }
         } else if (EmitterMetadata.SubjectInfo.IsSelfProxy(subjectInfo)) {
-            throw new Error(`[${targetInstance.constructor.name}]: Unable to create a StateEmitter on property "${subjectInfo.propertyKey}": StateEmitter is self-proxying, but lacks a valid target.`);
+            throw new Error(`[${targetInstance.constructor.name}]: Unable to create a StateEmitter on property "${subjectInfo.propertyKey as any}": StateEmitter is self-proxying, but lacks a valid target.`);
         } else if (initialPropertyValue) {
-            console.warn(`Warning: Definition of StateEmitter for ${targetInstance.constructor.name}.${subjectInfo.propertyKey} is overriding previous value for '${subjectInfo.propertyKey}'.`);
+            console.warn(`Warning: Definition of StateEmitter for ${targetInstance.constructor.name}.${subjectInfo.propertyKey as any} is overriding previous value for '${subjectInfo.propertyKey as any}'.`);
         }
         
         // Check the proxy mode for targetInstance subject
@@ -334,8 +346,8 @@ export namespace StateEmitter {
             }
         }
 
-        const facadeSetter = subjectInfo.readOnly ? undefined : Facade.CreateSetter(emitterType);
         const facadeGetter = Facade.CreateGetter(emitterType, initialValue);
+        const facadeSetter = subjectInfo.readOnly ? undefined : Facade.CreateSetter(emitterType, facadeGetter);
         // Assign the facade getter and setter to the target instance for targetInstance EmitterType
         Object.defineProperty(targetInstance, emitterType, {
             enumerable: true,
@@ -403,7 +415,7 @@ export namespace StateEmitter {
         });
     }
 
-    function resolveInitialValue(subjectInfo: EmitterMetadata.SubjectInfo): any {
+    function resolveInitialValue(this: any, subjectInfo: EmitterMetadata.SubjectInfo): any {
         if (subjectInfo.initialValue !== undefined && !LangUtils.isNil(subjectInfo.initial)) {
             throw new Error("[StateEmitter]: Both initialValue and initial cannot be defined on the same property.");
         } else if (subjectInfo.initial) {

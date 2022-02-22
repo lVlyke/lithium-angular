@@ -73,7 +73,7 @@ export namespace Metadata {
     function rootMetadata(target: any): any {
         ensureRootMetadataExists(target);
 
-        return Object.getOwnPropertyDescriptor(target, LI_METADATA_ROOT).value;
+        return Object.getOwnPropertyDescriptor(target, LI_METADATA_ROOT)!.value;
     }
 }
 

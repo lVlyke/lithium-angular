@@ -137,7 +137,7 @@ export namespace ObservableUtil {
     export function UpdateDynamicPropertyPathValue<T>(target: any, path: string, value: T, mergeValue?: boolean) {
         // Get all property keys in the path
         let propertyKeys = path.split(".");
-        let subject: Subject<any>;
+        let subject: Subject<any> | undefined;
         let subjectIndex: number;
 
         // Iterate over each property key to find a Subject
@@ -178,7 +178,7 @@ export namespace ObservableUtil {
         // Resolve the subject value
         let updatedSubjectValue = propertyKeys
             // Ignore all static property keys that come before the target subject
-            .slice(subjectIndex + 1)
+            .slice(subjectIndex! + 1)
             // Iterate over the property path in reverse and build up the subject value
             .reduceRight<any>((value, propertyKey) => ({ [propertyKey]: value }), value);
         
@@ -186,7 +186,7 @@ export namespace ObservableUtil {
             // Get the last value from the subject and emit the merged properties
             subject.pipe(
                 take(1)
-            ).subscribe((lastValue: any) => subject.next(Object.assign(lastValue, updatedSubjectValue)));
+            ).subscribe((lastValue: any) => subject!.next(Object.assign(lastValue, updatedSubjectValue)));
         }
         else {
             // Emit the new value

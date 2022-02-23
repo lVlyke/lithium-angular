@@ -71,19 +71,20 @@ describe("Given a ManagedObservableWrapper mixin", () => {
                         });
                     });
 
-                    describe("when there are new subscriptions", () => {
+                    if (ManagedWrapper === ManagedBehaviorSubject) { // TODO
 
-                        spec.beforeEach((params) => {
-                            params.neverCalled = jasmine.createSpy("neverCalled");
-                            params.observable.subscribe(params.neverCalled as any);
-                        });
+                        describe("when there are new subscriptions", () => {
 
-                        if (ManagedWrapper === ManagedBehaviorSubject) { // TODO
+                            spec.beforeEach((params) => {
+                                params.neverCalled = jasmine.createSpy("neverCalled");
+                                params.observable.subscribe(params.neverCalled as any);
+                            });
+                        
                             spec.it("should not invoke the onNext callback",  (params) => {
                                 expect(params.neverCalled).not.toHaveBeenCalled();
                             });
-                        }
-                    });
+                        });
+                    }
                 });
             });
         });

@@ -174,7 +174,7 @@ describe("An EventSource decorator", () => {
                             methodDecorators!.forEach(methodDecorator => expect(methodDecorator).toHaveBeenCalledWith(
                                 params.targetPrototype,
                                 eventType,
-                                Object.getOwnPropertyDescriptor(params.targetPrototype, eventType!)
+                                Object.getOwnPropertyDescriptor(params.targetPrototype, eventType!)!
                             ));
                         });
                     });

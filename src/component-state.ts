@@ -232,7 +232,7 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentState<Compon
             switchMap(() => merge(
                 this.get(stateProp).pipe(skip(1)),
                 source instanceof Subject
-                    ? _createManagedSource(source, this.componentInstance)
+                    ? _createManagedSource(source, this.componentInstance).asObservable()
                     : source.get(sourceProp!)
             )),
             distinctUntilChanged(),
@@ -473,12 +473,12 @@ export namespace ComponentState {
                     instance: ComponentT,
                     property: _K,
                     enumerable: boolean
-                ): PropertyDescriptor {
+                ): void {
                     const stateProp = stateKey<ComponentT, _K>(property);
                     componentState[stateProp] = propSubject$;
 
                     // Override the instance property with a getter/setter that synchronizes with `propSubject$`
-                    return Object.defineProperty(instance, property, {
+                    Object.defineProperty(instance, property, {
                         configurable: true,
                         enumerable: enumerable,
                         get: () => lastValue,

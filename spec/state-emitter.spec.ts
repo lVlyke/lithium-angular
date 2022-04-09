@@ -288,21 +288,21 @@ describe("Given a StateEmitter decorator", () => {
                         });
                     }
 
-                    describe("when the facade getter is invoked", () => {
-                        if (!options || !options.writeOnly) {
+                    if (!options || !options.writeOnly) {
+
+                        describe("when the facade getter is invoked", () => {
+                            
                             describe("when the StateEmitter is NOT writeOnly", () => {
     
                                 spec.it("then it should return the expected value", (params) => {
                                     if (!options || !options.proxyMode || options.proxyMode === EmitterMetadata.ProxyMode.None) {
                                         expect(params.targetInstance[propertyName!]).toEqual(mergedOptions()!.initialValue);
-                                    }
-                                    else if (isStaticProxyPath) {
+                                    } else if (isStaticProxyPath) {
                                         return params.targetInstance.static.proxy.path$.pipe(
                                             take(1),
                                             map((value: string) => expect(params.targetInstance[propertyName!]).toEqual(value))
                                         ).toPromise();
-                                    }
-                                    else {
+                                    } else {
                                         return params.targetInstance.dynamic.proxy$.pipe(
                                             take(1),
                                             map((value: { path: string }) => expect(params.targetInstance[propertyName!]).toEqual(value.path))
@@ -310,8 +310,8 @@ describe("Given a StateEmitter decorator", () => {
                                     }
                                 });
                             });
-                        }
-                    });
+                        });
+                    }
 
                     if (!options || !options.readOnly) {
                         spec.it("then it should create a facade setter on the instance for the property key to support AoT", (params) => {
@@ -708,28 +708,37 @@ describe("Given a StateEmitter decorator", () => {
                             });
                         }
                     });
-                } else {
+                } else if (isSelfProxy) {
                     describe("when the initial property value is NOT Observable-derived", () => {
 
-                        if (isSelfProxy) {
-                            describe("when the StateEmitter is self-proxying", () => {
+                        describe("when the StateEmitter is self-proxying", () => {
 
-                                spec.it("it should throw an error", (params) => {
-                                    expect(() => bootstrap(params.targetInstance)).toThrowError();
-                                });
+                            spec.it("it should throw an error", (params) => {
+                                expect(() => bootstrap(params.targetInstance)).toThrowError();
                             });
-                        } else if (initialPropertyValue) {
-                            describe("when the StateEmitter is NOT self-proxying", () => {
+                        });
+                    });
+                } else if (initialPropertyValue) {
+                    describe("when the initial property value is NOT Observable-derived", () => {
 
-                                spec.it("should log a warning", (params) => {
-                                    spyOn(console, "warn");
-        
-                                    bootstrap(params.targetInstance);
-        
-                                    expect(console.warn).toHaveBeenCalled();
-                                });
+                        describe("when the StateEmitter is NOT self-proxying", () => {
+
+                            spec.it("should log a warning", (params) => {
+                                spyOn(console, "warn");
+    
+                                bootstrap(params.targetInstance);
+    
+                                expect(console.warn).toHaveBeenCalled();
                             });
-                        }
+                        });
+                    });
+                } else {
+                    spec.it("should NOT log a warning", (params) => {
+                        spyOn(console, "warn");
+
+                        bootstrap(params.targetInstance);
+
+                        expect(console.warn).not.toHaveBeenCalled();
                     });
                 }
             });

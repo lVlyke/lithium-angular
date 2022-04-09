@@ -6,3 +6,4 @@ global["window"] = dom.window as any;
 global["document"] = dom.window.document;
 global["location"] = dom.window.location;
 global["Document"] = dom.window.Document;
+global["Node"] = dom.window.Node;

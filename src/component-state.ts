@@ -2,9 +2,9 @@ import type { Constructable, IfEquals, IfReadonly, StringKey } from "./lang-util
 import { AsyncSourceKey, EmitterMetadata } from "./metadata";
 import { EventEmitter, FactoryProvider, InjectFlags, Injector, resolveForwardRef, Type } from "@angular/core";
 import { combineLatest, forkJoin, from, merge, Observable, of, ReplaySubject, Subject, Subscription, throwError } from "rxjs";
-import { distinctUntilChanged, filter, map, mergeMap, skip, switchMap, tap } from "rxjs/operators";
+import { distinctUntilChanged, filter, map, mergeMap, skip, switchMap, takeUntil, tap } from "rxjs/operators";
 import { AutoPush } from "./autopush";
-import { ManagedBehaviorSubject, ManagedObservable, ManagedReplaySubject } from "./managed-observable";
+import { ManagedBehaviorSubject, ManagedObservable } from "./managed-observable";
 import { EventSource } from "./event-source";
 import { AngularLifecycleType } from "./lifecycle-event";
 import { ComponentStateMetadata, CommonMetadata, asyncStateKey } from "./metadata";
@@ -15,9 +15,11 @@ export type ComponentState<ComponentT> = ComponentState.Of<ComponentT>;
 
 type ComponentClassProvider<ComponentT> = Type<ComponentT> | Type<unknown>;
 
+export type ManagedComponent = Constructable<any, any> & { [CommonMetadata.MANAGED_ONDESTROY_KEY]: Observable<void> };
+
 export class ComponentStateRef<ComponentT> extends Promise<ComponentState<ComponentT>> {
 
-    public componentInstance!: ComponentT;
+    public componentInstance!: ComponentT & ManagedComponent;
 
     /**
      * @description Resolves the `ComponentState` instance for this reference.
@@ -148,7 +150,7 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentState<Compon
         let managedSource$: Observable<V>;
         if (managed) {
             managedSource$ = this.state().pipe(
-                mergeMap(() => _createManagedSource<ComponentT, V, Observable<V>>(source$, this.componentInstance))
+                mergeMap(() => _createManagedSource<ManagedComponent, V, Observable<V>>(source$, this.componentInstance))
             );
         } else {
             managedSource$ = source$;
@@ -232,7 +234,7 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentState<Compon
             switchMap(() => merge(
                 this.get(stateProp).pipe(skip(1)),
                 source instanceof Subject
-                    ? _createManagedSource(source, this.componentInstance).asObservable()
+                    ? _createManagedSource(source, this.componentInstance)
                     : source.get(sourceProp!)
             )),
             distinctUntilChanged(),
@@ -434,7 +436,7 @@ export namespace ComponentState {
         EventSource.unregisterLifecycleEvent($class, event, callback);
     }
 
-    function updateState<ComponentT extends Constructable<any, any>>(
+    function updateState<ComponentT extends ManagedComponent>(
         componentState: Partial<StateRecord<ComponentT>>,
         instance: ComponentT
     ): Partial<StateRecord<ComponentT>> {
@@ -455,7 +457,7 @@ export namespace ComponentState {
         return componentState;
     }
 
-    function updateStateForProperty<ComponentT extends Constructable<any, any>, K extends StringKey<ComponentT>>(
+    function updateStateForProperty<ComponentT extends ManagedComponent, K extends StringKey<ComponentT>>(
         componentState: Partial<StateRecord<ComponentT>>,
         instance: ComponentT,
         prop: ComponentStateMetadata.ManagedProperty<ComponentT, K>
@@ -544,7 +546,7 @@ export namespace ComponentState {
         return resolveForwardRef<Type<ComponentT>>($class);
     }
 
-    function getAllAccessibleKeys<T extends Record<string, any> & Constructable<any, any>>(instance: T): ComponentStateMetadata.ManagedPropertyList<T> {
+    function getAllAccessibleKeys<T extends Record<string, any> & ManagedComponent>(instance: T): ComponentStateMetadata.ManagedPropertyList<T> {
         // Ensure managed keys are processed first
         return getManagedKeys(instance).concat(getPublicKeys(instance));
     }
@@ -553,7 +555,7 @@ export namespace ComponentState {
         return (Object.keys(instance) as Array<StringKey<T>>).map(key => ({ key }));
     }
 
-    function getManagedKeys<T extends Constructable<any, any>>(instance: T): ComponentStateMetadata.ManagedPropertyList<T> {
+    function getManagedKeys<T extends ManagedComponent>(instance: T): ComponentStateMetadata.ManagedPropertyList<T> {
         return ComponentStateMetadata.GetInheritedManagedPropertyList<T>(instance.constructor);
     }
 }
@@ -581,8 +583,12 @@ export function _requireComponentState<T extends { [COMPONENT_STATE_IDENTITY]?: 
     return instance[COMPONENT_STATE_IDENTITY]!;
 }
 
-function _createManagedSource<ComponentT, T, S$ extends Observable<T>>(source$: S$, instance: ComponentT): Subject<T> {
-    const managedSource$ = new ManagedReplaySubject<T>(instance, 1);
-    source$.subscribe(managedSource$);
-    return managedSource$;
+function _createManagedSource<
+    ComponentT extends ManagedComponent,
+    T,
+    S$ extends Observable<T>
+>(source$: S$, instance: ComponentT): Observable<T> {
+    return source$.pipe(
+        takeUntil(instance[CommonMetadata.MANAGED_ONDESTROY_KEY])
+    );
 }

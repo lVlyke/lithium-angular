@@ -4,7 +4,7 @@ import { InputBuilder, Random, Spec, Template } from "detest-bdd";
 import { BehaviorSubject, combineLatest, Observable, Subject } from "rxjs";
 import { first, isEmpty } from "rxjs/operators";
 import { firstSync } from "./utils/first-sync";
-import { ComponentState, ComponentStateRef, stateTokenFor, createComponentState, _requireComponentState } from "../src/component-state";
+import { ComponentState, ComponentStateRef, stateTokenFor, createComponentState, _requireComponentState, ManagedComponent } from "../src/component-state";
 import { DeclareState } from "../src/declare-state";
 import { AsyncState } from "../src/async-state";
 import { asyncStateKey } from "../src/metadata/component-state-metadata";
@@ -436,7 +436,7 @@ describe("The ComponentStateRef class", () => {
 
     interface SpecParams {
         stateRef: ComponentStateRef<ITestComponent>;
-        componentInstance: ITestComponent;
+        componentInstance: ITestComponent & ManagedComponent;
         expectedBaseComponentState: Partial<ITestComponentState>;
         expectedComponentState: ITestComponentState;
         expectedComponentStateProperty: keyof ITestComponentState & ComponentState.StateKey<ITestComponentState>;

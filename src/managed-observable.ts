@@ -10,30 +10,32 @@ export function ManagedObservableWrapper/*<T, BaseObservable extends Observable<
 
     class _Managed extends $class {
 
-        private subscriptions: Subscription[] = [];
+        protected subscriptions?: Subscription = new Subscription();
 
-        constructor(private readonly componentInstance: any, ...args: any[]) {
+        constructor(private componentInstance: any, ...args: any[]) {
             super(...args);
 
             // Automatically handle unsubscribing on component's ngOnDestroy event
-            this.subscriptions.push(componentInstance[CommonMetadata.MANAGED_ONDESTROY_KEY].subscribe(() => {
+            this.subscriptions!.add(componentInstance[CommonMetadata.MANAGED_ONDESTROY_KEY].subscribe(() => {
                 // Mark the component instance as destroyed
                 Metadata.setMetadata(CommonMetadata.MANAGED_INSTANCE_DESTROYED_KEY, this.componentInstance, true);
 
-                this.subscriptions
-                    .filter(subscription => !subscription.closed)
-                    .forEach(subscription => subscription.unsubscribe());
+                this.subscriptions?.unsubscribe();
+                this.subscriptions = undefined;
+                this.componentInstance = undefined;
 
-                this.subscriptions = [];
+                if (this instanceof Subject) {
+                    this.complete();
+                }
             }));
         }
 
         public subscribe(...args: any[]): Subscription {
-            if (!CommonMetadata.instanceIsDestroyed(this.componentInstance)) {
+            if (this.componentInstance && !CommonMetadata.instanceIsDestroyed(this.componentInstance)) {
                 const subscription = super.subscribe(...args);
 
                 // Manage new subscription
-                this.subscriptions.push(subscription);
+                this.subscriptions!.add(subscription);
                 return subscription;
             } else {
                 return EMPTY.subscribe();

@@ -52,9 +52,9 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentState<Compon
                         );
                     }
     
-                    return state[stateKey];
+                    return state[stateKey] as unknown as Observable<ComponentT[K]>;
                 })
-            ) as Observable<ComponentT[K]>;
+            );
         }
     }
 

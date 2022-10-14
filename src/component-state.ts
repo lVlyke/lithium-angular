@@ -552,7 +552,7 @@ export namespace ComponentState {
     }
 
     function getPublicKeys<T>(instance: T): ComponentStateMetadata.ManagedPropertyList<T> {
-        return (Object.keys(instance) as Array<StringKey<T>>).map(key => ({ key }));
+        return (Object.keys(instance as object) as Array<StringKey<T>>).map(key => ({ key }));
     }
 
     function getManagedKeys<T extends ManagedComponent>(instance: T): ComponentStateMetadata.ManagedPropertyList<T> {

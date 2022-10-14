@@ -4,8 +4,10 @@ import { ComponentStateMetadata } from "./metadata";
 /** @description Ensures that `T[Name]` is the same type as `T[K]`.
  * `K` is not required to be a strict `keyof T` since it may be a private field.
  */
-type ValidateName<T, K extends string, Name extends string | undefined> = 
-   Name extends keyof T
+type ValidateName<
+   T extends Record<string, any>,
+   K extends string, Name extends string | undefined
+> = Name extends keyof T
       ? (IfEquals<T[Name], Publicize<T, K>[K]> extends true ? Name : never)
       : never
 

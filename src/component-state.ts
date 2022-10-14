@@ -52,9 +52,9 @@ export class ComponentStateRef<ComponentT> extends Promise<ComponentState<Compon
                         );
                     }
     
-                    return state[stateKey];
+                    return state[stateKey] as unknown as Observable<ComponentT[K]>;
                 })
-            ) as Observable<ComponentT[K]>;
+            );
         }
     }
 
@@ -552,7 +552,7 @@ export namespace ComponentState {
     }
 
     function getPublicKeys<T>(instance: T): ComponentStateMetadata.ManagedPropertyList<T> {
-        return (Object.keys(instance) as Array<StringKey<T>>).map(key => ({ key }));
+        return (Object.keys(instance as object) as Array<StringKey<T>>).map(key => ({ key }));
     }
 
     function getManagedKeys<T extends ManagedComponent>(instance: T): ComponentStateMetadata.ManagedPropertyList<T> {

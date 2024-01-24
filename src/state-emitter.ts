@@ -8,10 +8,14 @@ import { AutoPush } from "./autopush";
 import { AngularLifecycleType } from "./lifecycle-event";
 import { _LangUtils as LangUtils } from "./lang-utils";
 
+/** @deprecated */
 export function StateEmitter(): PropertyDecorator;
+/** @deprecated */
 export function StateEmitter(...propertyDecorators: PropertyDecorator[]): PropertyDecorator;
+/** @deprecated */
 export function StateEmitter(params: StateEmitter.DecoratorParams, ...propertyDecorators: PropertyDecorator[]): PropertyDecorator;
 
+/** @deprecated */
 /** @PropertyDecoratorFactory */
 export function StateEmitter(...args: any[]): PropertyDecorator {
     let paramsArg: StateEmitter.DecoratorParams | PropertyDecorator | undefined;
@@ -28,6 +32,7 @@ export function StateEmitter(...args: any[]): PropertyDecorator {
     }
 }
 
+/** @deprecated */
 export namespace StateEmitter {
 
     export interface DecoratorParams extends EmitterMetadata.SubjectInfo.CoreDetails {

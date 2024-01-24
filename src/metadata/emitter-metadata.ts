@@ -1,8 +1,10 @@
 import { Subject, Observable } from "rxjs";
 import { Metadata } from "./metadata";
 
+/** @deprecated */
 export type EmitterType = string;
 
+/** @deprecated */
 export namespace EmitterMetadata {
 
     export const BOOTSTRAPPED_KEY = "$$STATEEMITTER_BOOTSTRAPPED";

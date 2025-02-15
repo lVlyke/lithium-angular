@@ -149,7 +149,8 @@ describe("Given the createComponentState function", () => {
             try {
                 @Component({
                     providers: [params.createResult = createComponentState(fwdRef ? forwardRef(() => TestComponent) : TestComponent, options)],
-                    template: ""
+                    template: "",
+                    standalone: false
                 })
                 class TestComponent<T> implements ITestComponent<T> {
                     

@@ -1,6 +1,6 @@
 import type { Constructable, IfEquals, IfReadonly, StringKey } from "./lang-utils";
 import { AsyncSourceKey, EmitterMetadata } from "./metadata";
-import { EventEmitter, FactoryProvider, InjectFlags, Injector, resolveForwardRef, Type } from "@angular/core";
+import { EventEmitter, FactoryProvider, Injector, resolveForwardRef, Type } from "@angular/core";
 import { combineLatest, forkJoin, from, merge, Observable, of, ReplaySubject, Subject, Subscription, throwError } from "rxjs";
 import { distinctUntilChanged, filter, map, mergeMap, skip, switchMap, takeUntil, tap } from "rxjs/operators";
 import { AutoPush } from "./autopush";
@@ -403,7 +403,7 @@ export namespace ComponentState {
         injector?: Injector
     ): void {
         onEvent($class, event, function onEventFn(this: ThisType<any>) {
-            const instance: any = injector ? injector.get($class, null, InjectFlags.Self) : this;
+            const instance: any = injector ? injector.get($class, null, { self: true }) : this;
 
             if (instance === this) {
                 onUpdate(instance);

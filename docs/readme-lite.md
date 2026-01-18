@@ -52,12 +52,12 @@ class MyComponent {
 * **Works with Angular component decorators**
     
     You can use Angular's built-in component decorators with Lithium. Use an `@Input` as a Subject and listen to a `@HostListener` event as an Observable!
-* **OnPush components made easy**
+* **Zoneless change detection made easy**
 
-    By tracking component state changes automatically, Lithium's **AutoPush** feature allows you to easily write more performant components using [OnPush](https://angular.io/api/core/ChangeDetectionStrategy).
+    By tracking component state changes automatically, Lithium's **AutoPush** feature allows you to easily write more performant components using [Zoneless](https://angular.dev/guide/zoneless) change detection and [OnPush](https://angular.dev/api/core/ChangeDetectionStrategy).
 * **Beyond `async`**
 
-    Lithium automatically manages subscription lifetimes just like Angular's [async pipe](https://angular.io/api/common/AsyncPipe), without its syntax overhead (and [ugly workarounds](https://coryrylan.com/blog/angular-async-data-binding-with-ng-if-and-ng-else)).
+    Lithium automatically manages subscription lifetimes just like Angular's [async pipe](https://angular.dev/api/common/AsyncPipe), without the syntax overhead.
 
 ## Installation
 

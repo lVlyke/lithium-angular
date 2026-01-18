@@ -54,12 +54,12 @@ class MyComponent {
 * **Works with Angular component decorators**
     
     You can use Angular's built-in component decorators with Lithium. Use an `@Input` as a Subject and listen to a `@HostListener` event as an Observable!
-* **OnPush components made easy**
+* **Zoneless change detection made easy**
 
-    By tracking component state changes automatically, Lithium's [AutoPush](/docs/intro-guide.md#autopush) feature allows you to easily write more performant components using [OnPush](https://angular.io/api/core/ChangeDetectionStrategy).
+    By tracking component state changes automatically, Lithium's [AutoPush](/docs/intro-guide.md#autopush) feature allows you to easily write more performant components using [Zoneless](https://angular.dev/guide/zoneless) change detection and [OnPush](https://angular.dev/api/core/ChangeDetectionStrategy).
 * **Beyond `async`**
 
-    Lithium automatically manages subscription lifetimes just like Angular's [async pipe](https://angular.io/api/common/AsyncPipe), without its syntax overhead (and [ugly workarounds](https://coryrylan.com/blog/angular-async-data-binding-with-ng-if-and-ng-else)).
+    Lithium automatically manages subscription lifetimes just like Angular's [async pipe](https://angular.dev/api/common/AsyncPipe), without the syntax overhead.
 
 ## [Intro guide](/docs/intro-guide.md)
 
@@ -86,10 +86,6 @@ npm install @lithiumjs/angular
 If you are upgrading from Lithium 6.x or earlier, read through the [migration guide](/docs/lithium-7-migration-guide.md) to see how to updgrade your app to use the latest features from Lithium.
 
 ### FAQ
-
-#### Does Lithium support Ivy (the default rendering engine for Angular 9+)?
-
-Lithium fully supports Ivy-based applications. **Note**: Please be aware that Lithium currently uses features from the not-yet finialized Ivy API, so some features of Lithium could stop working in later versions of Angular before Lithium is updated to support them.
 
 #### Does Lithium support the ViewEngine (pre-Ivy) applications?
 

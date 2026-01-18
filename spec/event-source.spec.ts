@@ -12,7 +12,7 @@ const spec = Spec.create<{
     targetClass: any;
     targetInstance: any;
     facadeData: string | string[];
-    observable: Observable<string>;
+    observable: Observable<string | string[]>;
     ngCompDef: ComponentType<any> | { ɵcmp: any };
     facadeFn: (...args: any[]) => void;
 }>();

@@ -1,6 +1,6 @@
 {
   "name": "@lithiumjs/angular",
-  "version": "8.0.2",
+  "version": "9.0.0",
   "description": "Reactive components made easy. Lithium provides utilities that enable seamless reactive state and event interactions for Angular components.",
   "author": "Mychal Thompson <mychal.r.thompson@gmail.com>",
   "repository": "https://github.com/lVlyke/lithium-angular",
@@ -40,32 +40,32 @@
     "test": "node ./scripts/test.js"
   },
   "peerDependencies": {
-    "@angular/core": ">=15.0.0 <21.0.0",
+    "@angular/core": ">=21.0.0 <22.0.0",
     "rxjs": ">=7.x.x",
     "typescript": ">=4.8.0"
   },
   "devDependencies": {
-    "@angular/common": "20.0.6",
-    "@angular/compiler": "20.0.6",
-    "@angular/compiler-cli": "20.0.6",
-    "@angular/core": "20.0.6",
-    "@angular/platform-browser": "20.0.6",
-    "@angular/platform-browser-dynamic": "20.0.6",
-    "@types/jasmine": "^5.1.8",
-    "@types/jsdom": "^21.1.7",
-    "@types/node": "^22.13.4",
+    "@angular/common": "21.1.0",
+    "@angular/compiler": "21.1.0",
+    "@angular/compiler-cli": "21.1.0",
+    "@angular/core": "21.1.0",
+    "@angular/platform-browser": "21.1.0",
+    "@angular/platform-browser-dynamic": "21.1.0",
+    "@types/jasmine": "^5.1.15",
+    "@types/jsdom": "^27.0.0",
+    "@types/node": "^25.0.9",
     "c8": "^10.1.3",
     "detest-bdd": "^1.2.1",
-    "extensionless": "^1.9.9",
-    "fs-extra": "^11.3.0",
+    "extensionless": "^2.0.6",
+    "fs-extra": "^11.3.3",
     "istanbul-cobertura-badger": "^1.3.1",
-    "jasmine": "^5.8.0",
-    "jsdom": "^26.1.0",
-    "ng-packagr": "20.0.1",
+    "jasmine": "^5.13.0",
+    "jsdom": "^27.4.0",
+    "ng-packagr": "21.1.0",
     "rxjs": "^7.8.2",
     "source-map-support": "^0.5.21",
     "tslib": "^2.3.0",
-    "typescript": "~5.8.3",
-    "zone.js": "~0.15.0"
+    "typescript": "~5.9.3",
+    "zone.js": "~0.16.0"
   }
 }

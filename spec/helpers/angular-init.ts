@@ -1,12 +1,12 @@
 import { TestBed } from "@angular/core/testing";
 import {
-    BrowserDynamicTestingModule,
-    platformBrowserDynamicTesting
-} from "@angular/platform-browser-dynamic/testing";
+    BrowserTestingModule,
+    platformBrowserTesting
+} from "@angular/platform-browser/testing";
 
-const platform = platformBrowserDynamicTesting();
+const platform = platformBrowserTesting();
 
 beforeEach(() => {
     TestBed.resetTestEnvironment();
-    TestBed.initTestEnvironment(BrowserDynamicTestingModule, platform);
+    TestBed.initTestEnvironment(BrowserTestingModule, platform);
 });

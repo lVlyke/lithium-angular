@@ -48,7 +48,7 @@
     "@angular/common": "21.1.0",
     "@angular/compiler": "21.1.0",
     "@angular/compiler-cli": "21.1.0",
-    "@angular/core": "21.1.0",
+    "@angular/core": "21.1.6",
     "@angular/platform-browser": "21.1.0",
     "@types/jasmine": "^5.1.15",
     "@types/jsdom": "^27.0.0",
